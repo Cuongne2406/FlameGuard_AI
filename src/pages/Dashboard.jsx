@@ -1,3 +1,5 @@
+import React from 'react';
+
 const Dashboard = () => {
   return (
     <div className="p-8">
@@ -7,7 +9,7 @@ const Dashboard = () => {
         <div className="bg-surface-light dark:bg-surface-dark p-6 rounded-xl shadow-card border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300">
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">TONG DOAN VIEN</p>
+              <p className="text-axs font-semibold uppercase tracking-wider text-text-muted-light dark:text-text-muted-dark">TONG DOAN VIEN</p>
               <h3 className="text-3xl font-bold text-gray-900 dark:text-white mt-2">1,250</h3>
             </div>
             <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-primary">

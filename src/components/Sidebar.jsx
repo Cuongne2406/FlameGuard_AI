@@ -1,50 +1,100 @@
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
-  const activeStyle = "flex items-center gap-3 px-3 py-3 rounded-lg bg-white/10 text-white shadow-sm border-l-4 border-primary transition-all duration-200";
-  const normalStyle = "flex items-center gap-3 px-3 py-3 rounded-lg text-blue-100 border-l-4 border-transparent hover:bg-white/10 hover:text-white transition-colors duration-200 group";
+  // Style cho menu: 
+  // Active: Nền xanh sáng hơn một chút (hoặc trắng mờ), chữ trắng
+  const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-white/20 text-white font-medium shadow-sm transition-all duration-200";
+  
+  // Normal: Chữ trắng, không nền (hoặc nền trong suốt), hover vào mới hiện nền
+  const normalStyle = "flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:bg-white/10 transition-colors duration-200";
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-primary dark:bg-slate-900 flex flex-col transition-all duration-300 shadow-xl z-20">
-      <div className="h-16 flex items-center px-6 border-b border-white/10 dark:border-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
-            <span className="material-symbols-outlined text-xl">school</span>
-          </div>
-          <span className="text-white font-bold text-lg tracking-tight">LHU YouthHub</span>
+    // bg-primary: Dùng màu xanh chủ đạo bạn đã cài trong tailwind.config.js
+    <aside className="w-64 flex-shrink-0 bg-primary h-screen flex flex-col text-white shadow-xl overflow-hidden">
+      
+      {/* 1. HEADER (Logo) */}
+      <div className="h-16 flex items-center px-6 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <span className="material-symbols-outlined text-2xl">school</span>
+          <span className="font-bold text-lg tracking-wide">LHU YouthHub</span>
         </div>
       </div>
 
-      <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+      {/* 2. MENU LIST (Khôi phục đủ 9 mục như trong ảnh) */}
+      <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+        
+        {/* Mục 1: Tổng Quan */}
         <NavLink to="/" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">dashboard</span>
-          <span className="font-medium text-sm">Tổng Quan</span>
+          <span className="text-sm">Tổng Quan</span>
         </NavLink>
+
+        {/* Mục 2: Thông Báo */}
         <NavLink to="/notifications" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">notifications</span>
-          <span className="font-medium text-sm">Thông Báo</span>
+          <span className="text-sm">Thông Báo</span>
         </NavLink>
+
+        {/* Mục 3: Danh sách chờ duyệt */}
+        <NavLink to="/approvals" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">assignment</span>
+          <span className="text-sm">Danh sách chờ duyệt</span>
+        </NavLink>
+
+        {/* Mục 4: Quản lý & Nhân sự */}
+        <NavLink to="/hr" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">manage_accounts</span>
+          <span className="text-sm">Quản lý & Nhân sự</span>
+        </NavLink>
+
+        {/* Mục 5: Tài Chính & Hậu Cần */}
+        <NavLink to="/finance" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">account_balance_wallet</span>
+          <span className="text-sm">Tài Chính & Hậu Cần</span>
+        </NavLink>
+
+        {/* Mục 6: Quản lý sự kiện */}
         <NavLink to="/events" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
-          <span className="material-symbols-outlined">event_note</span>
-          <span className="font-medium text-sm">Quản lý sự kiện</span>
+          <span className="material-symbols-outlined">calendar_month</span>
+          <span className="text-sm">Quản lý sự kiện</span>
         </NavLink>
-        <NavLink to="/users" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+
+        {/* Mục 7: Quản lý Đoàn Viên */}
+        <NavLink to="/members" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">groups</span>
-          <span className="font-medium text-sm">Quản lý Đoàn Viên</span>
+          <span className="text-sm">Quản lý Đoàn Viên</span>
         </NavLink>
-        {/* Thêm các link khác tùy ý */}
+
+        {/* Mục 8: Thi đua & Danh hiệu */}
+        <NavLink to="/achievements" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">equalizer</span> {/* Icon biểu đồ cột như ảnh */}
+          <span className="text-sm">Thi đua & Danh hiệu</span>
+        </NavLink>
+
+        {/* Mục 9: Phân tích & AI */}
+        <NavLink to="/ai-analysis" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">psychology</span> {/* Icon đầu người/AI */}
+          <span className="text-sm">Phân tích & AI</span>
+        </NavLink>
+
       </nav>
 
-      <div className="p-4 border-t border-white/10 dark:border-gray-700">
-        <button className={normalStyle + " w-full"}>
+      {/* 3. FOOTER (Cài đặt & User Info như ảnh) */}
+      <div className="p-4 border-t border-white/10 mt-auto">
+        <NavLink to="/settings" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
            <span className="material-symbols-outlined">settings</span>
-           <span className="font-medium text-sm">Cài Đặt</span>
-        </button>
-        <div className="mt-4 flex items-center gap-3 px-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-md">AD</div>
+           <span className="text-sm">Cài Đặt</span>
+        </NavLink>
+        
+        {/* User Profile Card */}
+        <div className="flex items-center gap-3 pt-2">
+            <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-sm font-bold shadow-md border-2 border-white/20">
+              AD
+            </div>
             <div className="flex flex-col text-left">
-                <span className="text-xs font-medium text-white">Admin LHU</span>
-                <span className="text-[10px] text-blue-200">Quản trị viên</span>
+                <span className="text-sm font-bold text-white leading-tight">Admin LHU</span>
+                <span className="text-[11px] text-blue-100 opacity-80">Quản trị viên</span>
             </div>
         </div>
       </div>

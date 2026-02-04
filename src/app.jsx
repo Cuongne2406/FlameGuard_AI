@@ -1,7 +1,8 @@
+import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Dashboard from './pages/Dashboard';
+import Sidebar from './components/Sidebar.jsx';
+import Header from './components/Header.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 
 function App() {
   return (
