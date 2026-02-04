@@ -19,11 +19,14 @@ Hệ thống quản lý hoạt động Đoàn - Hội thông minh dành cho sinh
 - **Icons:** Google Material Symbols
 - **Font:** Inter
 
-## 📦 Hướng dẫn cài đặt
+## 📦 Hướng dẫn cài đặt và chạy project
 1. Cài đặt thư viện
     - npm install
     - npm install react react-dom react-router-dom@6.22.3
     - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
 2. Clone dự án:
    ```bash
-   git clone [https://github.com/Cuongne2406/FlameGuard_AI.git](https://github.com/Cuongne2406/FlameGuard_AI.git)
+   git clone https://github.com/Cuongne2406/FlameGuard_AI.git
+3. Tại Terminal:
+    -> cd web
+    -> npm run dev 
