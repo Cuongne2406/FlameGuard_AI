@@ -1,18 +1,11 @@
 import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
-  // 1. Định nghĩa Style cho 2 trạng thái: Đang chọn (Active) & Bình thường (Normal)
-  
-  // Style khi Active: Nền sáng nhẹ, chữ trắng, viền trái màu Primary
   const activeStyle = "flex items-center gap-3 px-3 py-3 rounded-lg bg-white/10 text-white shadow-sm border-l-4 border-primary transition-all duration-200";
-  
-  // Style bình thường: Chữ hơi mờ, viền trong suốt, hover vào mới hiện nền
   const normalStyle = "flex items-center gap-3 px-3 py-3 rounded-lg text-blue-100 border-l-4 border-transparent hover:bg-white/10 hover:text-white transition-colors duration-200 group";
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-primary dark:bg-slate-900 flex flex-col transition-all duration-300 shadow-xl z-20 h-screen">
-      
-      {/* --- LOGO --- */}
+    <aside className="w-64 flex-shrink-0 bg-primary dark:bg-slate-900 flex flex-col transition-all duration-300 shadow-xl z-20">
       <div className="h-16 flex items-center px-6 border-b border-white/10 dark:border-gray-700">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
@@ -22,43 +15,33 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* --- MENU LINKS --- */}
       <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-        
-        {/* Link 1: Tổng quan */}
         <NavLink to="/" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
-          {/* Icon: Dùng logic nhỏ để đổi dạng đặc (fill) khi active nếu muốn */}
           <span className="material-symbols-outlined">dashboard</span>
           <span className="font-medium text-sm">Tổng Quan</span>
         </NavLink>
-
-        {/* Link 2: Sự kiện */}
+        <NavLink to="/notifications" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+          <span className="material-symbols-outlined">notifications</span>
+          <span className="font-medium text-sm">Thông Báo</span>
+        </NavLink>
         <NavLink to="/events" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">event_note</span>
           <span className="font-medium text-sm">Quản lý sự kiện</span>
         </NavLink>
-
-        {/* Link 3: Đoàn viên */}
         <NavLink to="/users" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">groups</span>
           <span className="font-medium text-sm">Quản lý Đoàn Viên</span>
         </NavLink>
-        
-        {/* ... Bạn copy tiếp các link khác vào đây tương tự ... */}
-
+        {/* Thêm các link khác tùy ý */}
       </nav>
 
-      {/* --- FOOTER --- */}
       <div className="p-4 border-t border-white/10 dark:border-gray-700">
         <button className={normalStyle + " w-full"}>
            <span className="material-symbols-outlined">settings</span>
            <span className="font-medium text-sm">Cài Đặt</span>
         </button>
-        {/* User Info */}
         <div className="mt-4 flex items-center gap-3 px-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-md">
-            AD
-            </div>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-500 flex items-center justify-center text-white text-xs font-bold shadow-md">AD</div>
             <div className="flex flex-col text-left">
                 <span className="text-xs font-medium text-white">Admin LHU</span>
                 <span className="text-[10px] text-blue-200">Quản trị viên</span>

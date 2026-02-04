@@ -5,20 +5,18 @@ import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
-    <div className="flex h-screen bg-background-light dark:bg-background-dark font-body">
-      <Sidebar /> {/* Menu cố định bên trái */}
-      
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header /> {/* Header cố định bên trên */}
-        
-        <main className="flex-1 overflow-auto">
+    <div className="flex h-screen bg-background-light dark:bg-background-dark font-body overflow-hidden">
+      <Sidebar />
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        <Header />
+        <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            {/* Các route khác sẽ thêm vào đây */}
           </Routes>
         </main>
       </div>
     </div>
   );
 }
+
 export default App;
