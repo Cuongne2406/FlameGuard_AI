@@ -8,9 +8,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#0066B3", 
+        primary: "#0062b2", 
         "primary-hover": "#005596",
-        "background-light": "#F4F7FA",
+        "primary-dark": "#005494",
+        "background-light": "#f5f7f8",
         "background-dark": "#0f172a",
         "surface-light": "#ffffff",
         "surface-dark": "#1e293b",
@@ -18,11 +19,17 @@ export default {
         "text-main-dark": "#f8fafc",
         "text-muted-light": "#64748b",
         "text-muted-dark": "#94a3b8",
-        success: "#10B981",
-        danger: "#EF4444",
+        "brand-blue": "#0066B3",
+        "brand-blue-dark": "#005291",
+        success: "#078838",  
+        danger: "#e73908",
+        accent: "#FFAB00", // Màu Vàng (Gold)
+        silver: "#94a3b8", // Màu Bạc
+        bronze: "#b45309", // Màu đồng
       },
       fontFamily: {
         display: ["Inter", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
         body: ["Inter", "sans-serif"],
       },
     },

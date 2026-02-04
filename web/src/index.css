@@ -13,3 +13,32 @@
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #475569;
 }
+
+/* Nền lưới kỹ thuật */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+}
+
+/* Hiệu ứng icon phát sáng */
+.glowing-icon {
+  filter: drop-shadow(0 0 8px rgba(0, 101, 178, 0.6));
+}
+
+/* Ẩn thanh cuộn mặc định, thay bằng thanh mảnh đẹp hơn */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
