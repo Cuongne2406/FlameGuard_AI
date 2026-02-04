@@ -1,22 +1,16 @@
-import React from 'react';
-import { Outlet } from 'react-router-dom';
+import React from "react";
+import { Outlet } from "react-router-dom";
+import Navbar from "../components/public/Navbar"; // Đảm bảo đúng đường dẫn
+import Footer from "../components/public/Footer";
 
 const PublicLayout = () => {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header đơn giản cho khách */}
-      <header className="bg-white shadow p-4">
-        <h1 className="text-xl font-bold text-primary">LHU YouthHub (Public)</h1>
-      </header>
-
-      {/* Nội dung trang con (Home, Login...) sẽ hiện ở đây */}
-      <main className="flex-1">
-        <Outlet />
+      <Navbar />
+      <main className="flex-grow">
+        <Outlet /> {/* BẮT BUỘC PHẢI CÓ DÒNG NÀY */}
       </main>
-
-      <footer className="bg-gray-100 p-4 text-center mt-auto">
-        Footer nội dung
-      </footer>
+      <Footer />
     </div>
   );
 };

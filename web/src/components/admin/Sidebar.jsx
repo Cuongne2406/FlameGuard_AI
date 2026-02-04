@@ -25,7 +25,7 @@ const Sidebar = () => {
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
 
         {/* Mục 1: Tổng Quan */}
-        <NavLink to="/" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">dashboard</span>
           <span className="text-sm">Tổng Quan</span>
         </NavLink>
@@ -45,7 +45,7 @@ const Sidebar = () => {
         </NavLink>
 
         {/* Mục 4: Quản lý & Nhân sự */}
-        <NavLink to="/admin/members" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/users" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">manage_accounts</span>
           <span className="text-sm">Quản lý & Nhân sự</span>
         </NavLink>
