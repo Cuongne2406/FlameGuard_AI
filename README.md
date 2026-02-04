@@ -20,13 +20,17 @@ Hệ thống quản lý hoạt động Đoàn - Hội thông minh dành cho sinh
 - **Font:** Inter
 
 ## 📦 Hướng dẫn cài đặt và chạy project
-1. Cài đặt thư viện
-    - npm install
-    - npm install react react-dom react-router-dom@6.22.3
-    - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
-2. Clone dự án:
+1. Clone dự án:
    ```bash
    git clone https://github.com/Cuongne2406/FlameGuard_AI.git
-3. Tại Terminal:
+2. Cài đặt thư viện:
+       npm install
+
+   Nếu cài thư viện ở trên mà vẫn chưa chạy được thì hãy cài thêm 2 thư viện phía sau:
+       {
+           npm install react react-dom react-router-dom@6.22.3
+           npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
+        }
+3. Tại Terminal trong VScode:
     -> cd web
     -> npm run dev 
