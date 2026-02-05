@@ -16,6 +16,7 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
         { to: '/notifications', icon: 'notifications', label: 'Thông báo' },
         { to: '/certificates', icon: 'workspace_premium', label: 'Kho chứng nhận' },
         { to: '/ranking', icon: 'leaderboard', label: 'Bảng xếp hạng' },
+        { to: '/setting', icon: 'settings', label: 'Cài đặt' },
     ];
 
     return (

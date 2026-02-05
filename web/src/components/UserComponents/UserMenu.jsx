@@ -42,8 +42,12 @@ const UserMenu = ({ user, placement = 'bottom-right' }) => {
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 focus:outline-none group rounded-lg transition-colors"
+                type="button"
+                onClick={(e) => {
+                    e.preventDefault();
+                    setIsOpen(!isOpen);
+                }}
+                className="flex items-center gap-2 focus:outline-none group rounded-lg transition-colors cursor-pointer"
             >
                 {/* Custom trigger content passed as children or default avatar */}
                 <Avatar
@@ -83,7 +87,7 @@ const UserMenu = ({ user, placement = 'bottom-right' }) => {
                             Hồ sơ cá nhân
                         </button>
                         <button
-                            onClick={() => handleNavigate('/settings/profile')}
+                            onClick={() => handleNavigate('/setting')}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                             <span className="material-symbols-outlined text-lg">settings</span>
