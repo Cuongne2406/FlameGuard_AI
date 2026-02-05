@@ -44,7 +44,7 @@ const Sidebar = () => {
         </NavLink>
 
         {/* Mục 4: Quản lý & Nhân sự */}
-        <NavLink to="/admin/users" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/members" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">manage_accounts</span>
           <span className="text-sm">Quản lý & Nhân sự</span>
         </NavLink>

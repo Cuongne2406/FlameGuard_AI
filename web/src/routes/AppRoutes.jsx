@@ -114,7 +114,7 @@ const AppRoutes = () => {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<Members />} />
+        <Route path="members" element={<Members />} />
         <Route path="events" element={<EventManager />} />
         <Route path="notifications" element={<NotificationManager />} />
         <Route path="approvals" element={<ApprovalQueue />} />
