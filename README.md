@@ -20,10 +20,26 @@ Hệ thống quản lý hoạt động Đoàn - Hội thông minh dành cho sinh
 - **Font:** Inter
 
 ## 📦 Hướng dẫn cài đặt
-1. Cài đặt thư viện
-    - npm install
-    - npm install react react-dom react-router-dom@6.22.3
-    - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
-2. Clone dự án:
+1. Clone dự án:
    ```bash
-   git clone [https://github.com/Cuongne2406/FlameGuard_AI.git](https://github.com/Cuongne2406/FlameGuard_AI.git)
+git clone https://github.com/Cuongne2406/FlameGuard_AI.git
+
+2. Cài đặt thư viện
+    a. Front_end
+        - npm install
+        - npm install react react-dom react-router-dom@6.22.3
+        - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
+    b. Back_end
+        - B1:  python -m venv venv
+        - B2:  .\venv\Scripts\activate
+        - B3:  pip install -r requirements.txt
+
+3. Cách để dự án hoạt động:
+    a. Front_end
+        - cd front_end/web
+        - npm run dev
+    b. Back_end
+        -   .\venv\Scripts\activate
+        -   uvicorn app.main:app --reload
+        -   truy cập: 127.0.0.1:8000/docs
+
