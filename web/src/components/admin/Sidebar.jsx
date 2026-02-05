@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 
 const Sidebar = () => {
   // Style cho menu: 
-  // Active: Nền xanh sáng hơn một chút (hoặc trắng mờ), chữ trắng
   const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-white/20 text-white font-medium shadow-sm transition-all duration-200";
 
   // Normal: Chữ trắng, không nền (hoặc nền trong suốt), hover vào mới hiện nền
@@ -21,7 +20,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* 2. MENU LIST (Khôi phục đủ 9 mục như trong ảnh) */}
+      {/* 2. MENU LIST */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
 
         {/* Mục 1: Tổng Quan */}
@@ -65,7 +64,7 @@ const Sidebar = () => {
 
         {/* Mục 8: Thi đua & Danh hiệu */}
         <NavLink to="/admin/achievements" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
-          <span className="material-symbols-outlined">equalizer</span> {/* Icon biểu đồ cột như ảnh */}
+          <span className="material-symbols-outlined">equalizer</span> {/* Icon biểu đồ cột */}
           <span className="text-sm">Thi đua & Danh hiệu</span>
         </NavLink>
 
@@ -79,7 +78,7 @@ const Sidebar = () => {
 
       {/* 3. FOOTER (Cài đặt & User Info như ảnh) */}
       <div className="p-4 border-t border-white/10 mt-auto">
-        <NavLink to="/admin/settings" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
+        <NavLink to="/system-settings" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
           <span className="material-symbols-outlined">settings</span>
           <span className="text-sm">Cài Đặt</span>
         </NavLink>

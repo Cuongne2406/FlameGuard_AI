@@ -4,20 +4,18 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 // ==============================
 // 1. IMPORT LAYOUTS
 // ==============================
-// Layout Admin (Của BẠN)
 import AdminLayout from '../layouts/AdminLayout';
-
-// Layout Public & User (Của BẠN KIA - Hãy đảm bảo đã copy file vào đúng chỗ)
 import PublicLayout from '../layouts/PublicLayout';
 import UserLayout from '../components/UserComponents/UserLayout';
 import SettingsLayout from '../components/SettingsComponents/SettingsLayout';
-
+// Import Layout riêng cho Cài đặt hệ thống (Trang mới)
+import AdminSettingsLayout from '../pages/admin/settings/AdminSettingsLayout';
 
 // ==============================
 // 2. IMPORT PAGES
 // ==============================
 
-// --- GROUP A: PUBLIC PAGES (Khách xem) ---
+// --- GROUP A: PUBLIC PAGES ---
 import PublicHome from '../pages/public/home/Home';
 import News from '../pages/public/New';
 import NewsDetail from '../pages/public/NewDetail';
@@ -25,11 +23,11 @@ import Activities from '../pages/public/Activities';
 import Academic from '../pages/public/Academic';
 import Contact from '../pages/public/Contact';
 
-// --- GROUP B: AUTH (Đăng nhập) ---
+// --- GROUP B: AUTH ---
 import Login from '../pages/user/login/Login';
 
-// --- GROUP C: USER PAGES (Sinh viên) ---
-import UserHome from '../pages/user/dashboard/Home'; // Đổi tên để không nhầm với Admin
+// --- GROUP C: USER PAGES ---
+import UserHome from '../pages/user/dashboard/Home';
 import Profile from '../pages/user/profile/Profile';
 import ActivityLog from '../pages/user/activity/ActivityLog';
 import NotificationPage from '../pages/user/notification/NotificationPage';
@@ -42,9 +40,9 @@ import ChangePassword from '../pages/user/setting/changepassword/ChangePassword'
 import SocialLinks from '../pages/user/setting/linktosocial/SocialLinks';
 import Privacy from '../pages/user/setting/privacy/Privacy';
 
-// --- GROUP E: ADMIN PAGES (Của BẠN) ---
-import AdminDashboard from '../pages/admin/dashboard/Dashboard'; // Đổi tên cho rõ
-import Members from '../pages/admin/member_management/member'; 
+// --- GROUP E: ADMIN PAGES ---
+import AdminDashboard from '../pages/admin/dashboard/Dashboard';
+import Members from '../pages/admin/member_management/member';
 import EventManager from '../pages/admin/event_management/EventManager';
 import NotificationManager from '../pages/admin/notification_management/NotificationManager';
 import ApprovalQueue from '../pages/admin/approval_queue/ApprovalQueue';
@@ -52,14 +50,17 @@ import FinancialManager from '../pages/admin/financial_management/FinancialManag
 import AchievementLeaderboard from '../pages/admin/achievements/AchievementLeaderboard';
 import AIAnalytics from '../pages/admin/AI_Data_Insight/AIAnalytics';
 
+// --- GROUP F: SYSTEM SETTINGS (Trang tách biệt) ---
+import GeneralSettings from '../pages/admin/settings/general/GeneralSettings';
+import SecuritySettings from '../pages/admin/settings/security/SecuritySettings';
+import NotificationSettings from '../pages/admin/settings/notifications/NotificationSettings';
+import IntegrationSettings from '../pages/admin/settings/integrations/IntegrationSettings';
 
 const AppRoutes = () => {
   return (
     <Routes>
-      
-      {/* =========================================================
-          KHU VỰC 1: PUBLIC (Trang chủ, Tin tức...) - Ai cũng xem được
-         ========================================================= */}
+
+      {/* --- KHU VỰC 1: PUBLIC --- */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<PublicHome />} />
         <Route path="/tin-tuc" element={<News />} />
@@ -70,17 +71,12 @@ const AppRoutes = () => {
       </Route>
 
 
-      {/* =========================================================
-          KHU VỰC 2: AUTHENTICATION
-         ========================================================= */}
+      {/* --- KHU VỰC 2: AUTHENTICATION --- */}
       <Route path="/login" element={<Login />} />
 
 
-      {/* =========================================================
-          KHU VỰC 3: USER (Sinh viên sau khi đăng nhập)
-         ========================================================= */}
+      {/* --- KHU VỰC 3: USER (Sinh viên) --- */}
       <Route element={<UserLayout />}>
-        {/* Đường dẫn: domain.com/home */}
         <Route path="/home" element={<UserHome />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/activity" element={<ActivityLog />} />
@@ -88,7 +84,6 @@ const AppRoutes = () => {
         <Route path="/certificates" element={<Certificates />} />
         <Route path="/ranking" element={<Ranking />} />
 
-        {/* Cấu trúc lồng nhau cho Settings */}
         <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<EditProfile />} />
           <Route path="profile" element={<EditProfile />} />
@@ -99,26 +94,31 @@ const AppRoutes = () => {
       </Route>
 
 
-      {/* =========================================================
-          KHU VỰC 4: ADMIN (Quản trị viên) - Code của BẠN
-         ========================================================= */}
+      {/* --- ADMIN DASHBOARD --- */}
       <Route path="/admin" element={<AdminLayout />}>
-           <Route index element={<Navigate to="dashboard" replace />} />
-           
-           <Route path="dashboard" element={<AdminDashboard />} />
-           <Route path="users" element={<Members />} /> 
-           <Route path="events" element={<EventManager />} />
-           <Route path="notifications" element={<NotificationManager />} />
-           <Route path="approvals" element={<ApprovalQueue />} />
-           <Route path="finance" element={<FinancialManager />} />
-           <Route path="achievements" element={<AchievementLeaderboard />} />
-           <Route path="ai-analysis" element={<AIAnalytics />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="members" element={<Members />} />
+        <Route path="events" element={<EventManager />} />
+        <Route path="notifications" element={<NotificationManager />} />
+        <Route path="approvals" element={<ApprovalQueue />} />
+        <Route path="finance" element={<FinancialManager />} />
+        <Route path="achievements" element={<AchievementLeaderboard />} />
+        <Route path="ai-analysis" element={<AIAnalytics />} />
       </Route>
 
 
-      {/* =========================================================
-          FALLBACK: Trang 404 hoặc Redirect
-         ========================================================= */}
+      {/* SYSTEM SETTINGS */}
+      <Route path="/system-settings" element={<AdminSettingsLayout />}>
+          <Route index element={<Navigate to="general" replace />} />
+          <Route path="general" element={<GeneralSettings />} />
+          <Route path="security" element={<SecuritySettings />} />
+          <Route path="notifications" element={<NotificationSettings />} />
+          <Route path="integrations" element={<IntegrationSettings />} />
+      </Route>
+
+
+      {/* --- FALLBACK --- */}
       <Route path="*" element={<Navigate to="/" replace />} />
 
     </Routes>
