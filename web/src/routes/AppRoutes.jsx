@@ -40,6 +40,14 @@ import ChangePassword from '../pages/user/setting/changepassword/ChangePassword'
 import SocialLinks from '../pages/user/setting/linktosocial/SocialLinks';
 import Privacy from '../pages/user/setting/privacy/Privacy';
 
+//  --- Group: Sub Admin
+import SubAdminLayout from '../pages/admin_sub/SubAdminLayout';
+import SubAdminDashboard from '../pages/admin_sub/dashboard/SubAdminDashboard';
+import SubAdminManagement from '../pages/admin_sub/management/SubAdminManagement';
+import SubAdminNotifications from '../pages/admin_sub/notifications/SubAdminNotifications';
+import SubAdminEvents from '../pages/admin_sub/events/SubAdminEvents';
+
+
 // --- GROUP E: ADMIN PAGES ---
 import AdminDashboard from '../pages/admin/dashboard/Dashboard';
 import Members from '../pages/admin/member_management/member';
@@ -60,7 +68,7 @@ const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* --- KHU VỰC 1: PUBLIC --- */}
+      {/* --- PUBLIC --- */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<PublicHome />} />
         <Route path="/tin-tuc" element={<News />} />
@@ -71,11 +79,11 @@ const AppRoutes = () => {
       </Route>
 
 
-      {/* --- KHU VỰC 2: AUTHENTICATION --- */}
+      {/* --- AUTHENTICATION --- */}
       <Route path="/login" element={<Login />} />
 
 
-      {/* --- KHU VỰC 3: USER (Sinh viên) --- */}
+      {/* ---  USER  --- */}
       <Route element={<UserLayout />}>
         <Route path="/home" element={<UserHome />} />
         <Route path="/profile" element={<Profile />} />
@@ -93,12 +101,20 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
+      {/* --- Sub ADMIN --- */}
+      <Route path="/admin-sub" element={<SubAdminLayout />}>
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<SubAdminDashboard />} />
+        <Route path="management" element={<SubAdminManagement />} />
+        <Route path="events" element={<SubAdminEvents />} />
+        <Route path="notifications" element={<SubAdminNotifications />} />
+      </Route>
 
-      {/* --- ADMIN DASHBOARD --- */}
+      {/* --- ADMIN --- */}
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="members" element={<Members />} />
+        <Route path="users" element={<Members />} />
         <Route path="events" element={<EventManager />} />
         <Route path="notifications" element={<NotificationManager />} />
         <Route path="approvals" element={<ApprovalQueue />} />
@@ -110,11 +126,11 @@ const AppRoutes = () => {
 
       {/* SYSTEM SETTINGS */}
       <Route path="/system-settings" element={<AdminSettingsLayout />}>
-          <Route index element={<Navigate to="general" replace />} />
-          <Route path="general" element={<GeneralSettings />} />
-          <Route path="security" element={<SecuritySettings />} />
-          <Route path="notifications" element={<NotificationSettings />} />
-          <Route path="integrations" element={<IntegrationSettings />} />
+        <Route index element={<Navigate to="general" replace />} />
+        <Route path="general" element={<GeneralSettings />} />
+        <Route path="security" element={<SecuritySettings />} />
+        <Route path="notifications" element={<NotificationSettings />} />
+        <Route path="integrations" element={<IntegrationSettings />} />
       </Route>
 
 

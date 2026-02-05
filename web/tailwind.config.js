@@ -11,6 +11,8 @@ export default {
         primary: "#0062b2", 
         "primary-hover": "#005596",
         "primary-dark": "#005494",
+        "bg-secretary-light": "#f8f7f5",
+        "bg-secretary-dark": "#221c10",
         "background-light": "#f5f7f8",
         "background-dark": "#0f172a",
         "surface-light": "#ffffff",
@@ -23,9 +25,9 @@ export default {
         "brand-blue-dark": "#005291",
         success: "#078838",  
         danger: "#e73908",
-        accent: "#FFAB00", // Màu Vàng (Gold)
-        silver: "#94a3b8", // Màu Bạc
-        bronze: "#b45309", // Màu đồng
+        accent: "#FFAB00",
+        silver: "#94a3b8",
+        bronze: "#b45309",
       },
       fontFamily: {
         display: ["Inter", "sans-serif"],
