@@ -25,8 +25,6 @@ import Contact from '../pages/public/Contact';
 
 // --- GROUP B: AUTH ---
 import Login from '../pages/user/login/Login';
-import Register from '../pages/user/login/Register';
-import ForgotPassword from '../pages/user/login/ForgotPassword';
 
 // --- GROUP C: USER PAGES ---
 import UserHome from '../pages/user/dashboard/Home';
@@ -35,6 +33,7 @@ import ActivityLog from '../pages/user/activity/ActivityLog';
 import NotificationPage from '../pages/user/notification/NotificationPage';
 import Certificates from '../pages/user/certificates/Certificates';
 import Ranking from '../pages/user/ranking/Ranking';
+import Checkin from '../pages/user/checkin/Checkin';
 
 // --- GROUP D: USER SETTINGS ---
 import EditProfile from '../pages/user/setting/editprofile/EditProfile';
@@ -83,8 +82,6 @@ const AppRoutes = () => {
 
       {/* --- AUTHENTICATION --- */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
 
 
       {/* ---  USER  --- */}
@@ -95,6 +92,7 @@ const AppRoutes = () => {
         <Route path="notifications" element={<NotificationPage />} />
         <Route path="certificates" element={<Certificates />} />
         <Route path="ranking" element={<Ranking />} />
+        <Route path="checkin" element={<Checkin />} />
 
         <Route path="setting" element={<SettingsLayout />}>
           <Route index element={<EditProfile />} />

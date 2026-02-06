@@ -1,11 +1,11 @@
-import React from 'react';
-import { useState } from 'react';
-import { Toggle, Button } from '../../../../components/ui';
+import React, { useState } from 'react';
+import { Toggle, Button, Toast } from '../../../../components/ui';
 
 /**
  * Privacy - Trang cài đặt quyền riêng tư
  */
 const Privacy = () => {
+    const [showToast, setShowToast] = useState(false);
     const [settings, setSettings] = useState({
         showEmail: true,
         showPhone: false,
@@ -17,8 +17,21 @@ const Privacy = () => {
         setSettings(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
+    const handleSave = () => {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {showToast && (
+                <Toast
+                    message="Đã lưu cài đặt quyền riêng tư!"
+                    type="success"
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h1 className="text-xl font-bold text-gray-900">Cài Đặt Quyền Riêng Tư</h1>
                 <p className="text-sm text-gray-500 mt-1">Quản lý khả năng hiển thị thông tin và chia sẻ dữ liệu của bạn</p>
@@ -66,7 +79,11 @@ const Privacy = () => {
                 </div>
 
                 <div className="flex justify-end pt-4">
-                    <Button variant="primary" leftIcon={<span className="material-symbols-outlined">save</span>}>
+                    <Button
+                        variant="primary"
+                        leftIcon={<span className="material-symbols-outlined">save</span>}
+                        onClick={handleSave}
+                    >
                         LƯU CÀI ĐẶT
                     </Button>
                 </div>

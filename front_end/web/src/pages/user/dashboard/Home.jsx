@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StatCard, Card, Badge, NotificationItem } from '../../../components/ui';
 
 /**
  * Home Page - Trang chủ đoàn viên
  */
 const Home = () => {
+    const navigate = useNavigate();
     // Mock data
     const stats = {
         points: { value: '85/100', change: '+5.2% so với tháng trước', trend: 'up' },
@@ -96,7 +98,10 @@ const Home = () => {
                                             )}
                                         </div>
                                     </div>
-                                    <button className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors">
+                                    <button
+                                        onClick={() => task.status === 'pending' ? navigate('/checkin') : null}
+                                        className={`px-4 py-2 text-white rounded-lg text-sm font-medium transition-colors ${task.status === 'pending' ? 'bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20' : 'bg-gray-300 cursor-not-allowed'}`}
+                                    >
                                         {task.status === 'pending' ? 'Điểm danh' : 'Chưa mở'}
                                     </button>
                                 </div>

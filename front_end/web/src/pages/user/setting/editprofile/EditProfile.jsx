@@ -1,19 +1,50 @@
-import React from 'react';
-import { useState } from 'react';
-import { Card, Input, Button, Avatar } from '../../../../components/ui';
+import React, { useState, useRef } from 'react';
+import { Card, Input, Button, Avatar, Toast } from '../../../../components/ui';
 
 /**
  * EditProfile - Trang chỉnh sửa thông tin cá nhân
  */
 const EditProfile = () => {
+    const [showToast, setShowToast] = useState(false);
+    const [avatarPreview, setAvatarPreview] = useState(null);
+    const fileInputRef = useRef(null);
+
     const [formData, setFormData] = useState({
         phone: '0901 234 567',
         email: 'nguyenvana@lhu.edu.vn',
         address: '123 Đường CMT8, Phường Quyết Thắng, TP. Biên Hòa, Đồng Nai'
     });
 
+    const handleSave = () => {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
+    const handleUploadClick = () => {
+        fileInputRef.current.click();
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setAvatarPreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {showToast && (
+                <Toast
+                    message="Cập nhật hồ sơ thành công!"
+                    type="success"
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h1 className="text-xl font-bold text-gray-900">Chỉnh Sửa Hồ Sơ</h1>
                 <p className="text-sm text-gray-500 mt-1">Cập nhật thông tin cá nhân và quản lý tài khoản của bạn</p>
@@ -24,17 +55,21 @@ const EditProfile = () => {
                 <div className="flex flex-col items-center justify-center py-6 border-b border-gray-100 mb-6">
                     <div className="relative mb-4">
                         <Avatar
-                            src="https://i.pravatar.cc/150?u=2"
+                            src={avatarPreview || "https://i.pravatar.cc/150?u=2"}
                             size="xl"
                             className="w-24 h-24 ring-4 ring-blue-50"
                         />
-                        <button className="absolute bottom-0 right-0 bg-white border border-gray-200 p-1.5 rounded-full shadow-sm hover:bg-gray-50">
-                            <span className="material-symbols-outlined text-gray-600 text-sm">camera_alt</span>
-                        </button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            accept="image/*"
+                            className="hidden"
+                        />
                     </div>
                     <h3 className="font-bold text-gray-900">Ảnh đại diện</h3>
                     <p className="text-xs text-gray-500 mt-1 mb-3">Hỗ trợ JPG, PNG. Tối đa 2MB.</p>
-                    <Button variant="secondary" size="sm">Tải lên ảnh mới</Button>
+                    <Button variant="secondary" size="sm" onClick={handleUploadClick}>Tải lên ảnh mới</Button>
                 </div>
 
                 {/* Contact Info */}
@@ -91,7 +126,12 @@ const EditProfile = () => {
 
                 {/* Action */}
                 <div className="mt-8 flex justify-end">
-                    <Button variant="primary" size="lg" leftIcon={<span className="material-symbols-outlined">save</span>}>
+                    <Button
+                        variant="primary"
+                        size="lg"
+                        leftIcon={<span className="material-symbols-outlined">save</span>}
+                        onClick={handleSave}
+                    >
                         LƯU THAY ĐỔI
                     </Button>
                 </div>

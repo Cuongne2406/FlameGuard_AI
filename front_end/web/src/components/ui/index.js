@@ -11,3 +11,5 @@ export { default as Pagination } from './Pagination';
 export { default as ActivityItem } from './ActivityItem';
 export { default as CertificateCard } from './CertificateCard';
 export { default as NotificationItem } from './NotificationItem';
+export { default as Modal } from './Modal';
+export { default as Toast } from './Toast';

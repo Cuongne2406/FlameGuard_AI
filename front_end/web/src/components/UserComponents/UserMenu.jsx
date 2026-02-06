@@ -84,7 +84,7 @@ const UserMenu = ({ user, placement = 'bottom-right' }) => {
                             Hồ sơ cá nhân
                         </button>
                         <button
-                            onClick={() => handleNavigate('/settings/profile')}
+                            onClick={() => handleNavigate('/setting/profile')}
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
                         >
                             <span className="material-symbols-outlined text-lg">settings</span>

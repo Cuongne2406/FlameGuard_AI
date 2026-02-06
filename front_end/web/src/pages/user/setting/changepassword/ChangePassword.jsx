@@ -1,16 +1,23 @@
-import React from 'react';
-import { useState } from 'react';
-import { Button, Input } from '../../../../components/ui';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Button, Input, Toast } from '../../../../components/ui';
 
 /**
  * ChangePassword - Trang đổi mật khẩu
  */
 const ChangePassword = () => {
+    const [showToast, setShowToast] = useState(false);
     const [passwords, setPasswords] = useState({
         current: '',
         new: '',
         confirm: ''
     });
+
+    const handleUpdate = () => {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        setPasswords({ current: '', new: '', confirm: '' });
+    };
 
     const getStrength = (pass) => {
         if (!pass) return 0;
@@ -27,7 +34,15 @@ const ChangePassword = () => {
     const strengthColors = ['bg-gray-200', 'bg-red-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500'];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {showToast && (
+                <Toast
+                    message="Cập nhật mật khẩu mới thành công!"
+                    type="success"
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
                 <h1 className="text-xl font-bold text-gray-900">Đổi Mật Khẩu</h1>
                 <p className="text-sm text-gray-500 mt-1">Vui lòng nhập mật khẩu hiện tại để thay đổi mật khẩu mới</p>
@@ -78,14 +93,22 @@ const ChangePassword = () => {
                         onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                     />
 
-                    <Button variant="primary" fullWidth size="lg">
+                    <Button
+                        variant="primary"
+                        fullWidth
+                        size="lg"
+                        onClick={handleUpdate}
+                    >
                         CẬP NHẬT MẬT KHẨU
                     </Button>
 
                     <div className="text-center">
-                        <button className="text-sm text-primary font-medium hover:underline">
+                        <Link
+                            to="/login"
+                            className="text-sm text-primary font-medium hover:underline"
+                        >
                             Bạn quên mật khẩu?
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

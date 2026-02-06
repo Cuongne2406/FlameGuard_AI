@@ -21,11 +21,13 @@ const UserLayout = () => {
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
             {/* Sidebar */}
-            <UserSidebar
-                user={user}
-                isOpen={sidebarOpen}
-                onClose={() => setSidebarOpen(false)}
-            />
+            <div className="z-50 lg:z-auto">
+                <UserSidebar
+                    user={user}
+                    isOpen={sidebarOpen}
+                    onClose={() => setSidebarOpen(false)}
+                />
+            </div>
 
             {/* Main content area */}
             <div className="flex-1 flex flex-col h-screen overflow-hidden">
@@ -33,6 +35,7 @@ const UserLayout = () => {
                 <UserHeader
                     user={user}
                     onMenuClick={() => setSidebarOpen(true)}
+                    onHelpClick={() => setSidebarOpen(false)}
                 />
 
                 {/* Page content */}
