@@ -12,6 +12,9 @@ class Event(Base):
     location = Column(String, nullable=False) # Địa điểm
     start_time = Column(DateTime, default=datetime.utcnow) # Thời gian bắt đầu
     end_time = Column(DateTime, nullable=True) # Thời gian kết thúc
+    max_participants = Column(Integer, default=100)
+    status = Column(String, default="UPCOMING") # UPCOMING, ONGOING, COMPLETED
+    points = Column(Integer, default=10) # Mặc định mỗi sự kiện 10 điểm
     
     # Ai là người tạo sự kiện này? (Liên kết với bảng User)
     creator_id = Column(Integer, ForeignKey("users.id"))

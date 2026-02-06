@@ -1,77 +1,152 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const navigate = useNavigate();
+  // State quản lý dữ liệu nhập vào
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Hàm xử lý đăng nhập giả
-  const handleFakeLogin = (role) => {
-    // 1. Lưu role vào bộ nhớ trình duyệt (LocalStorage)
-    localStorage.setItem('userRole', role);
-    localStorage.setItem('accessToken', 'fake-token-123456');
+  // Hàm xử lý khi bấm nút Đăng Nhập
+  const handleLogin = async (e) => {
+    e.preventDefault(); 
+    setError('');
+    setLoading(true);
 
-    // 2. Điều hướng dựa trên Role khớp với AppRoutes.jsx
-    if (role === 'SUPER_ADMIN') {
-      alert("Đang vào với quyền: ADMIN TỔNG");
-      navigate('/admin/dashboard'); // Vào khu vực Admin
-    } 
-    else if (role === 'SUB_ADMIN') {
-      alert("Đang vào với quyền: BÍ THƯ CHI ĐOÀN");
-      navigate('/admin-sub/dashboard'); // Vào khu vực Sub-Admin mới tạo
-    }
-    else if (role === 'STUDENT') {
-      alert("Đang vào với quyền: SINH VIÊN");
-      navigate('/home'); // Vào khu vực User
+    try {
+      // --- BƯỚC 1: GỌI API LOGIN ĐỂ LẤY TOKEN ---
+      const formData = new URLSearchParams();
+      formData.append('username', username); 
+      formData.append('password', password); 
+
+      const response = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Đăng nhập thất bại! Kiểm tra lại tài khoản.');
+      }
+
+      // Lưu Token vào kho
+      localStorage.setItem('access_token', data.access_token);
+      console.log("1. Token đã lưu thành công.");
+
+      // --- BƯỚC 2: GỌI API LẤY THÔNG TIN USER (ĐÃ THÊM AUTHORIZATION) ---
+      // Lưu ý: Phải dùng Bearer token vừa lấy được gửi ngược lên header
+      const meResponse = await fetch('http://127.0.0.1:8000/api/v1/users/me', {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${data.access_token}`, // Dòng cực kỳ quan trọng
+            'Content-Type': 'application/json'  
+        }
+      });
+
+      if (!meResponse.ok) {
+        // Nếu DB thiếu mã OTP hoặc lỗi Schema, nó sẽ rơi vào đây
+        throw new Error("Xác thực thông tin người dùng thất bại (Có thể do dữ liệu DB chưa đủ).");
+      }
+
+      const userData = await meResponse.json();
+      console.log("Dữ liệu User nhận được:", userData);
+      
+      // --- BƯỚC 3: LƯU ROLE VÀ ĐIỀU HƯỚNG ---
+      localStorage.setItem('user_role', userData.role); // Lưu role để AppRoutes sử dụng
+
+      // Phân luồng điều hướng dựa trên Role
+      if (userData.role === 'SUPER_ADMIN') {
+          navigate('/admin/dashboard');
+      } 
+      else if (userData.role === 'ADMIN') { 
+          // Sub Admin (Cán bộ đoàn) sẽ vào đây
+          navigate('/admin-sub/dashboard');
+      } 
+      else {
+          // Sinh viên và các role khác
+          navigate('/home');
+      }
+
+    } catch (err) {
+      console.error("Lỗi hệ thống:", err);
+      setError(err.message);
+      // Xóa dữ liệu cũ nếu lỗi để đảm bảo an toàn
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user_role');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100 gap-6 font-display">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-black text-primary uppercase">Hệ Thống YouthHub</h1>
-        <p className="text-gray-500 font-medium">Giả Lập Đăng Nhập (Chế độ phát triển)</p>
-      </div>
-      
-      <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col gap-4 w-96 border border-gray-100">
-        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest text-center mb-2">Chọn vai trò truy cập</p>
-
-        {/* NÚT 1: ADMIN TỔNG */}
-        <button 
-          onClick={() => handleFakeLogin('SUPER_ADMIN')}
-          className="flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-200"
-        >
-          <span className="material-symbols-outlined">admin_panel_settings</span>
-          ADMIN TỔNG (Trường)
-        </button>
-
-        {/* NÚT 2: SUB-ADMIN (Bí thư - Mới thêm) */}
-        <button 
-          onClick={() => handleFakeLogin('SUB_ADMIN')}
-          className="flex items-center justify-center gap-3 bg-[#f2a60d] hover:bg-[#d9950b] text-white font-bold py-3.5 px-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-orange-100"
-        >
-          <span className="material-symbols-outlined">local_police</span>
-          BÍ THƯ (Sub-Admin)
-        </button>
-
-        <div className="relative flex py-3 items-center">
-          <div className="flex-grow border-t border-gray-100"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-300 text-[10px] font-bold uppercase tracking-tighter">Sinh viên</span>
-          <div className="flex-grow border-t border-gray-100"></div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white shadow-lg rounded-xl">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            LHU YouthHub
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Đăng nhập hệ thống quản lý
+          </p>
         </div>
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative animate-pulse" role="alert">
+            <span className="block sm:inline text-xs font-bold">{error}</span>
+          </div>
+        )}
 
-        {/* NÚT 3: USER */}
-        <button 
-          onClick={() => handleFakeLogin('STUDENT')}
-          className="flex items-center justify-center gap-3 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-green-100"
-        >
-          <span className="material-symbols-outlined">person</span>
-          SINH VIÊN (User)
-        </button>
-      </div>
-      
-      <div className="flex items-center gap-2 text-gray-400 font-mono text-[10px]">
-        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        SYSTEM READY • NO DATABASE CONNECTED
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div className="mb-4">
+              <label htmlFor="username" className="sr-only">Tài khoản</label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="MSSV / Email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">Mật khẩu</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="Mật khẩu"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 transition-all shadow-md active:scale-95"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                   <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"></svg>
+                   Đang xác thực...
+                </span>
+              ) : 'Đăng Nhập'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
