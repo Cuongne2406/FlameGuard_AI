@@ -74,8 +74,14 @@ const PrivateRoute = ({ children }) => {
 
 // --- HÀM LOGIC: ĐIỀU HƯỚNG THEO ROLE (NEW) ---
 const getRedirectPath = (role) => {
-    if (role === 'SUPER_ADMIN' || role === 'ADMIN') return '/admin/dashboard';
-    if (role === 'SUB_ADMIN') return '/admin-sub/dashboard';
+    // Nếu là Sub Admin (Cán bộ Đoàn) -> Về Dashboard Sub Admin
+    // Lưu ý: Kiểm tra kỹ trong Database role của bạn là 'ADMIN' hay 'SUB_ADMIN' nhé
+    if (role === 'ADMIN') return '/admin-sub/dashboard'; 
+    
+    // Nếu là Super Admin -> Về Dashboard Admin Tổng
+    if (role === 'SUPER_ADMIN') return '/admin/dashboard';
+    
+    // Mặc định (Sinh viên/User) -> Về trang Home User
     return '/home';
 };
 
@@ -114,18 +120,18 @@ const AppRoutes = () => {
         <Route path="/activity" element={<ActivityLog />} />
         <Route path="/notifications" element={<NotificationPage />} />
         <Route path="/certificates" element={<Certificates />} />
+                <Route path="/checkin" element={<Checkin />} />
         <Route path="/ranking" element={<Ranking />} />
-        <Route path="/checkin" element={<Checkin />} />
-        
-        {/* Đưa Settings vào trong này để giữ nguyên Sidebar của User */}
-        <Route path="/settings">
+
+
+        <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<EditProfile />} />
           <Route path="profile" element={<EditProfile />} />
           <Route path="password" element={<ChangePassword />} />
           <Route path="social" element={<SocialLinks />} />
           <Route path="privacy" element={<Privacy />} />
         </Route>
-    </Route>
+      </Route>
 
 
       {/* --- SUB ADMIN (CÁN BỘ ĐOÀN) --- */}

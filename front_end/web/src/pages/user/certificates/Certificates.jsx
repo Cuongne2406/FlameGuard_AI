@@ -1,9 +1,8 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CertificateCard, Tabs, Pagination, Input, Button, Modal, Badge } from '../../../components/ui';
 
 /**
- * Certificates Page - Kho chứng nhận
+ * Certificates Page - Kho chứng nhận (Đã kết nối API /me)
  */
 const Certificates = () => {
     const tabs = [
@@ -13,6 +12,9 @@ const Certificates = () => {
         { id: 'award', label: 'Khen thưởng năm học' },
     ];
 
+    // --- STATE QUẢN LÝ DỮ LIỆU & UI ---
+    const [certificates, setCertificates] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
@@ -24,78 +26,59 @@ const Certificates = () => {
     const [filterYear, setFilterYear] = useState('');
     const [filterLevel, setFilterLevel] = useState('');
 
-    // Mock data (updated with level info)
-    const certificates = [
-        {
-            id: 1,
-            type: 'academic',
-            title: 'Giải Nhất Olympic Tin Học 2023',
-            issuer: 'Hội Sinh Viên Trường',
-            date: '10/05/2023',
-            month: 'Tháng 5',
-            year: '2023',
-            level: 'Cấp Trường',
-            code: 'CERT-IT-2023',
-            image: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=800&q=80',
-            verified: true,
-            description: 'Đạt thành tích xuất sắc trong kỳ thi Olympic Tin học sinh viên cấp trường năm 2023.'
-        },
-        {
-            id: 2,
-            type: 'award',
-            title: 'Đoàn Viên Xuất Sắc 2022-2023',
-            issuer: 'BCH Đoàn Trường ĐH CNTT',
-            year: '2022',
-            month: 'Tháng 6',
-            level: 'Cấp Khoa',
-            code: 'AWARD-2223',
-            image: 'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?w=800&q=80',
-            verified: true,
-            description: 'Khen thưởng cá nhân có thành tích xuất sắc trong công tác Đoàn và phong trào thanh niên năm học 2022-2023.'
-        },
-        {
-            id: 3,
-            type: 'volunteer',
-            title: 'Chiến dịch Mùa hè xanh 2023',
-            issuer: 'Đoàn Khoa Công nghệ Thông tin',
-            date: '15/08/2023',
-            month: 'Tháng 8',
-            year: '2023',
-            level: 'Cấp Thành phố',
-            code: 'VOL-MHX-2023',
-            image: 'https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&q=80',
-            verified: true,
-            description: 'Tham gia tích cực và hoàn thành tốt nhiệm vụ trong chiến dịch tình nguyện Mùa hè xanh năm 2023 tại địa phương.'
-        },
-        {
-            id: 4,
-            type: 'summer',
-            title: 'Giấy chứng nhận Sinh viên 5 tốt cấp Trường',
-            issuer: 'Hội Sinh Viên Trường',
-            year: '2024',
-            month: 'Tháng 1',
-            level: 'Cấp Trường',
-            code: 'SV5T-2024',
-            image: 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?w=800&q=80',
-            verified: true,
-            description: 'Đạt danh hiệu Sinh viên 5 tốt cấp Trường năm học 2023-2024 dựa trên các tiêu chí: Học tập tốt, Đạo đức tốt, Thể lực tốt, Tình nguyện tốt và Hội nhập tốt.'
+    // --- 1. HÀM GỌI API LẤY DỮ LIỆU ---
+    const fetchCertificates = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("access_token");
+            
+            // Xây dựng tham số lọc gửi lên Backend
+            const params = new URLSearchParams();
+            if (activeTab !== 'all') params.append('type', activeTab);
+            if (searchQuery) params.append('search', searchQuery);
+            if (filterYear) params.append('year', filterYear);
+            if (filterLevel) params.append('level', filterLevel);
+            
+            const response = await fetch(`http://127.0.0.1:8000/api/v1/certificates/me?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setCertificates(data);
+            }
+        } catch (error) {
+            console.error("Lỗi tải chứng nhận:", error);
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
-    const filteredCerts = certificates
-        .filter(c => activeTab === 'all' || c.type === activeTab || (activeTab === 'volunteer' && ['volunteer', 'summer', 'blood'].includes(c.type)))
-        .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
-        .filter(c => !filterMonth || c.month === filterMonth)
-        .filter(c => !filterYear || c.year === filterYear)
-        .filter(c => !filterLevel || c.level === filterLevel);
+    // Tự động tải lại khi các bộ lọc chính thay đổi
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            fetchCertificates();
+            setCurrentPage(1); // Reset về trang 1 khi lọc
+        }, 300); // Đợi 300ms để tránh gọi API liên tục khi gõ search
 
-    // Phân trang thực tế
-    const itemsPerPage = 3;
-    const totalPages = Math.ceil(filteredCerts.length / itemsPerPage);
-    const paginatedCerts = filteredCerts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+        return () => clearTimeout(delayDebounceFn);
+    }, [activeTab, searchQuery, filterYear, filterLevel]);
+
+    // --- 2. LOGIC LỌC TẠI CLIENT (Dành cho lọc Tháng) ---
+    const displayCerts = certificates.filter(c => !filterMonth || c.month === filterMonth);
+
+    // Phân trang
+    const itemsPerPage = 6;
+    const totalPages = Math.ceil(displayCerts.length / itemsPerPage);
+    const paginatedCerts = displayCerts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
+            {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Kho Chứng Nhận</h1>
@@ -107,10 +90,7 @@ const Certificates = () => {
                         leftIcon={<span className="material-symbols-outlined">search</span>}
                         className="w-full md:w-64"
                         value={searchQuery}
-                        onChange={(e) => {
-                            setSearchQuery(e.target.value);
-                            setCurrentPage(1);
-                        }}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                     <Button
                         variant="outline"
@@ -126,23 +106,30 @@ const Certificates = () => {
             <Tabs
                 tabs={tabs}
                 defaultTab={activeTab}
-                onChange={(id) => {
-                    setActiveTab(id);
-                    setCurrentPage(1);
-                }}
+                onChange={setActiveTab}
                 variant="pills"
             />
 
-            {/* Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {paginatedCerts.map((cert) => (
-                    <CertificateCard
-                        key={cert.id}
-                        {...cert}
-                        onViewDetail={() => setSelectedCert(cert)}
-                    />
-                ))}
-            </div>
+            {/* Grid Dữ liệu */}
+            {loading ? (
+                <div className="py-20 text-center text-gray-400">Đang truy xuất kho dữ liệu...</div>
+            ) : paginatedCerts.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedCerts.map((cert) => (
+                        <CertificateCard
+                            key={cert.id}
+                            {...cert}
+                            onViewDetail={() => setSelectedCert(cert)}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <div className="py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200">
+                    <span className="material-symbols-outlined text-5xl text-gray-200 mb-2">folder_open</span>
+                    <p className="text-gray-500 font-medium">Không tìm thấy chứng nhận nào</p>
+                    <p className="text-gray-400 text-sm">Vui lòng thay đổi bộ lọc hoặc từ khóa tìm kiếm.</p>
+                </div>
+            )}
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -155,7 +142,7 @@ const Certificates = () => {
                 </div>
             )}
 
-            {/* Modal Chi tiết */}
+            {/* Modal Chi tiết (DỮ LIỆU ĐỘNG) */}
             <Modal
                 isOpen={!!selectedCert}
                 onClose={() => setSelectedCert(null)}
@@ -175,11 +162,11 @@ const Certificates = () => {
                             <img src={selectedCert.image} alt={selectedCert.title} className="w-full h-full object-cover" />
                         </div>
                         <div className="space-y-3">
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start gap-4">
                                 <h4 className="text-xl font-bold text-gray-900 leading-tight">
                                     {selectedCert.title}
                                 </h4>
-                                <Badge variant="primary">{selectedCert.code}</Badge>
+                                <Badge variant="primary" className="shrink-0">{selectedCert.code}</Badge>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-1">
@@ -188,13 +175,13 @@ const Certificates = () => {
                                 </div>
                                 <div className="space-y-1">
                                     <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Thời gian</p>
-                                    <p className="text-sm font-semibold text-gray-700">{selectedCert.date || selectedCert.year}</p>
+                                    <p className="text-sm font-semibold text-gray-700">{selectedCert.date}</p>
                                 </div>
                             </div>
                             <div className="space-y-1 pt-2">
                                 <p className="text-xs text-gray-400 uppercase font-bold tracking-wider">Mô tả thành tích</p>
                                 <p className="text-sm text-gray-600 leading-relaxed italic border-l-4 border-primary/20 pl-3">
-                                    "{selectedCert.description}"
+                                    "{selectedCert.description || "Thành tích được ghi nhận chính thức trên hệ thống quản lý Đoàn viên."}"
                                 </p>
                             </div>
                         </div>
@@ -215,7 +202,7 @@ const Certificates = () => {
                             setFilterLevel('');
                             setIsFilterOpen(false);
                         }}>Xóa lọc</Button>
-                        <Button variant="primary" onClick={() => setIsFilterOpen(false)}>Áp dụng bộ lọc</Button>
+                        <Button variant="primary" onClick={() => setIsFilterOpen(false)}>Áp dụng</Button>
                     </div>
                 }
             >
@@ -261,16 +248,6 @@ const Certificates = () => {
                                     {level}
                                 </button>
                             ))}
-                        </div>
-                    </div>
-
-                    <div className="space-y-3">
-                        <label className="text-sm font-bold text-gray-700">Trạng thái xác thực</label>
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-all cursor-pointer" />
-                                <span className="text-sm text-gray-600 group-hover:text-primary transition-colors font-medium">Đã xác thực chính thức</span>
-                            </label>
                         </div>
                     </div>
                 </div>
