@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from pydantic import BaseModel
-from app.api.deps import get_db, get_current_user
+from app.api import deps
 from app.models.achievement import Achievement
 from app.models.user import User
 from passlib.context import CryptContext
+
+# CHỈ IMPORT TỪ ĐÂY - KHÔNG KHAI BÁO LẠI TRONG FILE NÀY
+from app.schemas.user import UserUpdate, UserResponse, UserCreate
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -14,161 +16,84 @@ def get_password_hash(password: str):
 
 router = APIRouter()
 
-# --- SCHEMA ---
-class UserCreate(BaseModel):
-    full_name: str
-    mssv: str
-    class_name: Optional[str] = None
-    role: str = "STUDENT"
-    email: Optional[str] = None
-
-# 1. API Tạo User
-@router.post("/", status_code=201)
+# 1. API Tạo User (Admin dùng)
+@router.post("/", status_code=201, response_model=UserResponse)
 def create_user(
     user_in: UserCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
-    if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
-        raise HTTPException(status_code=403, detail="Bạn không có quyền này")
-    if db.query(User).filter(User.mssv == user_in.mssv).first():
-        raise HTTPException(status_code=400, detail="MSSV này đã tồn tại!")
+    if current_user.role not in ["SUPER_ADMIN", "ADMIN"]:
+        raise HTTPException(status_code=403, detail="Không đủ quyền hạn")
+    
+    db_user = db.query(User).filter(User.mssv == user_in.mssv).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="MSSV đã tồn tại")
     
     new_user = User(
-        full_name=user_in.full_name,
         mssv=user_in.mssv,
-        email=user_in.email or f"{user_in.mssv}@lhu.edu.vn",
-        class_name=user_in.class_name,
+        full_name=user_in.full_name,
+        hashed_password=get_password_hash(user_in.password),
         role=user_in.role,
-        hashed_password=get_password_hash("123123123"), 
-        is_active=True
+        email=user_in.email
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return {"message": "Thành công", "id": new_user.id}
+    return new_user
 
-# 2. API Lấy danh sách
-@router.get("/", status_code=200)
-def read_users(
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100,
-    search: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
+# 2. API Lấy hồ sơ cá nhân (Dữ liệu lồng nhau cho Frontend)
+@router.get("/me/profile")
+def get_my_profile(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
-    if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
-         raise HTTPException(status_code=403, detail="Không đủ quyền")
-    query = db.query(User)
-    if search:
-        search_term = f"%{search}%"
-        query = query.filter(
-            (User.full_name.ilike(search_term)) | 
-            (User.mssv.ilike(search_term)) |
-            (User.class_name.ilike(search_term))
-        )
-    users = query.order_by(User.id.desc()).offset(skip).limit(limit).all()
-    for user in users:
-        user.hashed_password = None
-    return users
-
-# --- [DÒNG NÀY FIX LỖI 44 LOGIN.JSX] ---
-# 3. API Lấy thông tin chính chủ
-@router.get("/me", status_code=200)
-def get_user_me(
-    current_user: User = Depends(get_current_user)
-):
-    return {
-        "id": current_user.id,
-        "mssv": current_user.mssv,
-        "full_name": current_user.full_name,
-        "role": current_user.role.upper() if current_user.role else "STUDENT", # Ép hoa để chắc chắn
-        "email": current_user.email,
-        "class_name": current_user.class_name
-    }
-
-
-class AchievementDTO(BaseModel):
-    id: int
-    title: str
-    year: str
-    type: str
-    date: str # Trả về dạng string dd/mm/yyyy cho frontend dễ hiển thị
-
-class UserProfileResponse(BaseModel):
-    name: str
-    studentId: str
-    chidoan: Optional[str]
-    avatar: Optional[str]
-    role: str
-    joinedDate: Optional[str]
-    
-    info: dict # Chứa birthday, email, phone...
-    unionInfo: dict # Chứa position, place...
-    awards: List[AchievementDTO]
-
-
-# --- API LẤY PROFILE ---
-@router.get("/me", response_model=UserProfileResponse)
-def read_user_me(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    # 1. Format dữ liệu ngày tháng
-    dob = current_user.birthday.strftime("%d/%m/%Y") if current_user.birthday else "Chưa cập nhật"
-    join_d = current_user.join_date.strftime("%d/%m/%Y") if current_user.join_date else "Chưa cập nhật"
-    
-    # 2. Lấy danh sách khen thưởng từ quan hệ achievements
-    # Lưu ý: Vì trong model User đã có relationship achievements, ta truy cập trực tiếp được
-    awards_list = []
-    for ach in current_user.achievements:
-        awards_list.append({
+    achievements = []
+    # Kiểm tra an toàn nếu user chưa có achievements
+    user_achievements = getattr(current_user, 'achievements', [])
+    for ach in user_achievements:
+        achievements.append({
             "id": ach.id,
             "title": ach.title,
-            "year": ach.year,
             "type": ach.type,
-            "date": ach.date_received.strftime("%d/%m/%Y")
+            "year": ach.school_year,
+            "date": ach.date.strftime("%d/%m/%Y") if ach.date else ""
         })
 
-    # 3. Trả về đúng cấu trúc React đang chờ
     return {
+        "id": current_user.id,
         "name": current_user.full_name,
         "studentId": current_user.mssv,
-        "chidoan": current_user.class_name or "Chưa cập nhật",
+        "chidoan": current_user.class_name,
         "avatar": current_user.avatar_url,
-        "role": current_user.role, # Ví dụ: STUDENT -> Đoàn viên (Frontend tự map)
-        "joinedDate": join_d,
-        
+        "joinedDate": current_user.join_date.strftime("%d/%m/%Y") if current_user.join_date else "Chưa cập nhật",
+        "role": current_user.union_position,
+        "email": current_user.email,
         "info": {
-            "birthday": dob,
-            "gender": current_user.gender or "Chưa cập nhật",
-            "email": current_user.email,
-            "phone": current_user.phone or "Chưa cập nhật",
+            "birthday": current_user.birthday.strftime("%d/%m/%Y") if current_user.birthday else "",
+            "gender": current_user.gender or "Nam",
+            "phone": current_user.phone or "",
             "ethnicity": current_user.ethnicity or "Kinh",
-            "address": current_user.address or "Chưa cập nhật"
+            "address": current_user.address or ""
         },
-        
-        "unionInfo": {
-            "position": current_user.union_position,
-            "joinDate": join_d,
-            "place": "Trường ĐH Lạc Hồng" # Tạm thời hardcode
-        },
-        
-        "awards": awards_list
+        "awards": achievements
     }
 
-# --- API CẬP NHẬT PROFILE (Dành cho tab "Thông tin chung") ---
-@router.put("/me")
-def update_user_me(
-    data: dict = Body(...), # Nhận cục JSON từ frontend
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+# 3. API CẬP NHẬT HỒ SƠ (API TRỌNG TÂM)
+@router.put("/me/profile")
+def update_my_profile(
+    data: UserUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
-    # Cập nhật các trường cho phép
-    if "phone" in data: current_user.phone = data["phone"]
-    if "address" in data: current_user.address = data["address"]
-    if "email" in data: current_user.email = data["email"]
-    # ... thêm các trường khác nếu muốn
+    # Cập nhật thông tin từ Schema gửi lên
+    if data.full_name is not None: current_user.full_name = data.full_name
+    if data.phone is not None: current_user.phone = data.phone
+    if data.gender is not None: current_user.gender = data.gender
+    if data.birthday is not None: current_user.birthday = data.birthday
+    if data.ethnicity is not None: current_user.ethnicity = data.ethnicity
+    if data.address is not None: current_user.address = data.address
 
     db.commit()
-    return {"message": "Cập nhật thành công"}
+    db.refresh(current_user)
+    return {"message": "Cập nhật thành công!"}

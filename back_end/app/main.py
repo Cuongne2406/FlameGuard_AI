@@ -2,27 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
-from app.models import User, Event 
-from app.api.v1 import auth, events, dashboard, users
-from app.api.v1 import notifications
-from app.api.v1 import transactions
-from app.api.v1 import achievements
-from app.api.v1 import ai_analysis
-from app.api.v1 import system
-from app.api.v1 import dashboard
+from app.models import User, Event, notification, certificate
+from app.api.v1 import auth, events, dashboard, users, notifications, transactions, achievements, ai_analysis, system
+from app.db.session import engine, Base
 
 
+Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
-
-
-app = FastAPI(
-    title=settings.PROJECT_NAME,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
-)
-
 # Cấu hình CORS (Giữ nguyên như cũ)
 origins = [
     "http://localhost",

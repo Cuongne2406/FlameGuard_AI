@@ -1,90 +1,117 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
-from typing import List, Optional
-from datetime import datetime
-from pydantic import BaseModel
-from app.api.deps import get_db, get_current_user
-from app.models.transaction import Transaction, TransactionType
+from sqlalchemy import or_
+from typing import List
+from app.api import deps
+from app.models.notification import Notification
 from app.models.user import User
+from pydantic import BaseModel
 
 router = APIRouter()
 
-class TransactionCreate(BaseModel):
+# --- SCHEMA VALIDATION ---
+class NotificationCreate(BaseModel):
     title: str
-    amount: float
-    type: str # INCOME hoặc EXPENSE
-    category: str = "General"
+    content: str
+    type: str = "info" # urgent, info, success, warning
+    target_audience: str = "ALL" # ALL, STUDENT, SUB_ADMIN
+    status: str = "SENT"
 
-# 1. API Tạo giao dịch (Thu/Chi)
-@router.post("/", status_code=201)
-def create_transaction(
-    trans_in: TransactionCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+# --- 1. API: TẠO THÔNG BÁO (Chỉ dành cho Admin/Sub-Admin) ---
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_notification(
+    notif: NotificationCreate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
     if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
-        raise HTTPException(status_code=403, detail="Không đủ quyền")
+        raise HTTPException(status_code=403, detail="Bạn không có quyền tạo thông báo")
 
-    new_trans = Transaction(
-        title=trans_in.title,
-        amount=trans_in.amount,
-        type=trans_in.type,
-        category=trans_in.category,
+    new_notif = Notification(
+        title=notif.title,
+        content=notif.content,
+        type=notif.type,
+        target_audience=notif.target_audience,
+        status=notif.status,
         creator_id=current_user.id
     )
-    db.add(new_trans)
+    db.add(new_notif)
     db.commit()
-    return {"message": "Giao dịch thành công"}
+    db.refresh(new_notif)
+    return {"message": "Tạo thông báo thành công", "id": new_notif.id}
 
-# 2. API Lấy danh sách & Thống kê
-@router.get("/")
-def get_transactions(
-    db: Session = Depends(get_db),
-    search: Optional[str] = None,
-    month: Optional[int] = None,
-    year: Optional[int] = None
+# --- 2. API: LẤY THÔNG BÁO CỦA TÔI (Dành cho Sinh viên xem) ---
+@router.get("/me")
+def get_my_notifications(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
 ):
-    # --- A. Lấy danh sách giao dịch ---
-    query = db.query(Transaction)
-    if search:
-        query = query.filter(Transaction.title.ilike(f"%{search}%"))
-    if month and year:
-        query = query.filter(
-            extract('month', Transaction.created_at) == month,
-            extract('year', Transaction.created_at) == year
+    # Lọc thông báo: 
+    # 1. Trạng thái phải là SENT (Đã gửi)
+    # 2. Đối tượng là ALL, hoặc trùng Role với User, hoặc gửi đích danh cho user_id này
+    notifications = db.query(Notification).filter(
+        Notification.status == 'SENT',
+        or_(
+            Notification.target_audience == "ALL",
+            Notification.target_audience == current_user.role,
+            Notification.user_id == current_user.id
         )
+    ).order_by(Notification.created_at.desc()).all()
+
+    # Format lại dữ liệu để khớp với Frontend
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "content": n.content,
+            "type": n.type,
+            "read": n.is_read, # Trả về field 'read' cho Frontend dễ dùng
+            "time": n.created_at.isoformat(), # Dùng ISO format để Frontend tự convert "2 giờ trước"
+            "created_at": n.created_at
+        }
+        for n in notifications
+    ]
+
+# --- 3. API: ĐÁNH DẤU ĐÃ ĐỌC ---
+@router.put("/{id}/read")
+def mark_as_read(
+    id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    # Tìm thông báo
+    noti = db.query(Notification).filter(Notification.id == id).first()
+    if not noti:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thông báo")
     
-    transactions = query.order_by(Transaction.created_at.desc()).all()
+    # Logic đơn giản: Cập nhật is_read
+    noti.is_read = True
+    db.commit()
+    return {"message": "Đã đọc"}
 
-    # --- B. Tính toán thống kê (Tổng quỹ, Thu/Chi tháng này) ---
-    # 1. Tổng quỹ (Tất cả Thu - Tất cả Chi từ trước đến nay)
-    total_income = db.query(func.sum(Transaction.amount)).filter(Transaction.type == "INCOME").scalar() or 0
-    total_expense = db.query(func.sum(Transaction.amount)).filter(Transaction.type == "EXPENSE").scalar() or 0
-    balance = total_income - total_expense
+# --- 4. API: QUẢN LÝ TẤT CẢ (Chỉ dành cho Admin) ---
+@router.get("/all")
+def get_all_notifications(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
+        raise HTTPException(status_code=403, detail="Không có quyền truy cập kho lưu trữ")
+        
+    return db.query(Notification).order_by(Notification.created_at.desc()).all()
 
-    # 2. Thống kê Tháng Này (hoặc tháng được chọn)
-    now = datetime.now()
-    target_month = month or now.month
-    target_year = year or now.year
+# --- 5. API: XÓA THÔNG BÁO ---
+@router.delete("/{notification_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_notification(
+    notification_id: int,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
+        raise HTTPException(status_code=403, detail="Không có quyền xóa")
 
-    month_income = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.type == "INCOME",
-        extract('month', Transaction.created_at) == target_month,
-        extract('year', Transaction.created_at) == target_year
-    ).scalar() or 0
-
-    month_expense = db.query(func.sum(Transaction.amount)).filter(
-        Transaction.type == "EXPENSE",
-        extract('month', Transaction.created_at) == target_month,
-        extract('year', Transaction.created_at) == target_year
-    ).scalar() or 0
-
-    return {
-        "stats": {
-            "balance": balance,
-            "month_income": month_income,
-            "month_expense": month_expense
-        },
-        "transactions": transactions
-    }
+    notif = db.query(Notification).filter(Notification.id == notification_id).first()
+    if notif:
+        db.delete(notif)
+        db.commit()
+    return None
