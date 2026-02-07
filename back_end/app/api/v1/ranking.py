@@ -8,7 +8,7 @@ from app.models.participation import Participation
 
 router = APIRouter()
 
-@router.get("/")
+@router.get("")
 def get_ranking(
     period: str = "semester", # semester, month, year
     db: Session = Depends(deps.get_db),

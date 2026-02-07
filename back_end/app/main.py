@@ -3,8 +3,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.models import User, Event, notification, certificate
-from app.api.v1 import auth, events, dashboard, users, notifications, transactions, achievements, ai_analysis, system
+from app.api.v1 import auth, events, dashboard, users, notifications, transactions, achievements, ai_analysis, system, ranking, certificates
 from app.db.session import engine, Base
+from app.models.user import User
+from app.models.event import Event
+from app.models.participation import Participation # Thêm dòng này
+from app.models.achievement import Achievement     # Thêm dòng này
+from app.models.certificate import Certificate
+
 
 
 Base.metadata.create_all(bind=engine)
@@ -41,8 +47,11 @@ app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["tr
 app.include_router(achievements.router, prefix="/api/v1/achievements", tags=["achievements"])
 app.include_router(ai_analysis.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
-app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
+app.include_router(ranking.router, prefix="/api/v1/ranking", tags=["Ranking"])
+app.include_router(certificates.router, prefix="/api/v1/certificates", tags=["Certificates"])
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.get("/")
 def root():

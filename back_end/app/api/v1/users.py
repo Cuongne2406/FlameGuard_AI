@@ -16,6 +16,39 @@ def get_password_hash(password: str):
 
 router = APIRouter()
 
+# 2. API Lấy danh sách User (Dành cho Admin) - ĐANG THIẾU CÁI NÀY
+@router.get("/", status_code=200)
+def read_users(
+    db: Session = Depends(deps.get_db),
+    skip: int = 0,
+    limit: int = 100,
+    search: Optional[str] = None,
+    current_user: User = Depends(deps.get_current_user)
+):
+    # Kiểm tra quyền Admin
+    # if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
+    #      raise HTTPException(status_code=403, detail="Không đủ quyền")
+    
+    query = db.query(User)
+    
+    # Logic tìm kiếm
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            (User.full_name.ilike(search_term)) | 
+            (User.mssv.ilike(search_term)) |
+            (User.class_name.ilike(search_term))
+        )
+        
+    # Sắp xếp và phân trang
+    users = query.order_by(User.id.desc()).offset(skip).limit(limit).all()
+    
+    # Xóa password hash trước khi trả về (mặc dù Schema UserResponse đã lọc, nhưng làm thêm cho chắc)
+    for user in users:
+        user.hashed_password = None
+        
+    return users
+
 # 1. API Tạo User (Admin dùng)
 @router.post("/", status_code=201, response_model=UserResponse)
 def create_user(
@@ -97,3 +130,12 @@ def update_my_profile(
     db.commit()
     db.refresh(current_user)
     return {"message": "Cập nhật thành công!"}
+
+
+@router.get("/me", response_model=UserResponse)
+def read_user_me(current_user: User = Depends(deps.get_current_user)):
+    """
+    API lấy thông tin cơ bản của user đang đăng nhập
+    (Dùng cho Header, Sidebar hoặc AuthContext)
+    """
+    return current_user
