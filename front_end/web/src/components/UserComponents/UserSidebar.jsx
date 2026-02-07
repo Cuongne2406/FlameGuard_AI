@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
 /**
@@ -16,7 +16,9 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
         { to: '/activity', icon: 'history', label: 'Nhật ký hoạt động' },
         { to: '/notifications', icon: 'notifications', label: 'Thông báo' },
         { to: '/certificates', icon: 'workspace_premium', label: 'Kho chứng nhận' },
+        { to: '/checkin', icon: 'qr_code_scanner', label: 'Điểm danh' },
         { to: '/ranking', icon: 'leaderboard', label: 'Bảng xếp hạng' },
+        { to: '/setting', icon: 'settings', label: 'Cài đặt' },
     ];
 
     return (
@@ -39,7 +41,7 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
         `}
             >
                 {/* Header (Logo) */}
-                <div className="h-16 flex items-center px-6 border-b border-gray-100">
+                <Link to="/home" className="h-16 flex items-center px-6 border-b border-gray-100 hover:opacity-80 transition-opacity">
                     <div className="flex items-center gap-2">
                         <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
                             <span className="material-symbols-outlined text-white text-xl">school</span>
@@ -49,7 +51,7 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
                             <span className="text-[10px] text-gray-400 uppercase tracking-wider">Hệ sinh thái số</span>
                         </div>
                     </div>
-                </div>
+                </Link>
 
                 {/* Menu List */}
                 <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">

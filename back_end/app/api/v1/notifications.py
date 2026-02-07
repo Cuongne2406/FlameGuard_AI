@@ -8,13 +8,12 @@ from app.models.user import User
 
 router = APIRouter()
 
-# 1. Cập nhật Schema: Thêm field status
 class NotificationCreate(BaseModel):
     title: str
     content: str
     type: str = "info"
     target_audience: str = "ALL"
-    status: str = "SENT" # Mặc định là gửi luôn, nhưng có thể nhận "DRAFT"
+    status: str = "SENT" # Mặc định thông báo là gửi luôn, nhưng có thể nhận "DRAFT"
 
 @router.post("/", status_code=201)
 def create_notification(
@@ -87,3 +86,29 @@ def delete_notification(
     db.delete(notif)
     db.commit()
     return None
+
+@router.get("/me", response_model=List[dict]) # Trả về dict để ta tùy biến tên trường
+def get_my_notifications(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    # Lấy các thông báo dành cho tất cả mọi người (ALL) và đã ở trạng thái SENT
+    notifications = db.query(Notification)\
+        .filter(Notification.status == "SENT")\
+        .order_by(Notification.created_at.desc())\
+        .limit(5)\
+        .all()
+    
+    # Chuyển đổi dữ liệu để khớp với Frontend (type -> category)
+    result = []
+    for n in notifications:
+        result.append({
+            "id": n.id,
+            "title": n.title,
+            "content": n.content,
+            "category": n.type, # React mong đợi 'category'
+            "time": n.created_at.strftime("%H:%M %d/%m"),
+            "isNew": True # Bạn có thể thêm logic so sánh thời gian ở đây
+        })
+    
+    return result

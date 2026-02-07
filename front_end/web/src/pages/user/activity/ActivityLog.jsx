@@ -1,6 +1,6 @@
 import React from 'react';
 import { useState } from 'react';
-import { Card, StatCard, ActivityItem, Button, Badge } from '../../../components/ui';
+import { Card, StatCard, ActivityItem, Button, Badge, Toast } from '../../../components/ui';
 
 /**
  * ActivityLog Page - Nhật ký hoạt động
@@ -16,9 +16,12 @@ const ActivityLog = () => {
     // Filters
     const [year, setYear] = useState('2023 - 2024');
     const [semester, setSemester] = useState('Học kỳ 1');
+    const [visibleCount, setVisibleCount] = useState(3);
+    const [isApplying, setIsApplying] = useState(false);
+    const [showToast, setShowToast] = useState(false);
 
     // Mock activities
-    const activities = [
+    const allActivities = [
         {
             id: 1,
             type: 'summer',
@@ -27,7 +30,9 @@ const ActivityLog = () => {
             points: 15,
             checkIn: '07:32 AM',
             checkOut: '17:15 PM',
-            location: 'Quận Bình Thạnh, TP.HCM'
+            location: 'Quận Bình Thạnh, TP.HCM',
+            year: '2023 - 2024',
+            semester: 'Học kỳ hè'
         },
         {
             id: 2,
@@ -37,7 +42,9 @@ const ActivityLog = () => {
             points: 5,
             checkIn: '13:55 PM',
             checkOut: '16:40 PM',
-            location: 'Hội trường A, Cơ sở chính'
+            location: 'Hội trường A, Cơ sở chính',
+            year: '2023 - 2024',
+            semester: 'Học kỳ 1'
         },
         {
             id: 3,
@@ -45,12 +52,72 @@ const ActivityLog = () => {
             title: 'Hiến máu nhân đạo đợt 1',
             date: '20 Tháng 05, 2024',
             points: 10,
-            location: 'Sảnh B - Trường ĐH Lạc Hồng'
+            location: 'Sảnh B - Trường ĐH Lạc Hồng',
+            year: '2023 - 2024',
+            semester: 'Học kỳ 1'
+        },
+        {
+            id: 4,
+            type: 'academic',
+            title: 'Hội thảo: Ứng dụng AI trong lập trình Modern Web',
+            date: '10 Tháng 05, 2024',
+            points: 2,
+            checkIn: '08:00 AM',
+            checkOut: '11:00 AM',
+            location: 'Phòng Lab 402',
+            year: '2022 - 2023',
+            semester: 'Học kỳ 2'
+        },
+        {
+            id: 5,
+            type: 'volunteer',
+            title: 'Ngày hội Chủ nhật đỏ 2024',
+            date: '25 Tháng 04, 2024',
+            points: 5,
+            location: 'Sân trường Cơ sở 1',
+            year: '2023 - 2024',
+            semester: 'Học kỳ 2'
         }
     ];
 
+    const [filteredActivities, setFilteredActivities] = useState(allActivities);
+
+    const handleApplyFilters = () => {
+        setIsApplying(true);
+        setTimeout(() => {
+            const result = allActivities.filter(act =>
+                act.year === year && act.semester === semester
+            );
+            setFilteredActivities(result);
+            setIsApplying(false);
+            setVisibleCount(3);
+        }, 500);
+    };
+
+    const handleClearFilters = () => {
+        setYear('2023 - 2024');
+        setSemester('Học kỳ 1');
+        setFilteredActivities(allActivities);
+        setVisibleCount(3);
+    };
+
+    const handleExportPDF = () => {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
+    const visibleActivities = filteredActivities.slice(0, visibleCount);
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
+            {showToast && (
+                <Toast
+                    message="Xuất báo cáo PDF thành công!"
+                    type="success"
+                    onClose={() => setShowToast(false)}
+                />
+            )}
+
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -59,7 +126,8 @@ const ActivityLog = () => {
                 </div>
                 <Button
                     variant="primary"
-                    leftIcon={<span className="material-symbols-outlined">download</span>}
+                    leftIcon={<span className="material-symbols-outlined">picture_as_pdf</span>}
+                    onClick={handleExportPDF}
                 >
                     Xuất báo cáo PDF
                 </Button>
@@ -127,41 +195,73 @@ const ActivityLog = () => {
                             </span>
                         </div>
                     </div>
-                    <Button variant="secondary" className="w-full md:w-auto">
-                        Áp dụng
-                    </Button>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <Button
+                            variant="outline"
+                            className="flex-1 md:flex-none"
+                            onClick={handleClearFilters}
+                            disabled={isApplying}
+                        >
+                            Xóa lọc
+                        </Button>
+                        <Button
+                            variant="secondary"
+                            className="flex-1 md:flex-none min-w-[100px]"
+                            onClick={handleApplyFilters}
+                            disabled={isApplying}
+                        >
+                            {isApplying ? 'Đang xử lý...' : 'Áp dụng'}
+                        </Button>
+                    </div>
                 </div>
             </Card>
 
             {/* Timeline Activities */}
             <div className="bg-white rounded-xl border border-gray-100 p-6">
-                <div className="relative border-l-2 border-gray-100 pl-8 ml-4 space-y-8">
-                    {activities.map((item, index) => (
-                        <div key={item.id} className="relative">
-                            {/* Dot on timeline */}
-                            <span className="absolute -left-[41px] top-6 w-4 h-4 rounded-full bg-primary border-4 border-white shadow-sm ring-1 ring-gray-100"></span>
+                {filteredActivities.length > 0 ? (
+                    <div className="relative border-l-2 border-gray-100 pl-8 ml-4 space-y-8">
+                        {visibleActivities.map((item, index) => (
+                            <div key={item.id} className="relative">
+                                {/* Dot on timeline */}
+                                <span className="absolute -left-[41px] top-6 w-4 h-4 rounded-full bg-primary border-4 border-white shadow-sm ring-1 ring-gray-100"></span>
 
-                            <ActivityItem
-                                type={item.type}
-                                title={item.title}
-                                points={item.points}
-                                date={item.date}
-                                checkIn={item.checkIn}
-                                checkOut={item.checkOut}
-                                location={item.location}
-                                onViewProof={() => console.log('Xem minh chứng', item.id)}
-                            />
-                        </div>
-                    ))}
+                                <ActivityItem
+                                    type={item.type}
+                                    title={item.title}
+                                    points={item.points}
+                                    date={item.date}
+                                    checkIn={item.checkIn}
+                                    checkOut={item.checkOut}
+                                    location={item.location}
+                                    onViewProof={() => console.log('Xem minh chứng', item.id)}
+                                />
+                            </div>
+                        ))}
 
-                    {/* Show more button */}
-                    <div className="relative pt-4">
-                        <span className="absolute -left-[37px] top-8 w-2 h-2 rounded-full bg-gray-300"></span>
-                        <Button variant="secondary" fullWidth rightIcon={<span className="material-symbols-outlined">expand_more</span>}>
-                            Xem thêm hoạt động cũ hơn
-                        </Button>
+                        {/* Show more button */}
+                        {visibleCount < filteredActivities.length && (
+                            <div className="relative pt-4">
+                                <span className="absolute -left-[37px] top-8 w-2 h-2 rounded-full bg-gray-300"></span>
+                                <Button
+                                    variant="secondary"
+                                    fullWidth
+                                    rightIcon={<span className="material-symbols-outlined">expand_more</span>}
+                                    onClick={() => setVisibleCount(prev => prev + 3)}
+                                >
+                                    Xem thêm hoạt động cũ hơn
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                </div>
+                ) : (
+                    <div className="text-center py-20">
+                        <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="material-symbols-outlined text-gray-300 text-3xl">event_busy</span>
+                        </div>
+                        <p className="text-gray-500 font-medium">Không tìm thấy hoạt động nào trong giai đoạn này.</p>
+                        <p className="text-gray-400 text-sm mt-1">Vui lòng thử chọn Năm học hoặc Học kỳ khác.</p>
+                    </div>
+                )}
             </div>
         </div>
     );

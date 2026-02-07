@@ -9,7 +9,7 @@ from app.api.v1 import transactions
 from app.api.v1 import achievements
 from app.api.v1 import ai_analysis
 from app.api.v1 import system
-
+from app.api.v1 import dashboard
 
 
 app = FastAPI(
@@ -53,7 +53,7 @@ app.include_router(achievements.router, prefix="/api/v1/achievements", tags=["ac
 app.include_router(ai_analysis.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
+app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 
 @app.get("/")
 def root():

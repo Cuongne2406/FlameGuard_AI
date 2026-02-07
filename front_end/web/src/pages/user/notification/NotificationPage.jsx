@@ -7,6 +7,7 @@ import { Card, Button, Badge } from '../../../components/ui';
  */
 const NotificationPage = () => {
     const [filter, setFilter] = useState('all');
+    const [visibleCount, setVisibleCount] = useState(4);
 
     const notifications = [
         {
@@ -40,6 +41,22 @@ const NotificationPage = () => {
             time: '5 ngày trước',
             type: 'warning',
             read: true,
+        },
+        {
+            id: 5,
+            title: 'Lịch thi đấu giải bóng đá nam 2024',
+            content: 'Cập nhật lịch thi đấu vòng bảng giải bóng đá truyền thống cấp trường...',
+            time: '1 tuần trước',
+            type: 'info',
+            read: true,
+        },
+        {
+            id: 6,
+            title: 'Khen thưởng cuộc thi Ý tưởng sáng tạo',
+            content: 'Chúc mừng chi đoàn 21CT111 đạt giải ba cuộc thi Ý tưởng sáng tạo không biên giới...',
+            time: '2 tuần trước',
+            type: 'success',
+            read: true,
         }
     ];
 
@@ -63,7 +80,8 @@ const NotificationPage = () => {
         }
     };
 
-    const filtered = filter === 'all' ? notifications : filter === 'unread' ? notifications.filter(n => !n.read) : notifications;
+    const filtered = (filter === 'all' ? notifications : notifications.filter(n => !n.read))
+        .slice(0, visibleCount);
 
     return (
         <div className="space-y-6">
@@ -76,14 +94,20 @@ const NotificationPage = () => {
                     <Button
                         variant={filter === 'all' ? 'primary' : 'outline'}
                         size="sm"
-                        onClick={() => setFilter('all')}
+                        onClick={() => {
+                            setFilter('all');
+                            setVisibleCount(4);
+                        }}
                     >
                         Tất cả
                     </Button>
                     <Button
                         variant={filter === 'unread' ? 'primary' : 'outline'}
                         size="sm"
-                        onClick={() => setFilter('unread')}
+                        onClick={() => {
+                            setFilter('unread');
+                            setVisibleCount(4);
+                        }}
                     >
                         Chưa đọc
                     </Button>
@@ -120,9 +144,17 @@ const NotificationPage = () => {
                 ))}
             </div>
 
-            <div className="text-center pt-4">
-                <Button variant="ghost" size="sm">Xem các thông báo cũ hơn</Button>
-            </div>
+            {visibleCount < notifications.length && (
+                <div className="text-center pt-4">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setVisibleCount(prev => prev + 4)}
+                    >
+                        Xem các thông báo cũ hơn
+                    </Button>
+                </div>
+            )}
         </div>
     );
 };

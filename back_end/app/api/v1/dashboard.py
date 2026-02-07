@@ -1,12 +1,91 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
+
 from app.api.deps import get_db, get_current_user
 from app.models.user import User
-# from app.models.event import Event (Nếu cần sau này)
+from app.models.event import Event
+from app.models.participation import Participation
+from app.schemas.dashboard import StudentDashboardResponse
 
 router = APIRouter()
+
+# --- ENDPOINT 1: DÀNH CHO ROLE USER (SINH VIÊN) ---
+@router.get("/student/overview", response_model=StudentDashboardResponse)
+def get_student_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != "STUDENT":
+        raise HTTPException(status_code=403, detail="Yêu cầu quyền Sinh viên")
+
+    # 1. TÍNH TỔNG ĐIỂM THẬT (Từ các sự kiện đã tham gia)
+    total_points = db.query(func.sum(Event.points))\
+        .join(Participation, Participation.event_id == Event.id)\
+        .filter(Participation.user_id == current_user.id)\
+        .scalar() or 0
+
+    # 2. ĐẾM SỐ SỰ KIỆN ĐÃ THAM GIA THẬT
+    event_count = db.query(Participation).filter(Participation.user_id == current_user.id).count()
+
+    # 3. LẤY NHIỆM VỤ HÔM NAY (Thực tế theo ngày hiện tại)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    
+    today_events = db.query(Event)\
+        .filter(Event.start_time >= today_start, Event.start_time < today_end)\
+        .limit(3).all()
+
+    tasks = []
+    for ev in today_events:
+        # Kiểm tra xem user đã tham gia sự kiện này chưa
+        is_joined = db.query(Participation).filter(
+            Participation.user_id == current_user.id, 
+            Participation.event_id == ev.id
+        ).first()
+        
+        tasks.append({
+            "id": ev.id,
+            "title": ev.title,
+            "time": ev.start_time.strftime("%H:%M"),
+            "location": ev.location,
+            "status": "attended" if is_joined else "pending",
+            "requireAttendance": True
+        })
+
+    # 4. TÍNH XẾP HẠNG THỰC TẾ (Logic: Đếm số người có tổng điểm cao hơn mình)
+    # Query: Tính tổng điểm của tất cả sinh viên
+    subquery = db.query(
+        Participation.user_id, 
+        func.sum(Event.points).label('total_score')
+    ).join(Event).group_by(Participation.user_id).subquery()
+
+    higher_scores_count = db.query(subquery).filter(subquery.c.total_score > total_points).count()
+    rank_val = higher_scores_count + 1
+    
+    total_students = db.query(User).filter(User.role == "STUDENT").count()
+
+    return {
+        "stats": {
+            "points": {
+                "value": f"{int(total_points)}/100", 
+                "trend": "up" if total_points > 0 else "neutral", 
+                "change": "Điểm rèn luyện tích lũy"
+            },
+            "events": {
+                "value": str(event_count), 
+                "trend": "up", 
+                "change": "Hoạt động đã tham gia"
+            },
+            "rank": {
+                "value": f"{rank_val:02d}/{total_students}", 
+                "trend": "neutral", 
+                "change": "Xếp hạng toàn khoa"
+            }
+        },
+        "tasks": tasks
+    }
 
 @router.get("/summary")
 def get_dashboard_summary(
@@ -16,9 +95,6 @@ def get_dashboard_summary(
     # 1. Thống kê User
     total_students = db.query(User).count()
     
-    # --- [SỬA LỖI TẠI ĐÂY] ---
-    # Vì đã xóa cột is_paid, ta không query nó nữa.
-    # Gán mặc định bằng 0 hoặc logic khác tùy bạn.
     paid_students = 0 
     unpaid_students = 0
     # -------------------------
@@ -62,3 +138,4 @@ def get_dashboard_summary(
         "chart": chart_data,
         "recent_checkins": recent_checkins
     }
+

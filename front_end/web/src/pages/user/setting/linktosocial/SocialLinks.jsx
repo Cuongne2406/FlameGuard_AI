@@ -5,6 +5,18 @@ import { Button, Badge } from '../../../../components/ui';
  * SocialLinks - Trang liên kết mạng xã hội
  */
 const SocialLinks = () => {
+    const handleConnect = (provider) => {
+        let url = '';
+        switch (provider) {
+            case 'google': url = 'https://accounts.google.com/o/oauth2/auth'; break;
+            case 'facebook': url = 'https://www.facebook.com/v12.0/dialog/oauth'; break;
+            case 'zalo': url = 'https://oauth.zaloapp.com/v4/permission'; break;
+            default: return;
+        }
+        // Giả lập chuyển hướng
+        window.open(url, '_blank', 'width=600,height=600');
+    };
+
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm">
@@ -30,7 +42,7 @@ const SocialLinks = () => {
                                 </div>
                             </div>
                         </div>
-                        <Button variant="danger" size="sm" className="bg-white text-danger border border-red-100 hover:bg-red-50">
+                        <Button variant="danger" size="sm" className="min-w-[100px] border-none shadow-none">
                             Hủy liên kết
                         </Button>
                     </div>
@@ -49,7 +61,7 @@ const SocialLinks = () => {
                                 </div>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleConnect('facebook')}>
                             Kết nối
                         </Button>
                     </div>
@@ -68,7 +80,7 @@ const SocialLinks = () => {
                                 </div>
                             </div>
                         </div>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleConnect('zalo')}>
                             Kết nối
                         </Button>
                     </div>

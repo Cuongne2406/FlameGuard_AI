@@ -64,9 +64,8 @@ const Login = () => {
       if (userData.role === 'SUPER_ADMIN') {
           navigate('/admin/dashboard');
       } 
-      else if (userData.role === 'ADMIN') { 
-          // Sub Admin (Cán bộ đoàn) sẽ vào đây
-          navigate('/admin-sub/dashboard');
+      else if (userData.role === 'SUB_ADMIN') { 
+          navigate('/admin_sub/dashboard');
       } 
       else {
           // Sinh viên và các role khác
