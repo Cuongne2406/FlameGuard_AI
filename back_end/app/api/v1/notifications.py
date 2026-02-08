@@ -85,3 +85,23 @@ def delete_notification(notification_id: int, db: Session = Depends(deps.get_db)
         db.delete(notif)
         db.commit()
     return None
+
+@router.get("/")
+def get_notifications_list(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user)
+):
+    # Logic: Nếu là Admin/Sub-Admin, trả về danh sách các thông báo do họ tạo ra
+    # Hoặc trả về tất cả thông báo nếu muốn
+    if current_user.role in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
+        return db.query(Notification).order_by(Notification.created_at.desc()).all()
+    
+    # Nếu là User thường, trả về thông báo dành cho họ (giống logic /me)
+    return db.query(Notification).filter(
+        Notification.status == "SENT",
+        or_(
+            Notification.target_audience == "ALL",
+            Notification.target_audience == current_user.role,
+            Notification.user_id == current_user.id
+        )
+    ).order_by(Notification.created_at.desc()).limit(20).all()

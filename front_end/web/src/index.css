@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .form-input {
+    /* Đổi focus:ring-secretary/20 thành focus:ring-primary/20 */
+    @apply w-full px-5 py-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-transparent focus:bg-white dark:focus:bg-white/5 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-medium;
+  }
+}
+
 /* Custom Scrollbar nếu cần */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -51,3 +58,4 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
