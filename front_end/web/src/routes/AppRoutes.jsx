@@ -23,7 +23,7 @@ import Academic from '../pages/public/Academic';
 import Contact from '../pages/public/Contact';
 
 // --- GROUP B: AUTH ---
-import Login from '../pages/user/login/Login'; 
+import Login from '../pages/user/login/Login';
 
 // --- GROUP C: USER PAGES ---
 import UserHome from '../pages/user/dashboard/Home';
@@ -35,10 +35,10 @@ import Ranking from '../pages/user/ranking/Ranking';
 import Checkin from '../pages/user/checkin/Checkin';
 
 // --- GROUP D: USER SETTINGS ---
-import EditProfile from '../pages/user/setting/editprofile/EditProfile';
-import ChangePassword from '../pages/user/setting/changepassword/ChangePassword';
-import SocialLinks from '../pages/user/setting/linktosocial/SocialLinks';
-import Privacy from '../pages/user/setting/privacy/Privacy';
+import EditProfile from '../pages/user/settings/editprofile/EditProfile';
+import ChangePassword from '../pages/user/settings/changepassword/ChangePassword';
+import SocialLinks from '../pages/user/settings/linktosocial/SocialLinks';
+import Privacy from '../pages/user/settings/privacy/Privacy';
 
 // --- Group: Sub Admin Pages ---
 import SubAdminDashboard from '../pages/admin_sub/dashboard/SubAdminDashboard';
@@ -74,15 +74,15 @@ const PrivateRoute = ({ children }) => {
 
 // --- HÀM LOGIC: ĐIỀU HƯỚNG THEO ROLE (NEW) ---
 const getRedirectPath = (role) => {
-    // Nếu là Sub Admin (Cán bộ Đoàn) -> Về Dashboard Sub Admin
-    // Lưu ý: Kiểm tra kỹ trong Database role của bạn là 'ADMIN' hay 'SUB_ADMIN' nhé
-    if (role === 'ADMIN') return '/admin-sub/dashboard'; 
-    
-    // Nếu là Super Admin -> Về Dashboard Admin Tổng
-    if (role === 'SUPER_ADMIN') return '/admin/dashboard';
-    
-    // Mặc định (Sinh viên/User) -> Về trang Home User
-    return '/home';
+  // Nếu là Sub Admin (Cán bộ Đoàn) -> Về Dashboard Sub Admin
+  // Lưu ý: Kiểm tra kỹ trong Database role của bạn là 'ADMIN' hay 'SUB_ADMIN' nhé
+  if (role === 'SUB_ADMIN') return '/admin_sub/dashboard';
+
+  // Nếu là Super Admin -> Về Dashboard Admin Tổng
+  if (role === 'SUPER_ADMIN') return '/admin/dashboard';
+
+  // Mặc định (Sinh viên/User) -> Về trang Home User
+  return '/home';
 };
 
 const AppRoutes = () => {
@@ -114,18 +114,20 @@ const AppRoutes = () => {
 
 
       {/* --- USER (STUDENT) --- */}
-      <Route element={<PrivateRoute><UserLayout /></PrivateRoute>}>
+      <Route element={
+        <PrivateRoute>
+          <UserLayout />
+        </PrivateRoute>}>
+
         <Route path="/home" element={<UserHome />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/activity" element={<ActivityLog />} />
         <Route path="/notifications" element={<NotificationPage />} />
         <Route path="/certificates" element={<Certificates />} />
-                <Route path="/checkin" element={<Checkin />} />
+        <Route path="/checkin" element={<Checkin />} />
         <Route path="/ranking" element={<Ranking />} />
-
-
         <Route path="/settings" element={<SettingsLayout />}>
-          <Route index element={<EditProfile />} />
+          <Route index element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<EditProfile />} />
           <Route path="password" element={<ChangePassword />} />
           <Route path="social" element={<SocialLinks />} />
@@ -134,16 +136,17 @@ const AppRoutes = () => {
       </Route>
 
 
+
       {/* --- SUB ADMIN (CÁN BỘ ĐOÀN) --- */}
-      <Route path="/admin-sub" element={
+      <Route path="/admin_sub" element={
         <PrivateRoute>
           <SubAdminLayout />
         </PrivateRoute>
       }>
-        {/* Vào /admin-sub thì tự nhảy vào dashboard */}
+        {/* Vào /admin_sub thì tự nhảy vào dashboard */}
         <Route index element={<Navigate to="dashboard" replace />} />
-        
-        {/* Đường dẫn thực tế: /admin-sub/dashboard */}
+
+        {/* Đường dẫn thực tế: /admin_sub/dashboard */}
         <Route path="dashboard" element={<SubAdminDashboard />} />
         <Route path="management" element={<SubAdminManagement />} />
         <Route path="events" element={<SubAdminEvents />} />
@@ -172,7 +175,7 @@ const AppRoutes = () => {
       {/* --- SYSTEM SETTINGS --- */}
       <Route path="/system-settings" element={
         <PrivateRoute>
-           <AdminSettingsLayout />
+          <AdminSettingsLayout />
         </PrivateRoute>
       }>
         <Route index element={<Navigate to="general" replace />} />

@@ -29,19 +29,19 @@ const SubAdminLayout = () => {
         </div>
 
         <nav className="flex-1 px-4 space-y-2 mt-4">
-          <NavLink to="/admin-sub/dashboard" className={navLinkDesktop}>
+          <NavLink to="/admin_sub/dashboard" className={navLinkDesktop}>
             <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>home</span>
             <span className="text-sm">Tổng Quan</span>
           </NavLink>
-          <NavLink to="/admin-sub/management" className={navLinkDesktop}>
+          <NavLink to="/admin_sub/management" className={navLinkDesktop}>
             <span className="material-symbols-outlined">dashboard</span>
             <span className="text-sm">Quản lý</span>
           </NavLink>
-          <NavLink to="/admin-sub/events" className={navLinkDesktop}>
+          <NavLink to="/admin_sub/events" className={navLinkDesktop}>
             <span className="material-symbols-outlined">calendar_today</span>
             <span className="text-sm">Sự kiện</span>
           </NavLink>
-          <NavLink to="/admin-sub/notifications" className={navLinkDesktop}>
+          <NavLink to="/admin_sub/notifications" className={navLinkDesktop}>
             <span className="material-symbols-outlined relative">
               notifications
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
@@ -68,11 +68,11 @@ const SubAdminLayout = () => {
 
       {/* --- BOTTOM NAVIGATION (Mobile) --- */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-[#2d2516] border-t border-[#e6e2db] dark:border-[#3d3321] flex items-center justify-around py-2 px-4 z-50">
-        <NavLink to="/admin-sub/dashboard" className={navLinkMobile}>
+        <NavLink to="/admin_sub/dashboard" className={navLinkMobile}>
           <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>home</span>
           <span className="text-[10px] font-bold">Tổng Quan</span>
         </NavLink>
-        <NavLink to="/admin-sub/management" className={navLinkMobile}>
+        <NavLink to="/admin_sub/management" className={navLinkMobile}>
           <span className="material-symbols-outlined">dashboard</span>
           <span className="text-[10px] font-medium">Quản lý</span>
         </NavLink>
@@ -84,11 +84,11 @@ const SubAdminLayout = () => {
           </button>
         </div>
 
-        <NavLink to="/admin-sub/notifications" className={navLinkMobile}>
+        <NavLink to="/admin_sub/notifications" className={navLinkMobile}>
           <span className="material-symbols-outlined">notifications</span>
           <span className="text-[10px] font-medium">Báo động</span>
         </NavLink>
-        <NavLink to="/admin-sub/profile" className={navLinkMobile}>
+        <NavLink to="/admin_sub/profile" className={navLinkMobile}>
           <span className="material-symbols-outlined">person</span>
           <span className="text-[10px] font-medium">Cá nhân</span>
         </NavLink>
