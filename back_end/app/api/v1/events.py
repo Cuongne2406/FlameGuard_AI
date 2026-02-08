@@ -34,7 +34,7 @@ def create_event(
         max_participants=event_in.max_participants,
         status=event_in.status, # UPCOMING, ONGOING, etc.
         # ---------------------------------------------------------
-        
+        **event_in.dict(),
         creator_id=current_user.id
     )
     
