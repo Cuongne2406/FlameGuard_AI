@@ -1,12 +1,12 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // 1. Import hook điều hướng
+import { useNavigate } from 'react-router-dom';
 
 import NotificationBell from '../common/NotificationBell'; 
 
 const Header = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const navigate = useNavigate(); // 2. Khởi tạo hook
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -16,14 +16,10 @@ const Header = () => {
     }
   }, [isDarkMode]);
 
-  // --- 3. HÀM XỬ LÝ ĐĂNG XUẤT ---
   const handleLogout = () => {
-    // Hỏi xác nhận cho chắc
     const isConfirm = window.confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?");
     if (isConfirm) {
-        // Xóa token xác thực
         localStorage.removeItem("access_token");
-        // Điều hướng về trang đăng nhập
         navigate("/login");
     }
   };
@@ -66,7 +62,18 @@ const Header = () => {
           {/* --- VÁCH NGĂN --- */}
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
 
-          {/* --- NÚT ĐĂNG XUẤT (MỚI) --- */}
+          {/* --- NÚT XEM TRANG CHỦ PUBLIC --- */}
+          {/* Đã sửa đường dẫn thành /trang-chu để không bị redirect vòng lặp */}
+          <button
+            onClick={() => navigate("/trang-chu")} 
+            className="p-2 rounded-full text-gray-500 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 transition-all flex items-center gap-1 group"
+            title="Xem trang chủ Website"
+          >
+            <span className="material-symbols-outlined text-[22px]">public</span>
+            <span className="text-xs font-bold hidden lg:block pr-1">Xem Website</span>
+          </button>
+
+          {/* --- NÚT ĐĂNG XUẤT --- */}
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-all"

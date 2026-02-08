@@ -16,11 +16,12 @@ import SubAdminLayout from '../pages/admin_sub/SubAdminLayout'; // Import Layout
 // ==============================
 
 // --- GROUP A: PUBLIC PAGES ---
-import News from '../pages/public/New';
-import NewsDetail from '../pages/public/NewDetail';
-import Activities from '../pages/public/Activities';
-import Academic from '../pages/public/Academic';
-import Contact from '../pages/public/Contact';
+import Home from '../pages/public/home/Home';
+import News from '../pages/public/new/News';
+import NewsDetail from '../pages/public/newdetail/NewDetail';
+import Activities from '../pages/public/activity/Activities';
+import Academic from '../pages/public/academic/Academic';
+import Contact from '../pages/public/contact/Contact';
 
 // --- GROUP B: AUTH ---
 import Login from '../pages/user/login/Login';
@@ -74,14 +75,8 @@ const PrivateRoute = ({ children }) => {
 
 // --- HÀM LOGIC: ĐIỀU HƯỚNG THEO ROLE (NEW) ---
 const getRedirectPath = (role) => {
-  // Nếu là Sub Admin (Cán bộ Đoàn) -> Về Dashboard Sub Admin
-  // Lưu ý: Kiểm tra kỹ trong Database role của bạn là 'ADMIN' hay 'SUB_ADMIN' nhé
   if (role === 'SUB_ADMIN') return '/admin_sub/dashboard';
-
-  // Nếu là Super Admin -> Về Dashboard Admin Tổng
   if (role === 'SUPER_ADMIN') return '/admin/dashboard';
-
-  // Mặc định (Sinh viên/User) -> Về trang Home User
   return '/home';
 };
 
@@ -91,16 +86,16 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-
-      {/* --- XỬ LÝ TRANG CHỦ (ROOT) - THÔNG MINH HƠN --- */}
-      {/* Logic: Có token ? Điều hướng theo Role : Về trang Login */}
       <Route path="/" element={
         token ? <Navigate to={getRedirectPath(role)} replace /> : <Navigate to="/login" replace />
       } />
-
-
-      {/* --- PUBLIC PAGES --- */}
-      <Route element={<PublicLayout />}>
+      <Route element={
+        <PrivateRoute>
+          <PublicLayout />
+        </PrivateRoute>
+      }>
+        <Route path="/trang-chu" element={<Home />} />
+        
         <Route path="/tin-tuc" element={<News />} />
         <Route path="/tin-tuc/:id" element={<NewsDetail />} />
         <Route path="/hoat-dong" element={<Activities />} />
@@ -108,17 +103,12 @@ const AppRoutes = () => {
         <Route path="/lien-he" element={<Contact />} />
       </Route>
 
-
-      {/* --- AUTHENTICATION --- */}
       <Route path="/login" element={<Login />} />
 
-
-      {/* --- USER (STUDENT) --- */}
       <Route element={
         <PrivateRoute>
           <UserLayout />
         </PrivateRoute>}>
-
         <Route path="/home" element={<UserHome />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/activity" element={<ActivityLog />} />
@@ -135,8 +125,6 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-
-
       {/* --- SUB ADMIN (CÁN BỘ ĐOÀN) --- */}
       <Route path="/admin_sub" element={
         <PrivateRoute>
@@ -152,7 +140,6 @@ const AppRoutes = () => {
         <Route path="events" element={<SubAdminEvents />} />
         <Route path="notifications" element={<SubAdminNotifications />} />
       </Route>
-
 
       {/* --- SUPER ADMIN (QUẢN TRỊ VIÊN) --- */}
       <Route path="/admin" element={
@@ -171,7 +158,6 @@ const AppRoutes = () => {
         <Route path="ai-analysis" element={<AIAnalytics />} />
       </Route>
 
-
       {/* --- SYSTEM SETTINGS --- */}
       <Route path="/system-settings" element={
         <PrivateRoute>
@@ -185,7 +171,6 @@ const AppRoutes = () => {
         <Route path="integrations" element={<IntegrationSettings />} />
         <Route path="help" element={<HelpCenter />} />
       </Route>
-
 
       {/* --- FALLBACK --- */}
       <Route path="*" element={<Navigate to="/" replace />} />

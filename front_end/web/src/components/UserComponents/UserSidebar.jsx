@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import UserMenu from './UserMenu';
 
 /**
@@ -7,6 +7,7 @@ import UserMenu from './UserMenu';
  * Menu: Trang chủ, Hồ sơ cá nhân, Nhật ký hoạt động, Kho chứng nhận, Bảng xếp hạng
  */
 const UserSidebar = ({ user, isOpen, onClose }) => {
+    const navigate = useNavigate();
     const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-white font-medium shadow-sm transition-all duration-200";
     const normalStyle = "flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200";
 
@@ -70,6 +71,17 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
 
                 {/* Footer (User Menu) */}
                 <div className="p-4 border-t border-gray-100 mt-auto">
+                    <button 
+                        onClick={() => {
+                            navigate("/trang-chu");
+                            onClose();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-blue-50 hover:text-blue-600 transition-all duration-200 group font-medium"
+                    >
+                        <span className="material-symbols-outlined text-gray-400 group-hover:text-blue-600 transition-colors">public</span>
+                        <span className="text-sm">Xem Website</span>
+                        <span className="material-symbols-outlined text-xs ml-auto opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1">arrow_forward</span>
+                    </button>
                     <UserMenu user={user} placement="top-right" />
                 </div>
             </aside>
