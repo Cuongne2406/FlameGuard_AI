@@ -1,34 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const NotificationSettings = () => {
-  // State quản lý trạng thái bật/tắt của các kênh
-  const [channels, setChannels] = useState({
-    email: true,
-    mobile: true,
-    zalo: false
+  // 1. STATE QUẢN LÝ DỮ LIỆU TỪ DB
+  const [settings, setSettings] = useState({
+    is_email_enabled: true,  // Giá trị mặc định
+    is_mobile_enabled: true,
+    is_zalo_enabled: false
   });
+  
+  const [loading, setLoading] = useState(false);
+  const [isChanged, setIsChanged] = useState(false);
 
+  // 2. FETCH DỮ LIỆU TỪ API KHI VÀO TRANG
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch("http://127.0.0.1:8000/api/v1/system/", {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            // Cập nhật state với dữ liệu thực từ DB
+            setSettings(prev => ({...prev, ...data})); 
+        }
+      } catch (error) {
+        console.error("Lỗi tải cấu hình:", error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  // Hàm xử lý bật/tắt kênh
   const toggleChannel = (key) => {
-    setChannels(prev => ({ ...prev, [key]: !prev[key] }));
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    setIsChanged(true);
   };
 
-  // Dữ liệu mẫu cho danh sách Template
-  const templates = [
-    {
-      id: 1,
-      title: "Chúc mừng Sinh nhật",
-      desc: "Tự động gửi vào 8:00 sáng ngày sinh nhật của sinh viên."
-    },
-    {
-      id: 2,
-      title: "Nhắc nhở đóng phí",
-      desc: "Gửi khi có các khoản Đoàn phí hoặc phí sự kiện chưa thanh toán."
-    },
-    {
-      id: 3,
-      title: "Xác nhận đăng ký sự kiện",
-      desc: "Gửi ngay sau khi sinh viên đăng ký tham gia hoạt động thành công."
+  // 3. LƯU CẤU HÌNH VỀ SERVER
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch("http://127.0.0.1:8000/api/v1/system/", {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${token}` 
+            },
+            body: JSON.stringify(settings) // Gửi toàn bộ settings (bao gồm cả các setting bảo mật/chung khác)
+        });
+
+        if (response.ok) {
+            alert("✅ Đã cập nhật kênh thông báo thành công!");
+            setIsChanged(false);
+            window.location.reload(); // Reload để đảm bảo đồng bộ
+        } else {
+            alert("❌ Lỗi khi lưu cấu hình!");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Lỗi kết nối Server!");
+    } finally {
+        setLoading(false);
     }
+  };
+
+  // Dữ liệu mẫu cho Template (Chúng ta sẽ làm phần này ở bước sau)
+  const templates = [
+    { id: 1, title: "Chúc mừng Sinh nhật", desc: "Tự động gửi vào 8:00 sáng ngày sinh nhật của sinh viên." },
+    { id: 2, title: "Nhắc nhở đóng phí", desc: "Gửi khi có các khoản Đoàn phí hoặc phí sự kiện chưa thanh toán." },
+    { id: 3, title: "Xác nhận đăng ký sự kiện", desc: "Gửi ngay sau khi sinh viên đăng ký tham gia hoạt động thành công." }
   ];
 
   return (
@@ -40,7 +82,7 @@ const NotificationSettings = () => {
         <p className="text-slate-500 text-sm">Quản lý các kênh gửi thông báo và nội dung mẫu cho sinh viên.</p>
       </div>
 
-      {/* --- Section 1: Kênh thông báo --- */}
+      {/* --- Section 1: Kênh thông báo (ĐÃ KẾT NỐI) --- */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Kênh thông báo</h3>
@@ -52,29 +94,29 @@ const NotificationSettings = () => {
             color="text-blue-600 bg-blue-50 dark:bg-blue-900/20"
             title="Gửi Email"
             desc="Sử dụng hệ thống SMTP của trường để gửi email."
-            isActive={channels.email}
-            onToggle={() => toggleChannel('email')}
+            isActive={settings.is_email_enabled}
+            onToggle={() => toggleChannel('is_email_enabled')}
           />
           <ChannelItem 
             icon="smartphone" 
             color="text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20"
             title="Gửi App Mobile"
             desc="Gửi thông báo đẩy (push) trực tiếp đến LHU App."
-            isActive={channels.mobile}
-            onToggle={() => toggleChannel('mobile')}
+            isActive={settings.is_mobile_enabled}
+            onToggle={() => toggleChannel('is_mobile_enabled')}
           />
           <ChannelItem 
             icon="chat" 
             color="text-sky-600 bg-sky-50 dark:bg-sky-900/20"
             title="Gửi Zalo"
             desc="Tích hợp Zalo OA để gửi tin nhắn quan trọng."
-            isActive={channels.zalo}
-            onToggle={() => toggleChannel('zalo')}
+            isActive={settings.is_zalo_enabled}
+            onToggle={() => toggleChannel('is_zalo_enabled')}
           />
         </div>
       </div>
 
-      {/* --- Section 2: Mẫu thông báo --- */}
+      {/* --- Section 2: Mẫu thông báo (Tạm thời là UI tĩnh) --- */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
           <div>
@@ -103,7 +145,7 @@ const NotificationSettings = () => {
         </div>
       </div>
 
-      {/* --- Section 3: Gửi thử nghiệm --- */}
+      {/* --- Section 3: Gửi thử nghiệm (Tạm thời là UI tĩnh) --- */}
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800">
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Gửi thử nghiệm</h3>
@@ -132,13 +174,26 @@ const NotificationSettings = () => {
       {/* --- Sticky Bottom Action Bar --- */}
       <div className="sticky bottom-8 flex justify-end z-20">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md p-4 rounded-xl border border-slate-100 dark:border-slate-800 shadow-xl flex items-center gap-4">
-          <span className="text-xs text-slate-400 font-medium px-2 italic">Thay đổi chưa được lưu...</span>
-          <button className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all border dark:border-slate-700">
+          {isChanged && <span className="text-xs text-slate-400 font-medium px-2 italic animate-pulse">Thay đổi chưa được lưu...</span>}
+          
+          <button 
+             onClick={() => window.location.reload()}
+             className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-50 transition-all border dark:border-slate-700"
+          >
             Hủy bỏ
           </button>
-          <button className="bg-accent text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2">
-            <span className="material-symbols-outlined text-lg">save</span>
-            Lưu Thay Đổi
+          
+          <button 
+             onClick={handleSave}
+             disabled={loading}
+             className="bg-accent text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-lg shadow-accent/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+          >
+            {loading ? "Đang lưu..." : (
+                <>
+                    <span className="material-symbols-outlined text-lg">save</span>
+                    Lưu Thay Đổi
+                </>
+            )}
           </button>
         </div>
       </div>
@@ -146,8 +201,7 @@ const NotificationSettings = () => {
   );
 };
 
-// --- Sub-components để code sạch hơn ---
-
+// --- Sub-components ---
 const ChannelItem = ({ icon, color, title, desc, isActive, onToggle }) => (
   <div className="flex items-center justify-between">
     <div className="flex items-center gap-4">

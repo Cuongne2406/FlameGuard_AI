@@ -1,301 +1,160 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
-const AchievementLeaderboard = () => {
-  // Mock Data: Top 3 Cá Nhân (Podium)
-  const topStudents = [
-    {
-      rank: 2,
-      name: "Trần Thị B",
-      class: "11B2",
-      points: "4,800",
-      avatar: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAy5o8gTdFU87NlRG7hrqNCg84jMZ3VnuFH4kJuW_HVR3ZeK5SSEVrh4RYEryJUPrXadUzSUywIJkT62w0WfIz8ZC36DIkvSSn81sOepwYCVxa_7nh9F8aWNN6hiUrHiM1vfOMhFCGeKtnFDZZqIZX9cTNXsEX6S1KBpAlc-vd3JK4ss-3jWOWRLkEGpU9nYq0kQAp0exX4G13-HJ51AVuw60-xs1F0uXfCyym9_5fds27b7Nbm5DfXtVBfYEnD65d3xT2ZL5vEg2WJ')",
-      color: "border-silver",
-      badgeColor: "bg-silver",
-      badges: [{ icon: "volunteer_activism", label: "Hiến Máu", color: "text-red-600 bg-red-50" }]
-    },
-    {
-      rank: 1,
-      name: "Nguyễn Văn A",
-      class: "12A1",
-      points: "5,000",
-      avatar: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuAdzkThZ_lL3larp59OKjcPN68jQmDAqzICHKas2NUSJZAo71BDCHUfXInOLNTbNDzUJT4LeJ_-nIvKuaVvay8fpLwTfpTj6fwIZdhZRmOwm_J5UHAHj_CfEsL_DroOEuIU6dy8TXqiaQKbCWKs9x_Wvtahu3gzzyJrJnxD6u7N1O95Ki7pjnSkaqMw9-PhS8Yx-tSvKL2d4Blsbm4CGuN4F8UjpF23oKWPXAK-xbxQPG7L62ka_rsHtD6D2JMOvN3hb5x-dqjJDDbX')",
-      color: "border-accent", // Gold
-      badgeColor: "bg-accent",
-      badges: [
-        { icon: "eco", label: "Mùa Hè Xanh", color: "text-blue-700 bg-blue-50" },
-        { icon: "stars", label: "Sinh Viên 5 Tốt", color: "text-amber-700 bg-amber-50" }
-      ]
-    },
-    {
-      rank: 3,
-      name: "Lê Văn C",
-      class: "10C3",
-      points: "4,500",
-      avatar: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuD-tZWHaVEFcvg_B3Hi8_LdGk86ycJWnnb7h1gJngf0idq-mfYNjfB69vXGKxN339RTcjvXSl_zG1NYfuj6cSTM2W724_8ki8kU3K0kAlIpKH6ojfoo8GRfQLSwaVQg0JuplN8KEdP5vjpKP2dTnBebMrHXH8u5SH-955oaYFBv1158W4RwdtagW7sf8iOHP_-sJuI41Tu2l13c-958BlXShLb5-u02R9AUlSDIu3isihadT6MXLIpYL2J7o6x9BBEjfxpJGYzr892n')",
-      color: "border-bronze",
-      badgeColor: "bg-bronze",
-      badges: [{ icon: "school", label: "Học Tập Tốt", color: "text-purple-600 bg-purple-50" }]
-    }
-  ];
+const Achievements = () => {
+  const [data, setData] = useState({ top3: [], classes: [] });
+  const [loading, setLoading] = useState(true);
 
-  // Mock Data: Bảng Xếp Hạng Tập Thể
-  const classRankings = [
-    {
-      rank: 1,
-      name: "Chi Đoàn 12A1",
-      faculty: "Khoa CNTT",
-      points: "12,500",
-      trend: "up", // up, down, neutral
-      trendVal: "+12%",
-      badges: [
-        { icon: "volunteer_activism", color: "bg-red-100 text-red-600" },
-        { icon: "forest", color: "bg-green-100 text-green-600" },
-        { text: "+2", color: "bg-slate-100 text-slate-600" }
-      ],
-      avatarColor: "bg-blue-100 text-blue-600"
-    },
-    {
-      rank: 2,
-      name: "Chi Đoàn 11B2",
-      faculty: "Khoa Ngôn Ngữ Anh",
-      points: "11,200",
-      trend: "down",
-      trendVal: "-2%",
-      badges: [
-        { icon: "rocket_launch", color: "bg-amber-100 text-amber-600" }
-      ],
-      avatarColor: "bg-purple-100 text-purple-600"
-    },
-    {
-      rank: 3,
-      name: "Chi Đoàn 10C3",
-      faculty: "Khoa Tài Chính",
-      points: "10,800",
-      trend: "neutral",
-      trendVal: "0%",
-      badges: [
-        { icon: "school", color: "bg-blue-100 text-blue-600" },
-        { icon: "palette", color: "bg-pink-100 text-pink-600" }
-      ],
-      avatarColor: "bg-cyan-100 text-cyan-600"
-    },
-    {
-      rank: 4,
-      name: "Chi Đoàn 12A2",
-      faculty: "Khoa Kỹ Thuật",
-      points: "9,450",
-      trend: "up",
-      trendVal: "+5%",
-      badges: [
-        { icon: "memory", color: "bg-indigo-100 text-indigo-600" }
-      ],
-      avatarColor: "bg-orange-100 text-orange-600"
-    },
-    {
-      rank: 5,
-      name: "Chi Đoàn 11D1",
-      faculty: "Khoa Dược",
-      points: "8,920",
-      trend: "up",
-      trendVal: "+2%",
-      badges: [
-        { icon: "ecg_heart", color: "bg-emerald-100 text-emerald-600" }
-      ],
-      avatarColor: "bg-teal-100 text-teal-600"
-    }
-  ];
+  // Gọi API Xếp hạng
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch("http://127.0.0.1:8000/api/v1/achievements/leaderboard", {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            setData(await response.json());
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Format số điểm
+  const formatPoint = (num) => new Intl.NumberFormat('en-US').format(num);
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-background-dark overflow-y-auto custom-scrollbar">
-      
-      {/* --- HERO SECTION (PODIUM) --- */}
-      <div className="relative bg-gradient-to-b from-primary/5 to-[#f8fafc] dark:to-background-dark pb-12 pt-10 px-4 md:px-10">
-        <div className="max-w-[1200px] mx-auto">
-          {/* Page Heading */}
-          <div className="mb-10 text-center">
-            <h1 className="text-3xl md:text-5xl font-black leading-tight tracking-tight mb-3 uppercase text-primary dark:text-primary-light">
-              Bảng Xếp Hạng Thi Đua
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-lg font-normal max-w-2xl mx-auto">
-              Vinh danh các cá nhân và tập thể xuất sắc trong Học kỳ I, năm học 2024-2025.
-            </p>
-          </div>
-
-          {/* Podium Grid */}
-          <div className="flex flex-col md:flex-row items-end justify-center gap-6 md:gap-8 pb-8">
-            {/* Chúng ta map thủ công để chỉnh order hiển thị: 2 - 1 - 3 */}
-            <PodiumCard student={topStudents[0]} order="order-2 md:order-1" />
-            <PodiumCard student={topStudents[1]} order="order-1 md:order-2" isChampion />
-            <PodiumCard student={topStudents[2]} order="order-3" />
-          </div>
+    <div className="flex flex-col h-full bg-[#F4F7FA] dark:bg-slate-900 p-8 overflow-y-auto custom-scrollbar">
+      <div className="max-w-[1280px] mx-auto w-full">
+        
+        {/* HEADER */}
+        <div className="text-center mb-10">
+            <h2 className="text-3xl font-black text-blue-700 dark:text-blue-400 uppercase tracking-tight">Bảng Xếp Hạng Thi Đua</h2>
+            <p className="text-slate-500 mt-2">Vinh danh các cá nhân và tập thể xuất sắc nhất Học kỳ I</p>
         </div>
-      </div>
 
-      {/* --- TABLE SECTION --- */}
-      <div className="flex-1 px-4 md:px-10 pb-10">
-        <div className="max-w-[1200px] mx-auto flex flex-col">
-          
-          {/* Header & Search */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <h2 className="text-slate-900 dark:text-white tracking-tight text-2xl font-bold">Xếp Hạng Chi Đoàn</h2>
-            <div className="w-full md:w-96">
-              <div className="flex w-full items-center rounded-xl h-11 shadow-sm bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-                <div className="text-slate-400 flex items-center justify-center pl-4 pr-2">
-                  <span className="material-symbols-outlined">search</span>
+        {/* --- TOP 3 PODIUM (Bục vinh quang) --- */}
+        <div className="flex justify-center items-end gap-4 mb-16 h-[350px]">
+            {/* Hạng 2 (Bạc) */}
+            {data.top3[1] && (
+                <div className="flex flex-col items-center animate-fade-in-up delay-100">
+                    <div className="relative mb-4">
+                        <div className="size-20 rounded-full bg-slate-200 border-4 border-slate-300 flex items-center justify-center text-2xl font-bold text-slate-500 shadow-lg">
+                            {data.top3[1].avatar_char}
+                        </div>
+                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-slate-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">#2</div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-t-2xl shadow-sm border border-slate-100 dark:border-slate-700 w-64 text-center h-[240px] flex flex-col justify-center relative hover:-translate-y-2 transition-transform">
+                        <h3 className="font-bold text-slate-800 dark:text-white text-lg">{data.top3[1].full_name}</h3>
+                        <p className="text-slate-500 text-sm mb-2">{data.top3[1].class_name}</p>
+                        <p className="text-2xl font-black text-blue-600">{formatPoint(data.top3[1].points)} <span className="text-xs font-medium text-slate-400">PTS</span></p>
+                    </div>
                 </div>
-                <input 
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 h-full" 
-                  placeholder="Tìm kiếm tên lớp hoặc sinh viên..." 
-                />
-              </div>
-            </div>
-          </div>
+            )}
 
-          {/* Main Table */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1e293b] shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                    <Th className="text-center w-20">Hạng</Th>
-                    <Th>Tên Chi Đoàn</Th>
-                    <Th>Tổng Điểm</Th>
-                    <Th>Xu Hướng</Th>
-                    <Th>Thành Tích Nổi Bật</Th>
-                    <Th className="text-right">Thao Tác</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                  {classRankings.map((item) => (
-                    <tr key={item.rank} className="hover:bg-blue-50/30 dark:hover:bg-slate-700/30 transition-colors group cursor-pointer">
-                      <td className="py-4 px-6 text-center">
-                        <RankBadge rank={item.rank} />
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`size-10 rounded-full flex items-center justify-center font-bold text-sm ${item.avatarColor}`}>
-                            {item.name.split(" ").pop()}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900 dark:text-white">{item.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{item.faculty}</p>
-                          </div>
+            {/* Hạng 1 (Vàng) - Cao nhất */}
+            {data.top3[0] && (
+                <div className="flex flex-col items-center z-10 animate-fade-in-up">
+                    <div className="relative mb-4">
+                        <span className="material-symbols-outlined text-yellow-400 text-5xl absolute -top-12 left-1/2 -translate-x-1/2 animate-bounce">emoji_events</span>
+                        <div className="size-28 rounded-full bg-yellow-100 border-4 border-yellow-400 flex items-center justify-center text-4xl font-bold text-yellow-600 shadow-xl ring-4 ring-yellow-400/20">
+                            {data.top3[0].avatar_char}
                         </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="font-bold text-slate-900 dark:text-white text-lg">{item.points}</span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <TrendBadge type={item.trend} value={item.trendVal} />
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex -space-x-2 overflow-hidden">
-                          {item.badges.map((badge, idx) => (
-                            <div key={idx} className={`inline-flex items-center justify-center size-8 rounded-full ring-2 ring-white dark:ring-[#1e293b] ${badge.color}`} title="Achievement">
-                              {badge.icon ? <span className="material-symbols-outlined text-[16px]">{badge.icon}</span> : <span className="text-xs font-bold">{badge.text}</span>}
-                            </div>
-                          ))}
+                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-yellow-500 text-white text-sm font-bold px-3 py-0.5 rounded-full shadow-md">#1 CHAMPION</div>
+                    </div>
+                    <div className="bg-gradient-to-b from-white to-blue-50 dark:from-slate-800 dark:to-slate-900 p-8 rounded-t-2xl shadow-xl border-t-4 border-yellow-400 w-72 text-center h-[280px] flex flex-col justify-center relative transform scale-105">
+                        <h3 className="font-bold text-slate-900 dark:text-white text-xl">{data.top3[0].full_name}</h3>
+                        <p className="text-slate-500 text-sm mb-3">{data.top3[0].class_name}</p>
+                        <p className="text-4xl font-black text-yellow-500 drop-shadow-sm">{formatPoint(data.top3[0].points)}</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Tổng điểm</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Hạng 3 (Đồng) */}
+            {data.top3[2] && (
+                <div className="flex flex-col items-center animate-fade-in-up delay-200">
+                    <div className="relative mb-4">
+                        <div className="size-20 rounded-full bg-orange-100 border-4 border-orange-300 flex items-center justify-center text-2xl font-bold text-orange-600 shadow-lg">
+                            {data.top3[2].avatar_char}
                         </div>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <button className="text-primary hover:bg-primary/10 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors">Xem Chi Tiết</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-md">#3</div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-t-2xl shadow-sm border border-slate-100 dark:border-slate-700 w-64 text-center h-[220px] flex flex-col justify-center relative hover:-translate-y-2 transition-transform">
+                        <h3 className="font-bold text-slate-800 dark:text-white text-lg">{data.top3[2].full_name}</h3>
+                        <p className="text-slate-500 text-sm mb-2">{data.top3[2].class_name}</p>
+                        <p className="text-2xl font-black text-blue-600">{formatPoint(data.top3[2].points)} <span className="text-xs font-medium text-slate-400">PTS</span></p>
+                    </div>
+                </div>
+            )}
+        </div>
+
+        {/* --- DANH SÁCH CHI ĐOÀN --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 dark:text-white text-lg">Xếp Hạng Chi Đoàn</h3>
+                <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-2 text-slate-400 text-lg">search</span>
+                    <input className="pl-9 pr-4 py-1.5 border rounded-lg text-sm dark:bg-slate-900 dark:border-slate-600" placeholder="Tìm lớp..." />
+                </div>
             </div>
             
-            {/* Pagination Footer */}
-            <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-6 py-3">
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Hiển thị 1-5 trên 24 Lớp</p>
-              <div className="flex gap-2">
-                <button className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50">Trước</button>
-                <button className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600">Sau</button>
-              </div>
-            </div>
-          </div>
-
+            <table className="w-full text-left">
+                <thead className="bg-slate-50 dark:bg-slate-900/50 text-xs uppercase text-slate-500 font-bold">
+                    <tr>
+                        <th className="px-6 py-4 text-center w-16">Hạng</th>
+                        <th className="px-6 py-4">Tên Chi Đoàn</th>
+                        <th className="px-6 py-4">Tổng Điểm</th>
+                        <th className="px-6 py-4">Xu Hướng</th>
+                        <th className="px-6 py-4 text-right">Thành viên</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+                    {loading ? (
+                        <tr><td colSpan="5" className="p-8 text-center text-slate-400">Đang tính điểm...</td></tr>
+                    ) : data.classes.length === 0 ? (
+                        <tr><td colSpan="5" className="p-8 text-center text-slate-400">Chưa có dữ liệu thi đua</td></tr>
+                    ) : (
+                        data.classes.map((cls) => (
+                            <tr key={cls.class_name} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                <td className="px-6 py-4 text-center">
+                                    <div className={`size-8 mx-auto flex items-center justify-center rounded-full font-bold ${
+                                        cls.rank === 1 ? 'bg-yellow-100 text-yellow-600' : 
+                                        cls.rank === 2 ? 'bg-slate-100 text-slate-600' :
+                                        cls.rank === 3 ? 'bg-orange-100 text-orange-600' : 'text-slate-500'
+                                    }`}>
+                                        {cls.rank}
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 font-bold text-slate-800 dark:text-white">
+                                    Chi Đoàn {cls.class_name}
+                                </td>
+                                <td className="px-6 py-4 font-black text-lg text-slate-800 dark:text-white">
+                                    {formatPoint(cls.total_points)}
+                                </td>
+                                <td className="px-6 py-4">
+                                    <span className="inline-flex items-center gap-1 text-green-600 bg-green-50 px-2 py-0.5 rounded text-xs font-bold">
+                                        <span className="material-symbols-outlined text-sm">trending_up</span>
+                                        {cls.trend}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-right text-slate-500">
+                                    {cls.member_count} sinh viên
+                                </td>
+                            </tr>
+                        ))
+                    )}
+                </tbody>
+            </table>
         </div>
+
       </div>
     </div>
   );
 };
 
-// --- Sub Components ---
-
-const PodiumCard = ({ student, order, isChampion }) => {
-  const heightClass = isChampion ? "w-full md:w-80 z-10 md:-mb-6 md:pb-12 shadow-xl" : "w-full md:w-72 shadow-lg";
-  const rankSize = isChampion ? "size-32 border-4" : "size-24 border-2";
-  const pointsSize = isChampion ? "text-3xl text-accent" : "text-xl text-primary";
-  const titleSize = isChampion ? "text-xl text-slate-900 dark:text-white" : "text-lg text-slate-800 dark:text-slate-200";
-
-  return (
-    <div className={`flex flex-col items-center rounded-2xl bg-white dark:bg-[#1e293b] p-6 border-t-4 ${student.color} relative transition-transform hover:-translate-y-1 ${order} ${heightClass}`}>
-      {isChampion && (
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2">
-          <span className="material-symbols-outlined text-6xl text-accent drop-shadow-sm">emoji_events</span>
-        </div>
-      )}
-      
-      {!isChampion && (
-        <div className={`absolute -top-5 flex size-10 items-center justify-center rounded-full ${student.badgeColor} text-white font-bold text-lg border-4 border-white dark:border-[#1e293b] shadow-sm`}>
-          {student.rank}
-        </div>
-      )}
-
-      <div className={`mb-4 ${isChampion ? 'mt-6' : ''} p-1 rounded-full border-dashed ${student.color}`}>
-        <div className={`${rankSize} bg-center bg-no-repeat bg-cover rounded-full ${student.color}`} style={{ backgroundImage: student.avatar }}></div>
-      </div>
-      
-      <h3 className={`${titleSize} font-bold`}>{student.name}</h3>
-      <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{student.class}</p>
-      
-      <div className={`mt-2 flex items-center gap-1 font-black ${pointsSize}`}>
-        <span>{student.points}</span>
-        <span className="text-xs font-normal text-slate-400 uppercase pt-1">pts</span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {student.badges.map((badge, idx) => (
-          <span key={idx} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${badge.color}`}>
-            <span className="material-symbols-outlined text-[14px]">{badge.icon}</span> {badge.label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const Th = ({ children, className = "" }) => (
-  <th className={`py-4 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ${className}`}>
-    {children}
-  </th>
-);
-
-const RankBadge = ({ rank }) => {
-  if (rank === 1) return <div className="inline-flex size-8 items-center justify-center rounded-full bg-accent/10 text-accent font-bold">1</div>;
-  if (rank === 2) return <div className="inline-flex size-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold dark:bg-slate-700 dark:text-slate-300">2</div>;
-  if (rank === 3) return <div className="inline-flex size-8 items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold dark:bg-slate-700 dark:text-slate-300">3</div>;
-  return <div className="inline-flex size-8 items-center justify-center rounded-full bg-slate-50 text-slate-400 font-medium dark:bg-slate-800/50">{rank}</div>;
-};
-
-const TrendBadge = ({ type, value }) => {
-  if (type === 'up') return (
-    <div className="flex items-center gap-1 text-green-600 bg-green-50 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded-md w-fit text-xs font-medium">
-      <span className="material-symbols-outlined text-[16px]">trending_up</span> {value}
-    </div>
-  );
-  if (type === 'down') return (
-    <div className="flex items-center gap-1 text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400 px-2 py-1 rounded-md w-fit text-xs font-medium">
-      <span className="material-symbols-outlined text-[16px]">trending_down</span> {value}
-    </div>
-  );
-  return (
-    <div className="flex items-center gap-1 text-slate-500 bg-slate-100 dark:bg-slate-700 dark:text-slate-300 px-2 py-1 rounded-md w-fit text-xs font-medium">
-      <span className="material-symbols-outlined text-[16px]">remove</span> {value}
-    </div>
-  );
-};
-
-export default AchievementLeaderboard;
+export default Achievements;

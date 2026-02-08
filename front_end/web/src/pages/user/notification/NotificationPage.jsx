@@ -1,69 +1,49 @@
-import React from 'react';
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge } from '../../../components/ui';
 
 /**
- * NotificationPage - Trang thông báo
+ * Notification Page - Trang thông báo tích hợp API & UI mượt mà
  */
 const NotificationPage = () => {
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
-    const [visibleCount, setVisibleCount] = useState(4);
+    const [visibleCount, setVisibleCount] = useState(5);
 
-    const notifications = [
-        {
-            id: 1,
-            title: 'Nhắc nhở đóng Đoàn phí năm học 2023-2024',
-            content: 'Các bạn đoàn viên vui lòng hoàn thành đóng đoàn phí trước ngày 30/05/2024...',
-            time: '2 giờ trước',
-            type: 'urgent',
-            read: false,
-        },
-        {
-            id: 2,
-            title: 'Kế hoạch tổ chức Mùa hè xanh 2024',
-            content: 'Đoàn trường ĐH CNTT chính thức khởi động chiến dịch Mùa hè xanh 2024. Đăng ký ngay...',
-            time: '1 ngày trước',
-            type: 'info',
-            read: true,
-        },
-        {
-            id: 3,
-            title: 'Kết quả rèn luyện Học kỳ 1',
-            content: 'Điểm rèn luyện HK1 năm học 2023-2024 đã được cập nhật. Sinh viên vui lòng kiểm tra...',
-            time: '3 ngày trước',
-            type: 'success',
-            read: true,
-        },
-        {
-            id: 4,
-            title: 'Thông báo về việc cập nhật hồ sơ đoàn viên',
-            content: 'Hệ thống yêu cầu cập nhật thông tin CCCD/CMND mới nhất. Hạn chót 15/06...',
-            time: '5 ngày trước',
-            type: 'warning',
-            read: true,
-        },
-        {
-            id: 5,
-            title: 'Lịch thi đấu giải bóng đá nam 2024',
-            content: 'Cập nhật lịch thi đấu vòng bảng giải bóng đá truyền thống cấp trường...',
-            time: '1 tuần trước',
-            type: 'info',
-            read: true,
-        },
-        {
-            id: 6,
-            title: 'Khen thưởng cuộc thi Ý tưởng sáng tạo',
-            content: 'Chúc mừng chi đoàn 21CT111 đạt giải ba cuộc thi Ý tưởng sáng tạo không biên giới...',
-            time: '2 tuần trước',
-            type: 'success',
-            read: true,
+    // --- 1. HÀM LẤY DỮ LIỆU TỪ BACKEND ---
+    const fetchNotifications = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem("access_token");
+            const response = await fetch('http://127.0.0.1:8000/api/v1/notifications/me', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    setNotifications(data);
+                }
+            }
+        } catch (error) {
+            console.error("Lỗi tải thông báo:", error);
+        } finally {
+            setLoading(false);
         }
-    ];
+    };
 
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
+
+    // --- 2. HÀM HỖ TRỢ GIAO DIỆN ---
     const getIcon = (type) => {
         switch (type) {
-            case 'urgent': return 'campaign'; // Loa mat
-            case 'info': return 'info';
+            case 'urgent': return 'campaign';
             case 'success': return 'check_circle';
             case 'warning': return 'warning';
             default: return 'notifications';
@@ -73,85 +53,100 @@ const NotificationPage = () => {
     const getColor = (type) => {
         switch (type) {
             case 'urgent': return 'text-red-500 bg-red-50';
-            case 'info': return 'text-blue-500 bg-blue-50';
             case 'success': return 'text-green-500 bg-green-50';
             case 'warning': return 'text-orange-500 bg-orange-50';
-            default: return 'text-gray-500 bg-gray-50';
+            default: return 'text-blue-500 bg-blue-50';
         }
     };
 
+    const formatTimeAgo = (dateString) => {
+        if (!dateString) return "Vừa xong";
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "Vừa xong";
+
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+        if (seconds < 60) return "Vừa xong";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} phút trước`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} giờ trước`;
+        return date.toLocaleDateString('vi-VN');
+    };
+
+    // --- 3. LOGIC LỌC DỮ LIỆU ---
     const filtered = (filter === 'all' ? notifications : notifications.filter(n => !n.read))
         .slice(0, visibleCount);
 
+    if (loading) return <div className="p-20 text-center text-gray-400">Đang tải thông báo...</div>;
+
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-6 animate-fade-in text-left">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Thông báo</h1>
-                    <p className="text-gray-500 mt-1">Cập nhật tin tức và thông báo mới nhất từ Đoàn trường</p>
+                    <p className="text-gray-500 mt-1">Cập nhật tin tức và thông báo mới nhất từ Đoàn khoa</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full md:w-auto">
                     <Button
                         variant={filter === 'all' ? 'primary' : 'outline'}
                         size="sm"
-                        onClick={() => {
-                            setFilter('all');
-                            setVisibleCount(4);
-                        }}
+                        onClick={() => { setFilter('all'); setVisibleCount(5); }}
+                        className="flex-1 md:flex-none"
                     >
                         Tất cả
                     </Button>
                     <Button
                         variant={filter === 'unread' ? 'primary' : 'outline'}
                         size="sm"
-                        onClick={() => {
-                            setFilter('unread');
-                            setVisibleCount(4);
-                        }}
+                        onClick={() => { setFilter('unread'); setVisibleCount(5); }}
+                        className="flex-1 md:flex-none"
                     >
-                        Chưa đọc
+                        Chưa đọc ({notifications.filter(n => !n.read).length})
                     </Button>
                 </div>
             </div>
 
             <div className="space-y-4">
-                {filtered.map((item) => (
+                {filtered.length > 0 ? filtered.map((item) => (
                     <div
                         key={item.id}
-                        className={`p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${item.read ? 'bg-white border-gray-100' : 'bg-blue-50/50 border-blue-100'
+                        className={`p-5 rounded-2xl border transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1 ${item.read ? 'bg-white border-gray-100' : 'bg-blue-50/50 border-blue-100 ring-1 ring-blue-100'
                             }`}
                     >
                         <div className="flex gap-4">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${getColor(item.type)}`}>
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${getColor(item.type)}`}>
                                 <span className="material-symbols-outlined">{getIcon(item.type)}</span>
                             </div>
                             <div className="flex-1">
                                 <div className="flex justify-between items-start mb-1">
-                                    <h3 className={`font-semibold ${item.read ? 'text-gray-900' : 'text-primary'}`}>
+                                    <h3 className={`font-bold ${item.read ? 'text-gray-900' : 'text-primary'}`}>
                                         {item.title}
                                     </h3>
-                                    <span className="text-xs text-gray-400 whitespace-nowrap">{item.time}</span>
+                                    <span className="text-[10px] font-medium text-gray-400 whitespace-nowrap bg-gray-50 px-2 py-1 rounded-full uppercase">
+                                        {formatTimeAgo(item.time || item.created_at)}
+                                    </span>
                                 </div>
-                                <p className="text-gray-600 text-sm line-clamp-2">{item.content}</p>
+                                <p className="text-gray-600 text-sm leading-relaxed line-clamp-2">{item.content}</p>
                             </div>
-                            {!item.read && (
-                                <div className="flex flex-col justify-center">
-                                    <span className="w-3 h-3 bg-primary rounded-full"></span>
-                                </div>
-                            )}
                         </div>
                     </div>
-                ))}
+                )) : (
+                    <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+                        <span className="material-symbols-outlined text-gray-300 text-5xl mb-2">notifications_off</span>
+                        <p className="text-gray-400 font-medium">Hiện tại không có thông báo nào dành cho bạn</p>
+                    </div>
+                )}
             </div>
 
-            {visibleCount < notifications.length && (
-                <div className="text-center pt-4">
+            {visibleCount < (filter === 'all' ? notifications.length : notifications.filter(n => !n.read).length) && (
+                <div className="text-center pt-6">
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setVisibleCount(prev => prev + 4)}
+                        onClick={() => setVisibleCount(prev => prev + 5)}
                     >
-                        Xem các thông báo cũ hơn
+                        Xem thêm thông báo cũ hơn
                     </Button>
                 </div>
             )}

@@ -33,7 +33,7 @@ git clone https://github.com/Cuongne2406/FlameGuard_AI.git
         - B1:  python -m venv venv
         - B2:  .\venv\Scripts\activate
         - B3:  pip install -r requirements.txt
-
+        (Bước phụ nếu back end lỗi thiếu thư viện psycopg2)  ```bash:    pip install psycopg2-binary
 3. Cách để dự án hoạt động:
     a. Front_end
         - cd front_end/web

@@ -1,18 +1,114 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const SecuritySettings = () => {
-  // State giả lập cho các checkbox (để có thể bật/tắt)
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [geoBlock, setGeoBlock] = useState(false);
-  const [minPassLen, setMinPassLen] = useState(8);
-  const [passExpiry, setPassExpiry] = useState(90);
+  // 1. STATE QUẢN LÝ DỮ LIỆU
+  const [settings, setSettings] = useState({
+    is_2fa_enabled: false,
+    is_geo_block_enabled: false,
+    min_password_length: 8,
+    password_expiry_days: 90
+  });
 
-  // Mock Data: Nhật ký truy cập
-  const accessLogs = [
-    { ip: "113.161.72.10", user: "admin_huongl", role: "AD", time: "2 phút trước", status: "success" },
-    { ip: "27.67.24.115", user: "tuyetngan.it", role: "TN", time: "15 phút trước", status: "success" },
-    { ip: "1.54.120.45", user: "unknown_user", role: "?", time: "1 giờ trước", status: "failed" },
-  ];
+  // State riêng cho Nhật ký truy cập (Dữ liệu thật)
+  const [accessLogs, setAccessLogs] = useState([]); 
+  
+  const [loading, setLoading] = useState(false);
+  const [isChanged, setIsChanged] = useState(false);
+
+  // 2. TẢI DỮ LIỆU KHI VÀO TRANG (Cấu hình + Logs)
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+
+    // Hàm lấy Cấu hình chung
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/v1/system/", {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setSettings(prev => ({...prev, ...data})); 
+        }
+      } catch (error) {
+        console.error("Lỗi tải cấu hình:", error);
+      }
+    };
+
+    // Hàm lấy Nhật ký truy cập (Mới thêm)
+    const fetchLogs = async () => {
+        try {
+            // Lấy 5 dòng log mới nhất
+            const response = await fetch("http://127.0.0.1:8000/api/v1/system/logs?limit=5", {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setAccessLogs(data);
+            }
+        } catch (error) {
+            console.error("Lỗi tải logs:", error);
+        }
+    };
+
+    fetchSettings();
+    fetchLogs();
+  }, []);
+
+  // Hàm xử lý thay đổi toggle/slider
+  const handleChange = (field, value) => {
+      setSettings(prev => ({ ...prev, [field]: value }));
+      setIsChanged(true);
+  };
+
+  // 3. LƯU CẤU HÌNH
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch("http://127.0.0.1:8000/api/v1/system/", {
+            method: "PUT",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": `Bearer ${token}` 
+            },
+            body: JSON.stringify(settings)
+        });
+
+        if (response.ok) {
+            alert("✅ Đã cập nhật chính sách bảo mật!");
+            setIsChanged(false);
+            window.location.reload(); // Reload để đảm bảo đồng bộ
+        } else {
+            alert("❌ Lỗi khi lưu!");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Lỗi kết nối Server!");
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  // --- HÀM HELPER: Tính thời gian "Cách đây bao lâu" ---
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "Không xác định";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000); // Đổi ra giây
+    
+    if (diffInSeconds < 60) return "Vừa xong";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} phút trước`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} giờ trước`;
+    return `${Math.floor(diffInSeconds / 86400)} ngày trước`;
+  };
+
+  // Hàm hiển thị Role ngắn gọn
+  const getRoleBadge = (role) => {
+      if (role === 'SUPER_ADMIN') return 'AD';
+      if (role === 'ADMIN') return 'QL';
+      if (role === 'STUDENT') return 'SV';
+      return '?';
+  };
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-500 pb-20">
@@ -30,23 +126,18 @@ const SecuritySettings = () => {
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Kiểm soát truy cập</h3>
         </div>
         <div className="p-6 space-y-6">
-          
-          {/* 2FA Toggle */}
           <ToggleItem 
             title="Xác thực 2 lớp (2FA)" 
             desc="Yêu cầu mã xác minh OTP khi đăng nhập vào tài khoản quản trị."
-            checked={twoFactor}
-            onChange={() => setTwoFactor(!twoFactor)}
+            checked={settings.is_2fa_enabled}
+            onChange={() => handleChange('is_2fa_enabled', !settings.is_2fa_enabled)}
           />
-
-          {/* Geo Block Toggle */}
           <ToggleItem 
             title="Chặn đăng nhập từ nước ngoài" 
             desc="Chỉ cho phép các địa chỉ IP từ Việt Nam truy cập vào hệ thống quản lý."
-            checked={geoBlock}
-            onChange={() => setGeoBlock(!geoBlock)}
+            checked={settings.is_geo_block_enabled}
+            onChange={() => handleChange('is_geo_block_enabled', !settings.is_geo_block_enabled)}
           />
-
         </div>
       </section>
 
@@ -57,39 +148,37 @@ const SecuritySettings = () => {
           <h3 className="text-base font-bold text-slate-900 dark:text-white">Chính sách mật khẩu</h3>
         </div>
         <div className="p-6 space-y-10">
-          
-          {/* Range Slider 1 */}
           <RangeItem 
             label="Độ dài mật khẩu tối thiểu"
-            value={minPassLen}
+            value={settings.min_password_length}
             unit="ký tự"
             min={6} max={20}
-            onChange={(e) => setMinPassLen(e.target.value)}
+            onChange={(e) => handleChange('min_password_length', Number(e.target.value))}
             labels={["6 ký tự", "20 ký tự"]}
           />
-
-          {/* Range Slider 2 */}
           <RangeItem 
             label="Thời gian hết hạn mật khẩu"
-            value={passExpiry}
+            value={settings.password_expiry_days}
             unit="ngày"
             min={30} max={365} step={5}
-            onChange={(e) => setPassExpiry(e.target.value)}
+            onChange={(e) => handleChange('password_expiry_days', Number(e.target.value))}
             labels={["30 ngày", "365 ngày (1 năm)"]}
           />
-
         </div>
       </section>
 
-      {/* --- Section 3: Nhật ký truy cập --- */}
+      {/* --- Section 3: Nhật ký truy cập (DỮ LIỆU THẬT TỪ DB) --- */}
       <section className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/60 dark:border-slate-800 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">history_edu</span>
             <h3 className="text-base font-bold text-slate-900 dark:text-white">Nhật ký truy cập gần đây</h3>
           </div>
-          <button className="text-primary text-xs font-bold hover:underline flex items-center gap-1 transition-all hover:gap-2">
-            Xem tất cả <span className="material-symbols-outlined text-xs">arrow_forward</span>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="text-primary text-xs font-bold hover:underline flex items-center gap-1 transition-all hover:gap-2"
+          >
+            Làm mới <span className="material-symbols-outlined text-xs">refresh</span>
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -103,20 +192,41 @@ const SecuritySettings = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {accessLogs.map((log, index) => (
-                <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 font-mono">{log.ip}</td>
+              {/* Trường hợp chưa có log nào */}
+              {accessLogs.length === 0 && (
+                  <tr>
+                      <td colSpan="4" className="px-6 py-8 text-center text-sm text-slate-400 italic">
+                          Chưa có dữ liệu nhật ký nào. Hãy thử đăng xuất và đăng nhập lại.
+                      </td>
+                  </tr>
+              )}
+
+              {/* Render Logs thật */}
+              {accessLogs.map((log) => (
+                <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                  {/* Cột IP (backend trả về field là ip_address) */}
+                  <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 font-mono">
+                    {log.ip_address} 
+                  </td>
+                  
+                  {/* Cột User */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${log.status === 'success' ? 'bg-slate-100 text-primary' : 'bg-slate-100 text-slate-500'}`}>
-                        {log.role}
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${log.status === 'SUCCESS' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {getRoleBadge(log.role)}
                       </div>
-                      <span className="text-sm font-medium text-slate-900 dark:text-white">{log.user}</span>
+                      <span className="text-sm font-medium text-slate-900 dark:text-white">{log.email}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500">{log.time}</td>
+                  
+                  {/* Cột Thời gian (Dùng hàm formatTimeAgo) */}
+                  <td className="px-6 py-4 text-sm text-slate-500">
+                    {formatTimeAgo(log.created_at)}
+                  </td>
+                  
+                  {/* Cột Trạng thái */}
                   <td className="px-6 py-4">
-                    <StatusBadge status={log.status} />
+                    <StatusBadge status={log.status === 'SUCCESS' ? 'success' : 'failed'} />
                   </td>
                 </tr>
               ))}
@@ -128,14 +238,25 @@ const SecuritySettings = () => {
       {/* --- Sticky Action Bar --- */}
       <div className="sticky bottom-6 flex justify-end z-10">
         <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-3 px-6 rounded-2xl border border-slate-200/60 dark:border-slate-800 shadow-2xl flex items-center gap-6">
-          <span className="hidden sm:inline text-xs text-slate-400 font-medium italic">Vừa cập nhật thay đổi...</span>
+          {isChanged && <span className="hidden sm:inline text-xs text-slate-400 font-medium italic animate-pulse">Thay đổi chưa được lưu...</span>}
           <div className="flex items-center gap-3">
-            <button className="bg-transparent text-slate-600 dark:text-slate-400 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+            <button 
+                onClick={() => window.location.reload()}
+                className="bg-transparent text-slate-600 dark:text-slate-400 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            >
               Hủy bỏ
             </button>
-            <button className="bg-accent text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-accent/30 hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center gap-2">
-              <span className="material-symbols-outlined text-lg">save</span>
-              Lưu Thay Đổi
+            <button 
+                onClick={handleSave}
+                disabled={loading}
+                className="bg-[#FFAB00] text-white px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-orange-500/20 hover:scale-[1.03] active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-70"
+            >
+              {loading ? "Đang lưu..." : (
+                  <>
+                    <span className="material-symbols-outlined text-lg">save</span>
+                    Lưu Thay Đổi
+                  </>
+              )}
             </button>
           </div>
         </div>
@@ -145,8 +266,7 @@ const SecuritySettings = () => {
   );
 };
 
-// --- Sub-components để code gọn ---
-
+// --- Sub-components ---
 const ToggleItem = ({ title, desc, checked, onChange }) => (
   <div className="flex items-center justify-between group">
     <div className="flex flex-col gap-1">
@@ -154,8 +274,8 @@ const ToggleItem = ({ title, desc, checked, onChange }) => (
       <p className="text-xs text-slate-500">{desc}</p>
     </div>
     <label className="relative inline-flex items-center cursor-pointer">
-      <input type="checkbox" className="sr-only peer" checked={checked} onChange={onChange} />
-      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary transition-colors"></div>
+      <input type="checkbox" className="sr-only peer" checked={!!checked} onChange={onChange} />
+      <div className={`w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${checked ? 'peer-checked:bg-primary' : ''}`}></div>
     </label>
   </div>
 );

@@ -1,7 +1,9 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 
-const Sidebar = () => {
+// NHẬN PROP settings VÀ role TỪ ADMINLAYOUT
+const Sidebar = ({ role, settings }) => { 
+  
   // Style cho menu: 
   const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-white/20 text-white font-medium shadow-sm transition-all duration-200";
 
@@ -10,13 +12,22 @@ const Sidebar = () => {
 
   return (
     // bg-primary: Dùng màu xanh chủ đạo bạn đã cài trong tailwind.config.js
-    <aside className="w-64 flex-shrink-0 bg-primary h-screen flex flex-col text-white shadow-xl overflow-hidden">
-
-      {/* 1. HEADER (Logo) */}
-      <div className="h-16 flex items-center px-6 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-2xl">school</span>
-          <span className="font-bold text-lg tracking-wide">LHU YouthHub</span>
+    <aside className="w-64 h-screen bg-primary text-white flex flex-col">
+      
+      {/* --- PHẦN HEADER: LOGO & TÊN ĐƠN VỊ (ĐÃ SỬA) --- */}
+      <div className="h-16 flex items-center px-6 border-b border-white/10 shadow-sm shrink-0">
+        <div className="flex items-center gap-3 overflow-hidden">
+            {/* Logic: Nếu có link logo thì hiện ảnh, không thì hiện icon cái mũ */}
+            {settings?.logo_url ? (
+                <img src={settings.logo_url} alt="Logo" className="size-8 object-contain bg-white rounded p-0.5" />
+            ) : (
+                <span className="material-symbols-outlined text-2xl shrink-0">school</span>
+            )}
+            
+            {/* Tên đơn vị lấy từ Database */}
+            <h1 className="font-bold text-lg tracking-wide truncate whitespace-nowrap" title={settings?.unit_name}>
+                {settings?.unit_name || "LHU YouthHub"}
+            </h1>
         </div>
       </div>
 
@@ -77,10 +88,11 @@ const Sidebar = () => {
       </nav>
 
       {/* 3. FOOTER (Cài đặt & User Info như ảnh) */}
-      <div className="p-4 border-t border-white/10 mt-auto">
-        <NavLink to="/system-settings" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
+      <div className="p-4 border-t border-white/10 mt-auto shrink-0">
+        {/* Lưu ý: Link này dẫn đến trang Cài đặt hệ thống mà chúng ta vừa làm */}
+        <NavLink to="/system-settings/general" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
           <span className="material-symbols-outlined">settings</span>
-          <span className="text-sm">Cài Đặt</span>
+          <span className="text-sm">Cài Đặt Hệ Thống</span>
         </NavLink>
 
         {/* User Profile Card */}

@@ -1,193 +1,186 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AIAnalytics = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Gọi API Backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("access_token");
+        const response = await fetch("http://127.0.0.1:8000/api/v1/ai/dashboard-stats", {
+            headers: { "Authorization": `Bearer ${token}` }
+        });
+        if (response.ok) {
+            setData(await response.json());
+        }
+      } catch (error) {
+        console.error("Lỗi AI Analysis:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Dữ liệu giả lập cho Biểu đồ (Vì Backend hiện tại chưa trả về Time-series)
+  const chartData = [
+    { name: 'Tuần 1', thamGia: 40 },
+    { name: 'Tuần 2', thamGia: 30 },
+    { name: 'Tuần 3', thamGia: 68 },
+    { name: 'Tuần 4', thamGia: 50 },
+    { name: 'Hiện tại', thamGia: 75 },
+    { name: 'Dự báo', thamGia: 90 }, // Điểm dự báo của AI
+  ];
+
+  if (loading) return (
+    <div className="flex h-full items-center justify-center bg-[#F4F7FA] dark:bg-slate-900">
+        <div className="flex flex-col items-center gap-3">
+            <span className="material-symbols-outlined text-4xl text-blue-600 animate-spin">smart_toy</span>
+            <p className="text-slate-500 font-medium">AI đang phân tích dữ liệu...</p>
+        </div>
+    </div>
+  );
+
   return (
-    <div className="flex flex-col h-full bg-background-light bg-grid-pattern overflow-y-auto custom-scrollbar">
-      
-      {/* --- PAGE HEADER --- */}
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-30 border-b border-gray-200 px-8 py-5 flex items-center justify-between">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wider">
-            <span>Dashboard</span>
-            <span className="material-symbols-outlined text-[12px]">chevron_right</span>
-            <span className="text-primary">AI Analytics</span>
-          </div>
-          <h1 className="text-slate-900 text-3xl font-black leading-tight tracking-[-0.033em] uppercase">BÁO CÁO PHÂN TÍCH AI</h1>
-          <p className="text-slate-500 text-sm font-normal">Dữ liệu thời gian thực & Dự đoán xu hướng hành vi sinh viên</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-sm">
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">calendar_today</span>
-            <span className="text-sm font-medium text-slate-700">Tháng 10, 2023</span>
-            <span className="material-symbols-outlined text-slate-400 text-[20px]">arrow_drop_down</span>
-          </div>
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-lg text-sm font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95">
-            <span className="material-symbols-outlined text-[20px]">download</span>
-            <span>Xuất báo cáo</span>
-          </button>
-        </div>
-      </header>
-
-      {/* --- CONTENT CONTAINER --- */}
-      <div className="flex-1 px-8 py-8 flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
+    <div className="flex flex-col h-full bg-[#F4F7FA] dark:bg-slate-900 p-8 overflow-y-auto custom-scrollbar">
+      <div className="max-w-[1280px] mx-auto w-full flex flex-col gap-8">
         
-        {/* KPI Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard 
-            title="Tổng sinh viên" 
-            value="12,450" 
-            trend="+5%" 
-            isPositive={true} 
-          />
-          <StatCard 
-            title="Tương tác tuần" 
-            value="85%" 
-            trend="+2%" 
-            isPositive={true} 
-          />
-          <StatCard 
-            title="Độ hài lòng" 
-            value="4.8/5" 
-            trend="0%" 
-            isNeutral={true} 
-          />
-          <StatCard 
-            title="Dự báo tăng trưởng" 
-            value="+12%" 
-            trend="+1.5%" 
-            isPositive={true} 
-          />
+        {/* --- HEADER --- */}
+        <div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600 text-3xl">psychology</span>
+                Trung Tâm Phân Tích AI
+            </h2>
+            <p className="text-slate-500 mt-1">Dữ liệu thời gian thực & Dự đoán xu hướng hành vi sinh viên</p>
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
-          {/* Sentiment Chart (Donut) */}
-          <div className="col-span-1 lg:col-span-4 bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-slate-900 text-lg font-bold">Cảm xúc sinh viên</h3>
-                <p className="text-slate-500 text-sm">Phân tích sắc thái (Sentiment Analysis)</p>
-              </div>
-              <button className="text-slate-400 hover:text-primary transition-colors">
-                <span className="material-symbols-outlined">more_vert</span>
-              </button>
+        {/* --- OVERVIEW CARDS --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatsCard 
+                title="Tổng Sinh Viên" 
+                value={data?.overview?.total_students} 
+                icon="groups" 
+                trend="+5%" 
+                color="blue"
+            />
+            <StatsCard 
+                title="Đang Hoạt Động (Active)" 
+                value={data?.overview?.active_now} 
+                icon="check_circle" 
+                subtext="Trong 30 ngày qua"
+                color="green"
+            />
+            <StatsCard 
+                title="Tỷ Lệ Tương Tác" 
+                value={`${data?.overview?.engagement_rate}%`} 
+                icon="ssid_chart" 
+                color={data?.overview?.engagement_rate < 50 ? "orange" : "purple"}
+            />
+        </div>
+
+        {/* --- MAIN SECTION: CHART & PREDICTION --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* LEFT: CHART (Chiếm 2 phần) */}
+            <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-400">monitoring</span>
+                        Xu hướng tham gia & Dự báo
+                    </h3>
+                    <div className="flex gap-4 text-xs font-bold">
+                        <span className="flex items-center gap-1 text-blue-600"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Thực tế</span>
+                        <span className="flex items-center gap-1 text-cyan-500"><div className="w-2 h-2 rounded-full bg-cyan-400"></div> Dự báo AI</span>
+                    </div>
+                </div>
+                
+                <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData}>
+                            <defs>
+                                <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                            <Tooltip 
+                                contentStyle={{backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                                itemStyle={{color: '#1e293b', fontWeight: 'bold'}}
+                            />
+                            <Area type="monotone" dataKey="thamGia" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorPv)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+
+            {/* RIGHT: AI PREDICTION BOX (Chiếm 1 phần) */}
+            <div className="bg-gradient-to-br from-indigo-600 to-blue-500 rounded-2xl p-6 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between">
+                {/* Background Decor */}
+                <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-[150px] opacity-10">smart_toy</span>
+                
+                <div>
+                    <div className="flex items-center gap-2 mb-4 opacity-90">
+                        <span className="material-symbols-outlined text-xl animate-pulse">online_prediction</span>
+                        <span className="text-sm font-bold uppercase tracking-wider">Dự báo sự kiện tới</span>
+                    </div>
+                    <h3 className="text-2xl font-bold leading-snug mb-2 line-clamp-2">
+                        {data?.prediction?.event_name}
+                    </h3>
+                    <p className="text-blue-100 text-sm">Dựa trên lịch sử dữ liệu và các yếu tố thời gian.</p>
+                </div>
+
+                <div className="mt-8 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                    <p className="text-xs font-medium text-blue-100 uppercase mb-1">Số lượng tham gia dự kiến</p>
+                    <div className="flex items-end gap-2">
+                        <span className="text-4xl font-black">{data?.prediction?.predicted_attendance}</span>
+                        <span className="text-sm mb-1 opacity-80">sinh viên</span>
+                    </div>
+                    <div className="mt-2 text-xs flex items-center gap-1 text-green-300 font-bold bg-green-500/20 w-fit px-2 py-0.5 rounded">
+                        <span className="material-symbols-outlined text-[14px]">check</span>
+                        Độ tin cậy: {data?.prediction?.confidence_score}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* --- BOTTOM: AI INSIGHTS --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-blue-100 dark:border-slate-700 overflow-hidden">
+            <div className="bg-blue-50/50 dark:bg-slate-900/50 p-4 border-b border-blue-100 dark:border-slate-700 flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600">tips_and_updates</span>
+                <h3 className="font-bold text-slate-800 dark:text-white">Đề xuất hành động từ AI</h3>
+                <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ml-2">Mới nhất</span>
             </div>
             
-            <div className="relative flex-1 flex items-center justify-center min-h-[260px]">
-              {/* SVG Donut Chart */}
-              <svg className="transform -rotate-90" height="220" viewBox="0 0 220 220" width="220">
-                <circle cx="110" cy="110" fill="none" r="90" stroke="#f1f5f9" strokeWidth="20"></circle>
-                {/* Negative (Red) */}
-                <circle cx="110" cy="110" fill="none" r="90" stroke="#ef4444" strokeDasharray="56.5 565" strokeDashoffset="-508.5" strokeLinecap="round" strokeWidth="20"></circle>
-                {/* Neutral (Gray) */}
-                <circle cx="110" cy="110" fill="none" r="90" stroke="#94a3b8" strokeDasharray="169.6 565" strokeDashoffset="-339" strokeLinecap="round" strokeWidth="20"></circle>
-                {/* Positive (Blue) */}
-                <circle cx="110" cy="110" fill="none" r="90" stroke="#0065b2" strokeDasharray="339 565" strokeDashoffset="0" strokeLinecap="round" strokeWidth="20"></circle>
-              </svg>
-              {/* Center Text */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-slate-900 tracking-tight">60%</span>
-                <span className="text-sm font-semibold text-primary uppercase tracking-wide">Tích cực</span>
-              </div>
+            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                {data?.insights?.map((insight, index) => (
+                    <div key={index} className="p-4 flex gap-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                        <div className={`mt-1 size-8 rounded-full flex items-center justify-center shrink-0 ${
+                            insight.type === 'warning' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
+                        }`}>
+                            <span className="material-symbols-outlined text-lg">
+                                {insight.type === 'warning' ? 'priority_high' : 'thumb_up'}
+                            </span>
+                        </div>
+                        <div>
+                            <p className="text-slate-800 dark:text-white text-sm font-medium leading-relaxed">
+                                {insight.message}
+                            </p>
+                            <p className="text-slate-400 text-xs mt-1">Phân tích lúc {new Date().toLocaleTimeString()}</p>
+                        </div>
+                        {insight.type === 'warning' && (
+                            <button className="ml-auto text-xs font-bold bg-white border border-slate-200 px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-50 shadow-sm h-fit">
+                                Xử lý ngay
+                            </button>
+                        )}
+                    </div>
+                ))}
             </div>
-
-            {/* Legend */}
-            <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100">
-              <ChartLegend color="bg-primary" label="Tích cực" value="60%" />
-              <ChartLegend color="bg-slate-400" label="Trung lập" value="30%" />
-              <ChartLegend color="bg-red-500" label="Tiêu cực" value="10%" />
-            </div>
-          </div>
-
-          {/* Forecast Chart (Line Graph) */}
-          <div className="col-span-1 lg:col-span-8 bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex flex-col">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h3 className="text-slate-900 text-lg font-bold">Dự báo tham gia (Forecast)</h3>
-                <p className="text-slate-500 text-sm">Dữ liệu tham dự sự kiện & Dự đoán tháng tới</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-1 bg-primary rounded-full"></span>
-                  <span className="text-xs text-slate-600 font-medium">Thực tế</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-3 h-1 bg-primary border-t border-dashed border-white"></span>
-                  <span className="text-xs text-slate-600 font-medium">Dự đoán AI</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex-1 w-full min-h-[260px] relative">
-              {/* SVG Line Chart */}
-              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 800 250">
-                <defs>
-                  <linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#0065b2" stopOpacity="0.3"></stop>
-                    <stop offset="100%" stopColor="#0065b2" stopOpacity="0.0"></stop>
-                  </linearGradient>
-                  <pattern height="50" id="gridPattern" patternUnits="userSpaceOnUse" width="80">
-                    <path d="M 80 0 L 0 0 0 50" fill="none" stroke="#f1f5f9" strokeWidth="1"></path>
-                  </pattern>
-                </defs>
-                <rect fill="url(#gridPattern)" height="100%" width="100%"></rect>
-                
-                {/* Data Fill & Line */}
-                <path d="M0,200 L0,150 C50,150 50,100 100,120 C150,140 150,80 200,90 C250,100 250,160 300,140 C350,120 350,50 400,60 C450,70 450,110 500,100 C550,90 550,140 600,130 L600,200 Z" fill="url(#chartGradient)"></path>
-                <path d="M0,150 C50,150 50,100 100,120 C150,140 150,80 200,90 C250,100 250,160 300,140 C350,120 350,50 400,60 C450,70 450,110 500,100 C550,90 550,140 600,130" fill="none" stroke="#0065b2" strokeLinecap="round" strokeWidth="3"></path>
-                <circle cx="600" cy="130" fill="#fff" r="5" stroke="#0065b2" strokeWidth="3"></circle>
-                
-                {/* Forecast Line */}
-                <path d="M600,130 C650,120 650,40 700,50 C750,60 750,30 800,20" fill="none" stroke="#0065b2" strokeDasharray="6 6" strokeLinecap="round" strokeOpacity="0.6" strokeWidth="3"></path>
-                <path d="M600,130 C650,120 650,40 700,50 C750,60 750,30 800,20 L800,200 L600,200 Z" fill="url(#chartGradient)" opacity="0.5"></path>
-                
-                {/* Labels */}
-                <text fill="#64748b" fontFamily="Inter" fontSize="12" x="10" y="240">Tuần 1</text>
-                <text fill="#64748b" fontFamily="Inter" fontSize="12" x="210" y="240">Tuần 2</text>
-                <text fill="#64748b" fontFamily="Inter" fontSize="12" x="410" y="240">Tuần 3</text>
-                <text fill="#0065b2" fontFamily="Inter" fontSize="12" fontWeight="bold" x="610" y="240">Hiện tại</text>
-                <text fill="#0065b2" fontFamily="Inter" fontSize="12" opacity="0.7" x="750" y="240">Dự đoán</text>
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Insights Panel */}
-        <div className="relative w-full rounded-xl bg-gradient-to-r from-white to-blue-50/50 border border-slate-200 border-l-[6px] border-l-primary shadow-lg p-6 overflow-hidden group hover:shadow-xl transition-shadow">
-          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="relative shrink-0">
-              <div className="absolute inset-0 bg-blue-400 blur-xl opacity-20 rounded-full"></div>
-              <div className="bg-white border-2 border-primary/10 rounded-2xl p-4 shadow-sm relative glowing-icon">
-                <span className="material-symbols-outlined text-primary text-[32px]">smart_toy</span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-primary font-bold text-lg uppercase tracking-tight">AI Insights</h4>
-                <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-200">NEW</span>
-              </div>
-              <p className="text-slate-700 text-lg font-medium leading-relaxed">
-                <span className="font-bold text-slate-900">Gợi ý từ AI:</span> Nên tổ chức thêm hoạt động thể thao để tăng tương tác vào cuối tuần, dựa trên dữ liệu tích cực từ sự kiện "Giải bóng đá sinh viên" tháng trước.
-              </p>
-              <div className="mt-3 flex gap-3">
-                <button className="text-xs font-bold text-primary hover:text-blue-700 underline underline-offset-2">Xem chi tiết dữ liệu nguồn</button>
-                <button className="text-xs font-bold text-slate-500 hover:text-slate-700">Bỏ qua gợi ý</button>
-              </div>
-            </div>
-            <div className="shrink-0 mt-4 md:mt-0">
-              <button className="flex items-center gap-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-4 py-2.5 rounded-lg text-sm font-bold transition-colors">
-                <span>Tạo kế hoạch sự kiện</span>
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-slate-200 flex flex-wrap justify-between items-center text-xs text-slate-400 font-mono">
-          <p>SYSTEM STATUS: <span className="text-green-600 font-bold">ONLINE</span> • AI MODEL: V2.4.1 (YOUTH-BERT)</p>
-          <p>LAST UPDATED: 2023-10-24 14:30:00 UTC+7</p>
         </div>
 
       </div>
@@ -195,37 +188,34 @@ const AIAnalytics = () => {
   );
 };
 
-// --- Sub Components ---
+// --- Sub Component: Stats Card ---
+const StatsCard = ({ title, value, icon, trend, subtext, color }) => {
+    const colors = {
+        blue: "text-blue-600 bg-blue-50",
+        green: "text-green-600 bg-green-50",
+        orange: "text-orange-600 bg-orange-50",
+        purple: "text-purple-600 bg-purple-50"
+    };
 
-const StatCard = ({ title, value, trend, isPositive, isNeutral }) => (
-  <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] flex items-center justify-between group hover:border-primary/50 transition-colors">
-    <div>
-      <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{title}</p>
-      <p className="text-slate-900 text-2xl font-bold font-mono mt-1">{value}</p>
-    </div>
-    <div className={`rounded-full px-2 py-1 text-xs font-bold flex items-center gap-1 ${
-      isNeutral 
-        ? "bg-slate-100 text-slate-500" 
-        : isPositive 
-          ? "bg-green-50 text-green-600" 
-          : "bg-red-50 text-red-600"
-    }`}>
-      <span className="material-symbols-outlined text-[14px]">
-        {isNeutral ? "remove" : isPositive ? "trending_up" : "trending_down"}
-      </span>
-      {trend}
-    </div>
-  </div>
-);
-
-const ChartLegend = ({ color, label, value }) => (
-  <div className="flex flex-col items-center gap-1">
-    <div className="flex items-center gap-2">
-      <div className={`size-2 rounded-full ${color}`}></div>
-      <span className="text-xs font-semibold text-slate-600">{label}</span>
-    </div>
-    <span className="text-sm font-bold text-slate-900">{value}</span>
-  </div>
-);
+    return (
+        <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start">
+                <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
+                    <h4 className="text-2xl font-black text-slate-800 dark:text-white">{value}</h4>
+                </div>
+                <div className={`p-2 rounded-lg ${colors[color]}`}>
+                    <span className="material-symbols-outlined text-xl">{icon}</span>
+                </div>
+            </div>
+            {(trend || subtext) && (
+                <div className="mt-4 flex items-center gap-2 text-xs">
+                    {trend && <span className="text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded">{trend}</span>}
+                    {subtext && <span className="text-slate-400">{subtext}</span>}
+                </div>
+            )}
+        </div>
+    );
+};
 
 export default AIAnalytics;

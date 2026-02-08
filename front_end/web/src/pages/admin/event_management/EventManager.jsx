@@ -1,220 +1,195 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+// Hãy chắc chắn đường dẫn import này đúng với cấu trúc folder của bạn (lùi ra 3 cấp)
+import AddEventModal from '../../../components/admin/AddEventModal'; 
 
-const EventManager = () => {
-  // Mock Data: Giả lập dữ liệu sự kiện
-  const events = [
-    {
-      id: 1,
-      name: "Workshop Kỹ Năng Mềm",
-      category: "Phát triển bản thân",
-      date: "20/10/2023",
-      location: "Hội trường A",
-      current: 150,
-      max: 200,
-      icon: "lightbulb",
-      iconBg: "bg-indigo-100 text-indigo-600",
-      progressColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 2,
-      name: "Ngày Hội Việc Làm 2023",
-      category: "Hướng nghiệp",
-      date: "25/10/2023",
-      location: "Sân trường LHU",
-      current: 500,
-      max: 1000,
-      icon: "work",
-      iconBg: "bg-blue-100 text-blue-600",
-      progressColor: "bg-yellow-100 text-yellow-800"
-    },
-    {
-      id: 3,
-      name: "Seminar Công Nghệ 4.0",
-      category: "Học thuật",
-      date: "01/11/2023",
-      location: "Phòng B202",
-      current: 80,
-      max: 100,
-      icon: "mic",
-      iconBg: "bg-purple-100 text-purple-600",
-      progressColor: "bg-green-100 text-green-800"
-    },
-    {
-      id: 4,
-      name: "Cuộc Thi Hùng Biện",
-      category: "Ngoại khóa",
-      date: "10/11/2023",
-      location: "Hội trường B",
-      current: 200,
-      max: 250,
-      icon: "record_voice_over",
-      iconBg: "bg-rose-100 text-rose-600",
-      progressColor: "bg-red-100 text-red-800"
-    },
-    {
-      id: 5,
-      name: "Tình Nguyện Mùa Hè Xanh",
-      category: "Tình nguyện",
-      date: "15/11/2023",
-      location: "Địa phương",
-      current: 40,
-      max: 50,
-      icon: "volunteer_activism",
-      iconBg: "bg-teal-100 text-teal-600",
-      progressColor: "bg-gray-100 text-gray-800"
+const EventManagement = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL"); // State cho bộ lọc
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 1. Hàm gọi API (Có tham số filter)
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      // Tạo URL với query params
+      let url = `http://127.0.0.1:8000/api/v1/events/?search=${searchTerm}`;
+      if (filterStatus !== "ALL") {
+        url += `&status=${filterStatus}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        setEvents(await response.json());
+      }
+    } catch (error) {
+      console.error("Lỗi tải sự kiện:", error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Gọi API khi filter hoặc search thay đổi
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchEvents();
+    }, 300); // Debounce để tránh gọi API quá nhiều khi gõ phím
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, filterStatus]);
+
+  // Format ngày tháng đẹp
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
 
   return (
-    <div className="flex flex-col h-full bg-background-light dark:bg-background-dark">
-      
-      {/* --- TOP HEADER AREA --- */}
-      <header className="bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 px-8 py-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4 flex-shrink-0 z-10">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">QUẢN LÝ SỰ KIỆN</h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Quản lý và theo dõi các hoạt động sinh viên</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center justify-center h-10 w-10 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-            <span className="material-symbols-outlined">filter_list</span>
-          </button>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-gray-900 text-sm font-bold rounded-lg shadow-sm hover:shadow transition-all duration-200">
-            <span className="material-symbols-outlined text-[20px]">add</span>
-            <span className="uppercase tracking-wide">Tạo Sự Kiện Mới</span>
-          </button>
-        </div>
-      </header>
+    <div className="flex flex-col h-full bg-[#F4F7FA] dark:bg-slate-900 p-8 overflow-y-auto custom-scrollbar">
+      <div className="max-w-[1280px] mx-auto w-full">
+        
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Quản Lý Sự Kiện</h2>
+            <p className="text-slate-500 mt-1">Quản lý và theo dõi các hoạt động sinh viên</p>
+          </div>
 
-      {/* --- CONTENT BODY --- */}
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
-          
-          {/* Search & Filters */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-surface-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="relative flex-1 max-w-md min-w-[300px]">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">search</span>
-              <input 
-                type="text" 
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-gray-700 dark:text-gray-200 placeholder-gray-400" 
-                placeholder="Tìm kiếm sự kiện theo tên hoặc địa điểm..." 
-              />
+          <div className="flex gap-3">
+             {/* Nút cài đặt (UI cũ) */}
+             <button className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+                <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">tune</span>
+             </button>
+
+             {/* --- NÚT TẠO SỰ KIỆN (MỚI & ĐẸP HƠN) --- */}
+             <button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-cyan-500/30 flex items-center gap-2 transform hover:-translate-y-0.5 transition-all duration-200"
+             >
+                <span className="material-symbols-outlined">add_circle</span>
+                TẠO SỰ KIỆN MỚI
+             </button>
+          </div>
+        </div>
+
+        {/* TOOLBAR & FILTER */}
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-t-xl border-b border-slate-100 dark:border-slate-700 flex flex-wrap gap-4 justify-between items-center shadow-sm">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[300px]">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <span className="material-symbols-outlined">search</span>
+                </span>
+                <input 
+                    type="text" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none text-slate-700 dark:text-white transition-all"
+                    placeholder="Tìm kiếm sự kiện theo tên hoặc địa điểm..."
+                />
             </div>
+
+            {/* --- BỘ LỌC HOẠT ĐỘNG --- */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Trạng thái:</span>
-              <select className="form-select text-sm py-2 pl-3 pr-8 rounded-lg border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:border-primary focus:ring-primary/50 cursor-pointer outline-none">
-                <option>Tất cả</option>
-                <option>Sắp diễn ra</option>
-                <option>Đang diễn ra</option>
-                <option>Đã kết thúc</option>
-              </select>
+                <span className="text-sm font-medium text-slate-500">Trạng thái:</span>
+                <select 
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="bg-slate-50 dark:bg-slate-900 border-none text-sm font-semibold text-slate-700 dark:text-white py-2 pl-3 pr-8 rounded-lg outline-none cursor-pointer hover:bg-slate-100 transition-colors"
+                >
+                    <option value="ALL">Tất cả</option>
+                    <option value="UPCOMING">Sắp diễn ra</option>
+                    <option value="ONGOING">Đang diễn ra</option>
+                    <option value="COMPLETED">Đã kết thúc</option>
+                </select>
             </div>
-          </div>
-
-          {/* Data Table */}
-          <div className="bg-white dark:bg-surface-dark rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col h-auto min-h-[400px]">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                    <Th width="w-[35%]">Tên Sự Kiện</Th>
-                    <Th width="w-[15%]">Ngày Tổ Chức</Th>
-                    <Th width="w-[20%]">Địa Điểm</Th>
-                    <Th width="w-[15%]" className="text-center">Số Lượng</Th>
-                    <Th width="w-[15%]" className="text-right">Hành Động</Th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {events.map((event) => (
-                    <tr key={event.id} className="group hover:bg-orange-50/30 dark:hover:bg-gray-700/30 transition-colors duration-150">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-lg flex items-center justify-center flex-shrink-0 ${event.iconBg}`}>
-                            <span className="material-symbols-outlined">{event.icon}</span>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-primary-hover transition-colors">{event.name}</p>
-                            <p className="text-xs text-gray-500">{event.category}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[16px] text-gray-400">calendar_today</span>
-                          {event.date}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[16px] text-gray-400">location_on</span>
-                          {event.location}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${event.progressColor}`}>
-                          {event.current}/{event.max}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border border-primary text-primary-hover hover:bg-primary hover:text-gray-900 text-xs font-bold uppercase tracking-wide transition-all duration-200">
-                          <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
-                          Lấy Mã QR
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between mt-auto">
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Hiển thị <span className="font-medium text-gray-900 dark:text-gray-200">1</span> đến <span className="font-medium text-gray-900 dark:text-gray-200">5</span> của <span className="font-medium text-gray-900 dark:text-gray-200">20</span> sự kiện
-              </p>
-              <nav className="flex items-center gap-1">
-                <PaginationBtn icon="chevron_left" disabled />
-                <PaginationBtn text="1" active />
-                <PaginationBtn text="2" />
-                <PaginationBtn text="3" />
-                <span className="px-2 text-gray-400">...</span>
-                <PaginationBtn icon="chevron_right" />
-              </nav>
-            </div>
-          </div>
-
         </div>
+
+        {/* TABLE */}
+        <div className="bg-white dark:bg-slate-800 rounded-b-xl shadow-sm border border-t-0 border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900/50 text-xs uppercase text-slate-500 font-bold border-b border-slate-100 dark:border-slate-700">
+                        <tr>
+                            <th className="px-6 py-4">Tên sự kiện</th>
+                            <th className="px-6 py-4">Ngày tổ chức</th>
+                            <th className="px-6 py-4">Địa điểm</th>
+                            <th className="px-6 py-4 text-center">Số lượng</th>
+                            <th className="px-6 py-4 text-right">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700 text-sm">
+                        {loading ? (
+                             <tr><td colSpan="5" className="p-8 text-center text-slate-400">Đang tải dữ liệu...</td></tr>
+                        ) : events.length === 0 ? (
+                             <tr><td colSpan="5" className="p-8 text-center text-slate-400">Không tìm thấy sự kiện nào</td></tr>
+                        ) : (
+                            events.map((event) => (
+                                <tr key={event.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`p-2 rounded-lg ${
+                                                event.status === 'UPCOMING' ? 'bg-blue-50 text-blue-600' :
+                                                event.status === 'ONGOING' ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-500'
+                                            }`}>
+                                                <span className="material-symbols-outlined text-xl">event</span>
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800 dark:text-white">{event.title}</p>
+                                                <p className="text-xs text-slate-500">{event.status === 'UPCOMING' ? 'Sắp diễn ra' : event.status}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-slate-400 text-base">calendar_today</span>
+                                            {formatDate(event.start_time)}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-slate-400 text-base">location_on</span>
+                                            {event.location}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <span className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs font-bold border border-green-100">
+                                            {event.max_participants} vé
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button className="border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ml-auto transition-all">
+                                            <span className="material-symbols-outlined text-sm">qr_code_2</span>
+                                            LẤY MÃ QR
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+            
+            {/* Pagination UI (Tĩnh) */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                <span className="text-xs text-slate-500">Hiển thị {events.length} sự kiện</span>
+                {/* Pagination Controls... */}
+            </div>
+        </div>
+
       </div>
+
+      {/* Modal Import */}
+      <AddEventModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onRefresh={fetchEvents}
+      />
     </div>
   );
 };
 
-// --- Sub Components ---
-
-const Th = ({ children, width, className = "" }) => (
-  <th className={`px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider ${width} ${className}`}>
-    {children}
-  </th>
-);
-
-const PaginationBtn = ({ text, icon, active, disabled }) => {
-  const baseClass = "rounded-md text-sm font-medium transition-colors";
-  const activeClass = "px-3 py-1 bg-primary text-gray-900 shadow-sm";
-  const normalClass = "px-3 py-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700";
-  const iconClass = "p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:text-gray-300 disabled:opacity-50";
-
-  if (icon) {
-    return (
-      <button className={iconClass} disabled={disabled}>
-        <span className="material-symbols-outlined text-[20px]">{icon}</span>
-      </button>
-    );
-  }
-
-  return (
-    <button className={active ? activeClass : normalClass}>
-      {text}
-    </button>
-  );
-};
-
-export default EventManager;
+export default EventManagement;

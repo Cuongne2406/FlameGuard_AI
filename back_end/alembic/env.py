@@ -5,6 +5,11 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
+from app.db.session import Base
+from app.models.user import User
+from app.models.notification import Notification
+
+
 # --- QUAN TRỌNG: Thêm đường dẫn dự án vào hệ thống để import được app ---
 sys.path.append(os.getcwd())
 
@@ -13,6 +18,10 @@ from app.core.config import settings
 from app.db.session import Base
 from app.models.user import User
 from app.models.event import Event
+from app.models.transaction import Transaction
+from app.models.access_log import AccessLog
+from app.models.system_setting import SystemSetting
+
 
 config = context.config
 

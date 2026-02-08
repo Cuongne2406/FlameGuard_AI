@@ -8,25 +8,24 @@ import AdminLayout from '../layouts/AdminLayout';
 import PublicLayout from '../layouts/PublicLayout';
 import UserLayout from '../components/UserComponents/UserLayout';
 import SettingsLayout from '../components/SettingsComponents/SettingsLayout';
-// Import Layout riêng cho Cài đặt hệ thống (Trang mới)
 import AdminSettingsLayout from '../pages/admin/settings/AdminSettingsLayout';
+import SubAdminLayout from '../pages/admin_sub/SubAdminLayout';
 
 // ==============================
 // 2. IMPORT PAGES
 // ==============================
 
-// --- GROUP A: PUBLIC PAGES ---
-import PublicHome from '../pages/public/home/Home';
+// --- PUBLIC ---
 import News from '../pages/public/New';
 import NewsDetail from '../pages/public/NewDetail';
 import Activities from '../pages/public/Activities';
 import Academic from '../pages/public/Academic';
 import Contact from '../pages/public/Contact';
 
-// --- GROUP B: AUTH ---
+// --- AUTH ---
 import Login from '../pages/user/login/Login';
 
-// --- GROUP C: USER PAGES ---
+// --- USER ---
 import UserHome from '../pages/user/dashboard/Home';
 import Profile from '../pages/user/profile/Profile';
 import ActivityLog from '../pages/user/activity/ActivityLog';
@@ -35,21 +34,19 @@ import Certificates from '../pages/user/certificates/Certificates';
 import Ranking from '../pages/user/ranking/Ranking';
 import Checkin from '../pages/user/checkin/Checkin';
 
-// --- GROUP D: USER SETTINGS ---
+// --- USER SETTINGS ---
 import EditProfile from '../pages/user/setting/editprofile/EditProfile';
 import ChangePassword from '../pages/user/setting/changepassword/ChangePassword';
 import SocialLinks from '../pages/user/setting/linktosocial/SocialLinks';
 import Privacy from '../pages/user/setting/privacy/Privacy';
 
-//  --- Group: Sub Admin
-import SubAdminLayout from '../pages/admin_sub/SubAdminLayout';
+// --- SUB ADMIN ---
 import SubAdminDashboard from '../pages/admin_sub/dashboard/SubAdminDashboard';
 import SubAdminManagement from '../pages/admin_sub/management/SubAdminManagement';
 import SubAdminNotifications from '../pages/admin_sub/notifications/SubAdminNotifications';
 import SubAdminEvents from '../pages/admin_sub/events/SubAdminEvents';
 
-
-// --- GROUP E: ADMIN PAGES ---
+// --- SUPER ADMIN ---
 import AdminDashboard from '../pages/admin/dashboard/Dashboard';
 import Members from '../pages/admin/member_management/member';
 import EventManager from '../pages/admin/event_management/EventManager';
@@ -59,19 +56,41 @@ import FinancialManager from '../pages/admin/financial_management/FinancialManag
 import AchievementLeaderboard from '../pages/admin/achievements/AchievementLeaderboard';
 import AIAnalytics from '../pages/admin/AI_Data_Insight/AIAnalytics';
 
-// --- GROUP F: SYSTEM SETTINGS (Trang tách biệt) ---
+// --- SYSTEM SETTINGS ---
 import GeneralSettings from '../pages/admin/settings/general/GeneralSettings';
 import SecuritySettings from '../pages/admin/settings/security/SecuritySettings';
 import NotificationSettings from '../pages/admin/settings/notifications/NotificationSettings';
 import IntegrationSettings from '../pages/admin/settings/integrations/IntegrationSettings';
+import HelpCenter from '../pages/admin/settings/help/HelpCenter';
+
+
+// ==============================
+// 3. TẠO KHIÊN BẢO VỆ (PRIVATE ROUTE)
+// ==============================
+const PrivateRoute = ({ children }) => {
+  const token = localStorage.getItem("access_token");
+  return token ? children : <Navigate to="/login" replace />;
+};
+
+const getRedirectPath = (role) => {
+  if (role === 'SUPER_ADMIN') return '/admin/dashboard';
+  if (role === 'SUB_ADMIN' || role === 'ADMIN') return '/admin-sub/dashboard';
+  return '/home';
+};
 
 const AppRoutes = () => {
+  const token = localStorage.getItem("access_token");
+  const role = localStorage.getItem("user_role");
+
   return (
     <Routes>
+      {/* TRANG CHỦ (ROOT) */}
+      <Route path="/" element={
+        token ? <Navigate to={getRedirectPath(role)} replace /> : <Navigate to="/login" replace />
+      } />
 
-      {/* --- PUBLIC --- */}
+      {/* PUBLIC PAGES */}
       <Route element={<PublicLayout />}>
-        <Route path="/" element={<PublicHome />} />
         <Route path="/tin-tuc" element={<News />} />
         <Route path="/tin-tuc/:id" element={<NewsDetail />} />
         <Route path="/hoat-dong" element={<Activities />} />
@@ -79,22 +98,20 @@ const AppRoutes = () => {
         <Route path="/lien-he" element={<Contact />} />
       </Route>
 
-
-      {/* --- AUTHENTICATION --- */}
+      {/* AUTH */}
       <Route path="/login" element={<Login />} />
 
+      {/* USER PORTAL */}
+      <Route element={<PrivateRoute><UserLayout /></PrivateRoute>}>
+        <Route path="/home" element={<UserHome />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/activity" element={<ActivityLog />} />
+        <Route path="/notifications" element={<NotificationPage />} />
+        <Route path="/certificates" element={<Certificates />} />
+        <Route path="/checkin" element={<Checkin />} />
+        <Route path="/ranking" element={<Ranking />} />
 
-      {/* ---  USER  --- */}
-      <Route path="/" element={<UserLayout />}>
-        <Route path="home" element={<UserHome />} />
-        <Route path="profile" element={<Profile />} />
-        <Route path="activity" element={<ActivityLog />} />
-        <Route path="notifications" element={<NotificationPage />} />
-        <Route path="certificates" element={<Certificates />} />
-        <Route path="ranking" element={<Ranking />} />
-        <Route path="checkin" element={<Checkin />} />
-
-        <Route path="setting" element={<SettingsLayout />}>
+        <Route path="/settings" element={<SettingsLayout />}>
           <Route index element={<EditProfile />} />
           <Route path="profile" element={<EditProfile />} />
           <Route path="password" element={<ChangePassword />} />
@@ -103,8 +120,8 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* --- Sub ADMIN --- */}
-      <Route path="/admin-sub" element={<SubAdminLayout />}>
+      {/* SUB ADMIN PORTAL */}
+      <Route path="/admin-sub" element={<PrivateRoute><SubAdminLayout /></PrivateRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<SubAdminDashboard />} />
         <Route path="management" element={<SubAdminManagement />} />
@@ -112,8 +129,8 @@ const AppRoutes = () => {
         <Route path="notifications" element={<SubAdminNotifications />} />
       </Route>
 
-      {/* --- ADMIN --- */}
-      <Route path="/admin" element={<AdminLayout />}>
+      {/* SUPER ADMIN PORTAL */}
+      <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="members" element={<Members />} />
@@ -125,20 +142,18 @@ const AppRoutes = () => {
         <Route path="ai-analysis" element={<AIAnalytics />} />
       </Route>
 
-
       {/* SYSTEM SETTINGS */}
-      <Route path="/system-settings" element={<AdminSettingsLayout />}>
+      <Route path="/system-settings" element={<PrivateRoute><AdminSettingsLayout /></PrivateRoute>}>
         <Route index element={<Navigate to="general" replace />} />
         <Route path="general" element={<GeneralSettings />} />
         <Route path="security" element={<SecuritySettings />} />
         <Route path="notifications" element={<NotificationSettings />} />
         <Route path="integrations" element={<IntegrationSettings />} />
+        <Route path="help" element={<HelpCenter />} />
       </Route>
 
-
-      {/* --- FALLBACK --- */}
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/" replace />} />
-
     </Routes>
   );
 };
