@@ -14,10 +14,10 @@ const SettingsSidebar = () => {
     };
 
     const menuItems = [
-        { to: '/setting/profile', icon: 'person', label: 'Thông Tin Cá Nhân' },
-        { to: '/setting/password', icon: 'lock', label: 'Đổi Mật Khẩu' },
-        { to: '/setting/social', icon: 'share', label: 'Liên Kết Mạng Xã Hội' },
-        { to: '/setting/privacy', icon: 'security', label: 'Quyền Riêng Tư' },
+        { to: '/settings/profile', icon: 'person', label: 'Thông Tin Cá Nhân' },
+        { to: '/settings/password', icon: 'lock', label: 'Đổi Mật Khẩu' },
+        { to: '/settings/social', icon: 'share', label: 'Liên Kết Mạng Xã Hội' },
+        { to: '/settings/privacy', icon: 'security', label: 'Quyền Riêng Tư' },
     ];
 
     return (

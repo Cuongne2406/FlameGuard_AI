@@ -18,7 +18,7 @@ const UserSidebar = ({ user, isOpen, onClose }) => {
         { to: '/certificates', icon: 'workspace_premium', label: 'Kho chứng nhận' },
         { to: '/checkin', icon: 'qr_code_scanner', label: 'Điểm danh' },
         { to: '/ranking', icon: 'leaderboard', label: 'Bảng xếp hạng' },
-        { to: '/setting', icon: 'settings', label: 'Cài đặt' },
+        { to: '/settings', icon: 'settings', label: 'Cài đặt' },
     ];
 
     return (
