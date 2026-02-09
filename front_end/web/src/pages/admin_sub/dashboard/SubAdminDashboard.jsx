@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import CreateEvent from '../../../components/common/CreateEvent';
 
 const SubAdminDashboard = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const SubAdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-bg-secretary-light dark:bg-[#181611] pb-10">
-      
+
       {/* HEADER */}
       <header className="sticky top-0 z-20 bg-white/80 dark:bg-[#181611]/80 backdrop-blur-xl border-b border-[#e6e2db] dark:border-[#3d3321] px-6 py-4">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
@@ -60,7 +61,7 @@ const SubAdminDashboard = () => {
       </header>
 
       <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in duration-700">
-        
+
         {/* STATS CARDS */}
         <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="bg-white dark:bg-[#2d2516] p-6 rounded-[2rem] border border-[#e6e2db] dark:border-[#3d3321] shadow-sm flex items-center justify-between">
@@ -89,7 +90,7 @@ const SubAdminDashboard = () => {
                 <span className="text-green-600">{data.funds?.collected_count}/{data.funds?.total_members} bạn</span>
               </div>
               <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
-                <div className="bg-green-500 h-full transition-all duration-1000" style={{width: `${(data.funds?.collected_count / data.funds?.total_members) * 100}%`}}></div>
+                <div className="bg-green-500 h-full transition-all duration-1000" style={{ width: `${(data.funds?.collected_count / data.funds?.total_members) * 100}%` }}></div>
               </div>
             </div>
           </div>
@@ -122,17 +123,24 @@ const SubAdminDashboard = () => {
       </div>
 
       {/* --- MODAL SYSTEM --- */}
-      {activeModal && (
-        <DashboardModal 
-          isOpen={!!activeModal} 
+      <CreateEvent
+        isOpen={activeModal === 'event'}
+        onClose={() => setActiveModal(null)}
+        onSuccess={() => {
+          setActiveModal(null);
+          fetchDashboardData(); // Load lại số liệu dashboard sau khi tạo xong
+        }}
+      />
+
+      {/* 2. Modal chung cho các tính năng khác (Thông báo, QR) */}
+      {activeModal && activeModal !== 'event' && (
+        <DashboardModal
+          isOpen={!!activeModal}
           onClose={() => setActiveModal(null)}
-          title={activeModal === 'event' ? 'Tạo Sự Kiện Mới' : activeModal === 'notif' ? 'Gửi Thông Báo Chi Đoàn' : 'Quét Mã Check-in'}
+          title={activeModal === 'notif' ? 'Gửi Thông Báo Chi Đoàn' : 'Quét Mã Check-in'}
         >
-          {/* Form Tạo Sự Kiện Mới (Full chức năng) */}
-          {activeModal === 'event' && <EventForm onSuccess={() => { setActiveModal(null); fetchDashboardData(); }} />}
-          
           {activeModal === 'notif' && <NotifForm onSuccess={() => { setActiveModal(null); fetchDashboardData(); }} />}
-          
+
           {activeModal === 'qr' && <div className="text-center py-10">Hệ thống quét QR Camera đang được tích hợp...</div>}
         </DashboardModal>
       )}
@@ -198,19 +206,19 @@ const EventForm = ({ onSuccess }) => {
       <div className="space-y-2">
         <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Ảnh bìa sự kiện</label>
         <div className="relative h-40 w-full bg-gray-50 dark:bg-white/5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden group">
-            {formData.image_url ? (
-                <img src={formData.image_url} className="w-full h-full object-cover" />
-            ) : (
-                <div className="text-center">
-                    <span className="material-symbols-outlined text-4xl text-gray-300">add_a_photo</span>
-                    <p className="text-[10px] font-bold text-gray-400 mt-1">Dán link ảnh bên dưới</p>
-                </div>
-            )}
+          {formData.image_url ? (
+            <img src={formData.image_url} className="w-full h-full object-cover" />
+          ) : (
+            <div className="text-center">
+              <span className="material-symbols-outlined text-4xl text-gray-300">add_a_photo</span>
+              <p className="text-[10px] font-bold text-gray-400 mt-1">Dán link ảnh bên dưới</p>
+            </div>
+          )}
         </div>
-        <input 
-            type="text" name="image_url" placeholder="https://example.com/anh-su-kien.jpg" 
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 ring-secretary/20"
-            onChange={handleChange}
+        <input
+          type="text" name="image_url" placeholder="https://example.com/anh-su-kien.jpg"
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 ring-secretary/20"
+          onChange={handleChange}
         />
       </div>
 
@@ -248,7 +256,7 @@ const EventForm = ({ onSuccess }) => {
       <InputWrapper label="Mô tả chi tiết">
         <textarea name="description" rows="4" onChange={handleChange} className="form-input py-3" placeholder="Nội dung và ý nghĩa sự kiện..."></textarea>
       </InputWrapper>
-      
+
       <button disabled={loading} className="w-full bg-gradient-to-r from-secretary to-orange-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-orange-200 active:scale-95 transition-all uppercase tracking-widest mt-4">
         {loading ? "ĐANG ĐĂNG..." : "ĐĂNG SỰ KIỆN LÊN HỆ THỐNG"}
       </button>
@@ -261,7 +269,7 @@ const EventForm = ({ onSuccess }) => {
 // ==========================================
 const NotifForm = ({ onSuccess }) => {
   const [formData, setFormData] = useState({ title: '', content: '', type: 'info', target_audience: 'ALL', status: 'SENT' });
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -278,21 +286,21 @@ const NotifForm = ({ onSuccess }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <InputWrapper label="Tiêu đề thông báo">
-        <input name="title" required onChange={e => setFormData({...formData, title: e.target.value})} className="form-input" placeholder="VD: Thông báo quan trọng..." />
+        <input name="title" required onChange={e => setFormData({ ...formData, title: e.target.value })} className="form-input" placeholder="VD: Thông báo quan trọng..." />
       </InputWrapper>
-      
+
       <InputWrapper label="Loại tin">
         <div className="flex gap-2">
-            {['info', 'urgent', 'success'].map(t => (
+          {['info', 'urgent', 'success'].map(t => (
             <label key={t} className={`flex-1 text-center py-2 rounded-xl border cursor-pointer font-bold text-[10px] uppercase transition-all ${formData.type === t ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-400 border-gray-100'}`}>
-                <input type="radio" name="type" className="hidden" onChange={() => setFormData({...formData, type: t})} /> {t}
+              <input type="radio" name="type" className="hidden" onChange={() => setFormData({ ...formData, type: t })} /> {t}
             </label>
-            ))}
+          ))}
         </div>
       </InputWrapper>
 
       <InputWrapper label="Nội dung chi tiết">
-        <textarea name="content" rows="5" onChange={e => setFormData({...formData, content: e.target.value})} className="form-input" placeholder="Nhập nội dung..."></textarea>
+        <textarea name="content" rows="5" onChange={e => setFormData({ ...formData, content: e.target.value })} className="form-input" placeholder="Nhập nội dung..."></textarea>
       </InputWrapper>
 
       <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all uppercase tracking-widest">GỬI THÔNG BÁO NGAY</button>

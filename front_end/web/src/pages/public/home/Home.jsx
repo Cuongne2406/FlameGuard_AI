@@ -149,9 +149,9 @@ const EventItem = ({ day, month, title, category, onClick }) => (
 // ==========================================
 const PublicHome = () => {
   // State quản lý dữ liệu
-  const [events, setEvents] = useState([]);
-  const [spotlightEvent, setSpotlightEvent] = useState(null); // Sự kiện nổi bật (Banner)
+  const [spotlightEvent, setSpotlightEvent] = useState(null); // Sự kiện nổi bật (Banner) - Sắp tới gần nhất
   const [upcomingEvents, setUpcomingEvents] = useState([]);   // Danh sách sự kiện sắp tới
+  const [pastEvents, setPastEvents] = useState([]);           // Sự kiện đã qua (Tin tức)
   const [selectedEvent, setSelectedEvent] = useState(null);   // Sự kiện đang xem chi tiết (Modal)
   const [loading, setLoading] = useState(true);
 
@@ -160,24 +160,44 @@ const PublicHome = () => {
     const fetchEvents = async () => {
       try {
         const token = localStorage.getItem("access_token");
-        // Gọi API Public (hoặc API events nếu backend cho phép public access)
         const res = await fetch('http://127.0.0.1:8000/api/v1/events/', {
-            // Nếu API yêu cầu token thì bỏ comment dòng dưới, nếu public thì thôi
-            headers: { 'Authorization': `Bearer ${token}` } 
+           headers: { 'Authorization': `Bearer ${token}` } 
         });
 
         if (res.ok) {
           const data = await res.json();
-          // 1. Sắp xếp sự kiện mới nhất/sắp tới lên đầu
-          const sortedEvents = data.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-          setEvents(sortedEvents);
+          const now = new Date();
 
-          // 2. Lấy sự kiện đầu tiên làm Spotlight (Banner)
-          if (sortedEvents.length > 0) {
-            setSpotlightEvent(sortedEvents[0]);
-            // 3. Lấy 4 sự kiện tiếp theo làm danh sách bên cạnh
-            setUpcomingEvents(sortedEvents.slice(1, 5));
+          // Phân loại sự kiện
+          const upcoming = [];
+          const past = [];
+
+          data.forEach(ev => {
+              const eventDate = new Date(ev.start_time); // Hoặc end_time tùy logic bạn muốn
+              if (eventDate >= now) {
+                  upcoming.push(ev);
+              } else {
+                  past.push(ev);
+              }
+          });
+
+          // Sắp xếp: 
+          // - Sắp tới: Ngày gần nhất lên đầu
+          upcoming.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+          // - Đã qua: Mới nhất (gần hiện tại nhất) lên đầu
+          past.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+          setUpcomingEvents(upcoming);
+          setPastEvents(past);
+
+          // Lấy sự kiện sắp tới gần nhất làm Banner
+          if (upcoming.length > 0) {
+            setSpotlightEvent(upcoming[0]);
+          } else if (past.length > 0) {
+             // Nếu không có sự kiện sắp tới, lấy sự kiện mới nhất đã qua làm banner (tùy chọn)
+             setSpotlightEvent(past[0]);
           }
+
         }
       } catch (err) {
         console.error("Lỗi tải sự kiện:", err);
@@ -207,8 +227,8 @@ const PublicHome = () => {
               
               <div className="absolute bottom-12 left-8 md:left-12 max-w-3xl text-white pr-4">
                 <div className="flex items-center gap-3 mb-4">
-                    <span className="bg-blue-600 text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-lg">
-                    Tin nổi bật
+                    <span className={`text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-widest shadow-lg ${new Date(spotlightEvent.start_time) >= new Date() ? 'bg-blue-600' : 'bg-gray-600'}`}>
+                      {new Date(spotlightEvent.start_time) >= new Date() ? 'Sắp diễn ra' : 'Đã kết thúc'}
                     </span>
                     <span className="flex items-center gap-1 text-xs font-bold bg-white/10 backdrop-blur px-3 py-1 rounded-md border border-white/10">
                         <Calendar size={12} />
@@ -231,14 +251,11 @@ const PublicHome = () => {
                   >
                     Xem chi tiết <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </button>
-                  <button className="bg-white/10 backdrop-blur-md px-8 py-3 rounded-xl font-bold text-sm border border-white/20 hover:bg-white/20 text-white transition-colors">
-                    Lịch trình
-                  </button>
                 </div>
               </div>
             </section>
         ) : (
-            <div className="h-[200px] flex items-center justify-center text-gray-400 italic">Chưa có sự kiện nổi bật nào.</div>
+            <div className="h-[200px] flex items-center justify-center text-gray-400 italic">Chưa có sự kiện nào.</div>
         )}
 
         {/* --- 2. LỐI TẮT NHANH --- */}
@@ -246,7 +263,6 @@ const PublicHome = () => {
           <span className="text-blue-600">⚡</span> Lối tắt nhanh cho Đoàn viên
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {/* <QuickAction icon={QrCode} title="Điểm danh QR" desc="Quét mã nhanh để ghi nhận tham gia các hoạt động, sự kiện." color="bg-blue-50" /> */}
           <QuickAction icon={CreditCard} title="Thẻ điện tử" desc="Xem thông tin định danh Đoàn viên số của bạn ngay tại đây." color="bg-cyan-50" />
           <QuickAction icon={BookOpen} title="Nhật ký Đoàn viên" desc="Theo dõi quá trình rèn luyện cá nhân và các hoạt động." color="bg-indigo-50" />
         </div>
@@ -254,31 +270,52 @@ const PublicHome = () => {
         {/* --- 3. CONTENT GRID: TIN TỨC & LỊCH --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           
-          {/* Cột trái: Tin tức (Tạm thời giữ Mock Data hoặc map thêm events nếu muốn) */}
+          {/* Cột trái: TIN TỨC HOẠT ĐỘNG (Sự kiện đã qua) */}
           <div className="lg:col-span-2">
             <div className="flex justify-between items-end mb-8">
               <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Tin tức hoạt động</h2>
-              <a href="#" className="text-blue-600 text-xs font-bold hover:underline">VÀO TIN TỨC &rarr;</a>
+              <span className="text-gray-400 text-xs font-bold uppercase">Các sự kiện đã diễn ra</span>
             </div>
             
-            {/* ... (Phần Tin tức bạn có thể giữ nguyên Mock Data hoặc thay bằng API sau) ... */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {[1, 2].map((i) => (
-                <div key={i} className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100">
-                  <div className="h-44 overflow-hidden bg-gray-200 relative">
-                    <img src={`https://picsum.photos/seed/${i + 20}/600/400`} className="w-full h-full object-cover group-hover:scale-110 transition-duration-500" />
-                    <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold">12/10/2024</div>
-                  </div>
-                  <div className="p-5">
-                    <span className="text-[10px] text-blue-600 font-black uppercase">Tình nguyện</span>
-                    <h3 className="font-bold text-gray-800 mt-2 leading-snug group-hover:text-blue-600 transition-colors">Ra quân Chiến dịch Mùa hè xanh 2024</h3>
-                  </div>
+            {/* Render danh sách sự kiện ĐÃ QUA */}
+            {pastEvents.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {pastEvents.map((ev) => (
+                    <div 
+                        key={ev.id} 
+                        onClick={() => setSelectedEvent(ev)}
+                        className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100 flex flex-col h-full"
+                    >
+                    <div className="h-44 overflow-hidden bg-gray-200 relative shrink-0">
+                        <img 
+                            src={ev.image_url || "https://images.unsplash.com/photo-1523240715630-34160408b495?auto=format&fit=crop&q=80"} 
+                            alt={ev.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-duration-500" 
+                        />
+                        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold text-gray-600">
+                            {new Date(ev.start_time).toLocaleDateString('vi-VN')}
+                        </div>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col">
+                        <span className="text-[10px] text-gray-400 font-black uppercase">Đã kết thúc</span>
+                        <h3 className="font-bold text-gray-800 mt-2 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
+                            {ev.title}
+                        </h3>
+                        <p className="text-xs text-gray-500 line-clamp-2 mt-auto">
+                            {ev.description || "Xem chi tiết nội dung sự kiện..."}
+                        </p>
+                    </div>
+                    </div>
+                ))}
                 </div>
-              ))}
-            </div>
+            ) : (
+                <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400">
+                    Chưa có tin tức hoạt động nào gần đây.
+                </div>
+            )}
           </div>
 
-          {/* Cột phải: Lịch sự kiện (Dữ liệu thật từ API) */}
+          {/* Cột phải: LỊCH SỰ KIỆN SẮP TỚI */}
           <aside>
             <h2 className="text-xl font-bold text-gray-800 mb-8 tracking-tight flex items-center gap-2">
                 <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
@@ -287,7 +324,9 @@ const PublicHome = () => {
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
               
               {upcomingEvents.length > 0 ? (
-                  upcomingEvents.map(ev => {
+                  // Bỏ qua sự kiện đầu tiên vì đã hiện ở Banner Spotlight (nếu muốn)
+                  // Ở đây tôi hiển thị từ sự kiện thứ 2 trở đi để tránh lặp lại, hoặc hiển thị hết tùy bạn
+                  upcomingEvents.slice(spotlightEvent && upcomingEvents[0]?.id === spotlightEvent.id ? 1 : 0).map(ev => {
                       const date = new Date(ev.start_time);
                       return (
                         <EventItem
@@ -295,33 +334,23 @@ const PublicHome = () => {
                             day={date.getDate()}
                             month={date.getMonth() + 1}
                             title={ev.title}
-                            category="Sự kiện"
+                            category="Sắp diễn ra"
                             onClick={() => setSelectedEvent(ev)}
                         />
                       )
                   })
               ) : (
-                  <div className="text-center py-10 text-gray-400 text-sm">Chưa có sự kiện nào khác.</div>
+                  <div className="text-center py-10 text-gray-400 text-sm">Hiện không có lịch sự kiện sắp tới.</div>
               )}
 
-              <button className="w-full mt-6 py-3 border-2 border-dashed border-gray-200 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-50 hover:text-blue-600 transition-all">
-                XEM TẤT CẢ LỊCH
-              </button>
+              {upcomingEvents.length > 5 && (
+                  <button className="w-full mt-6 py-3 border-2 border-dashed border-gray-200 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-50 hover:text-blue-600 transition-all">
+                    XEM TẤT CẢ LỊCH
+                  </button>
+              )}
             </div>
           </aside>
         </div>
-
-        {/* --- 4. Gương mặt tiêu biểu (Giữ nguyên) --- */}
-        <section className="mt-20 bg-blue-50/50 rounded-[40px] p-10 border border-blue-100 relative overflow-hidden">
-             {/* ... (Phần Gương mặt tiêu biểu giữ nguyên code cũ của bạn) ... */}
-             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-200/20 rounded-full -mr-20 -mt-20 blur-3xl" />
-             <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-center">
-                {/* ... (Code cũ của bạn) ... */}
-                <div className="md:col-span-12 text-center text-gray-400 italic text-sm">
-                    (Phần nội dung Gương mặt tiêu biểu giữ nguyên như thiết kế cũ của bạn)
-                </div>
-             </div>
-        </section>
 
       </main>
 

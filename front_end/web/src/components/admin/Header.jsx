@@ -20,6 +20,7 @@ const Header = () => {
     const isConfirm = window.confirm("Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?");
     if (isConfirm) {
         localStorage.removeItem("access_token");
+        localStorage.clear();
         navigate("/login");
     }
   };
