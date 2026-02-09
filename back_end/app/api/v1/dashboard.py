@@ -17,7 +17,7 @@ def get_student_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.role != "STUDENT":
+    if current_user.role not in ["STUDENT", "SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
         raise HTTPException(status_code=403, detail="Yêu cầu quyền Sinh viên")
 
     # 1. TÍNH TỔNG ĐIỂM THẬT (Từ các sự kiện đã tham gia)

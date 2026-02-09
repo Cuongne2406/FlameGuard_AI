@@ -28,6 +28,7 @@ export default {
         accent: "#FFAB00",
         silver: "#94a3b8",
         bronze: "#b45309",
+        secretary: "#f97316",
       },
       fontFamily: {
         display: ["Inter", "sans-serif"],

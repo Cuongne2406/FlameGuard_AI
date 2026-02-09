@@ -15,14 +15,15 @@ import SubAdminLayout from '../pages/admin_sub/SubAdminLayout';
 // 2. IMPORT PAGES
 // ==============================
 
-// --- PUBLIC ---
-import News from '../pages/public/New';
-import NewsDetail from '../pages/public/NewDetail';
-import Activities from '../pages/public/Activities';
-import Academic from '../pages/public/Academic';
-import Contact from '../pages/public/Contact';
+// --- GROUP A: PUBLIC PAGES ---
+import Home from '../pages/public/home/Home';
+import News from '../pages/public/new/News';
+import NewsDetail from '../pages/public/newdetail/NewDetail';
+import Activities from '../pages/public/activity/Activities';
+import Academic from '../pages/public/academic/Academic';
+import Contact from '../pages/public/contact/Contact';
 
-// --- AUTH ---
+// --- GROUP B: AUTH ---
 import Login from '../pages/user/login/Login';
 
 // --- USER ---
@@ -34,11 +35,11 @@ import Certificates from '../pages/user/certificates/Certificates';
 import Ranking from '../pages/user/ranking/Ranking';
 import Checkin from '../pages/user/checkin/Checkin';
 
-// --- USER SETTINGS ---
-import EditProfile from '../pages/user/setting/editprofile/EditProfile';
-import ChangePassword from '../pages/user/setting/changepassword/ChangePassword';
-import SocialLinks from '../pages/user/setting/linktosocial/SocialLinks';
-import Privacy from '../pages/user/setting/privacy/Privacy';
+// --- GROUP D: USER SETTINGS ---
+import EditProfile from '../pages/user/settings/editprofile/EditProfile';
+import ChangePassword from '../pages/user/settings/changepassword/ChangePassword';
+import SocialLinks from '../pages/user/settings/linktosocial/SocialLinks';
+import Privacy from '../pages/user/settings/privacy/Privacy';
 
 // --- SUB ADMIN ---
 import SubAdminDashboard from '../pages/admin_sub/dashboard/SubAdminDashboard';
@@ -73,8 +74,8 @@ const PrivateRoute = ({ children }) => {
 };
 
 const getRedirectPath = (role) => {
+  if (role === 'SUB_ADMIN') return '/admin_sub/dashboard';
   if (role === 'SUPER_ADMIN') return '/admin/dashboard';
-  if (role === 'SUB_ADMIN' || role === 'ADMIN') return '/admin-sub/dashboard';
   return '/home';
 };
 
@@ -84,13 +85,16 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* TRANG CHỦ (ROOT) */}
       <Route path="/" element={
         token ? <Navigate to={getRedirectPath(role)} replace /> : <Navigate to="/login" replace />
       } />
-
-      {/* PUBLIC PAGES */}
-      <Route element={<PublicLayout />}>
+      <Route element={
+        <PrivateRoute>
+          <PublicLayout />
+        </PrivateRoute>
+      }>
+        <Route path="/trang-chu" element={<Home />} />
+        
         <Route path="/tin-tuc" element={<News />} />
         <Route path="/tin-tuc/:id" element={<NewsDetail />} />
         <Route path="/hoat-dong" element={<Activities />} />
@@ -98,11 +102,12 @@ const AppRoutes = () => {
         <Route path="/lien-he" element={<Contact />} />
       </Route>
 
-      {/* AUTH */}
       <Route path="/login" element={<Login />} />
 
-      {/* USER PORTAL */}
-      <Route element={<PrivateRoute><UserLayout /></PrivateRoute>}>
+      <Route element={
+        <PrivateRoute>
+          <UserLayout />
+        </PrivateRoute>}>
         <Route path="/home" element={<UserHome />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/activity" element={<ActivityLog />} />
@@ -110,9 +115,8 @@ const AppRoutes = () => {
         <Route path="/certificates" element={<Certificates />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/ranking" element={<Ranking />} />
-
         <Route path="/settings" element={<SettingsLayout />}>
-          <Route index element={<EditProfile />} />
+          <Route index element={<Navigate to="profile" replace />} />
           <Route path="profile" element={<EditProfile />} />
           <Route path="password" element={<ChangePassword />} />
           <Route path="social" element={<SocialLinks />} />
@@ -120,17 +124,28 @@ const AppRoutes = () => {
         </Route>
       </Route>
 
-      {/* SUB ADMIN PORTAL */}
-      <Route path="/admin-sub" element={<PrivateRoute><SubAdminLayout /></PrivateRoute>}>
+      {/* --- SUB ADMIN (CÁN BỘ ĐOÀN) --- */}
+      <Route path="/admin_sub" element={
+        <PrivateRoute>
+          <SubAdminLayout />
+        </PrivateRoute>
+      }>
+        {/* Vào /admin_sub thì tự nhảy vào dashboard */}
         <Route index element={<Navigate to="dashboard" replace />} />
+
+        {/* Đường dẫn thực tế: /admin_sub/dashboard */}
         <Route path="dashboard" element={<SubAdminDashboard />} />
         <Route path="management" element={<SubAdminManagement />} />
         <Route path="events" element={<SubAdminEvents />} />
         <Route path="notifications" element={<SubAdminNotifications />} />
       </Route>
 
-      {/* SUPER ADMIN PORTAL */}
-      <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+      {/* --- SUPER ADMIN (QUẢN TRỊ VIÊN) --- */}
+      <Route path="/admin" element={
+        <PrivateRoute>
+          <AdminLayout />
+        </PrivateRoute>
+      }>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="members" element={<Members />} />
@@ -142,8 +157,12 @@ const AppRoutes = () => {
         <Route path="ai-analysis" element={<AIAnalytics />} />
       </Route>
 
-      {/* SYSTEM SETTINGS */}
-      <Route path="/system-settings" element={<PrivateRoute><AdminSettingsLayout /></PrivateRoute>}>
+      {/* --- SYSTEM SETTINGS --- */}
+      <Route path="/system-settings" element={
+        <PrivateRoute>
+          <AdminSettingsLayout />
+        </PrivateRoute>
+      }>
         <Route index element={<Navigate to="general" replace />} />
         <Route path="general" element={<GeneralSettings />} />
         <Route path="security" element={<SecuritySettings />} />
@@ -152,7 +171,7 @@ const AppRoutes = () => {
         <Route path="help" element={<HelpCenter />} />
       </Route>
 
-      {/* FALLBACK */}
+      {/* --- FALLBACK --- */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

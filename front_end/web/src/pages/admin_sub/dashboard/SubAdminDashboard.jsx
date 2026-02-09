@@ -1,158 +1,337 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const SubAdminDashboard = () => {
+  const navigate = useNavigate();
+
+  // --- 1. STATE DỮ LIỆU ---
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // --- 2. STATE QUẢN LÝ MODAL (POPUP) ---
+  const [activeModal, setActiveModal] = useState(null);
+
+  // --- 3. GỌI API LẤY THỐNG KÊ DASHBOARD ---
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch('http://127.0.0.1:8000/api/v1/sub-dashboard/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error("Lỗi kết nối server");
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  if (loading) return <div className="p-20 text-center animate-pulse italic text-gray-400">Đang đồng bộ dữ liệu...</div>;
+  if (!data) return <div className="p-20 text-center text-red-500">Lỗi: {error}</div>;
+
+  // SVG Math
+  const radius = 48;
+  const circumference = 2 * Math.PI * radius;
+  const attendancePercent = data.attendance?.rate || 0;
+  const offset = circumference - (attendancePercent / 100) * circumference;
+
   return (
-    <>
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-bg-secretary-light/80 dark:bg-bg-secretary-dark/80 backdrop-blur-md border-b border-[#e6e2db] dark:border-[#3d3321] px-6 py-4">
+    <div className="min-h-screen bg-bg-secretary-light dark:bg-[#181611] pb-10">
+      
+      {/* HEADER */}
+      <header className="sticky top-0 z-20 bg-white/80 dark:bg-[#181611]/80 backdrop-blur-xl border-b border-[#e6e2db] dark:border-[#3d3321] px-6 py-4">
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-[#181611] dark:text-white">Chào buổi sáng, Đ/c Hậu! 👋</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">Thứ Tư, 26/03/2026 - Hôm nay lớp có 1 sự kiện</p>
+            <h2 className="text-2xl font-black tracking-tight text-[#181611] dark:text-white uppercase">{data.greeting} 👋</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
+              {data.current_date} — {data.event_count > 0 ? `Hôm nay có ${data.event_count} sự kiện` : "Hôm nay không có sự kiện"}
+            </p>
           </div>
-          <button className="hidden md:flex bg-white dark:bg-white/10 border border-[#e6e2db] dark:border-[#3d3321] p-2 rounded-xl items-center justify-center hover:shadow-sm transition-all">
-            <span className="material-symbols-outlined text-gray-500">settings</span>
-          </button>
+          <button className="p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-secretary transition-colors"><span className="material-symbols-outlined">settings</span></button>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in duration-700">
         
-        {/* Alert Section */}
-        <section>
-          <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-700/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-4 shadow-sm">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="w-10 h-10 bg-yellow-100 dark:bg-yellow-800/30 text-yellow-600 dark:text-yellow-400 rounded-full flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined" style={{fontVariationSettings: "'FILL' 1"}}>notifications_active</span>
-              </div>
-              <div>
-                <p className="font-bold text-gray-800 dark:text-yellow-50">Nhắc nhở quan trọng</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Hạn nộp danh sách Đoàn viên ưu tú còn 2 ngày.</p>
-              </div>
+        {/* STATS CARDS */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-[2rem] border border-[#e6e2db] dark:border-[#3d3321] shadow-sm flex items-center justify-between">
+            <div className="flex flex-col">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tỷ lệ đi học</h3>
+              <p className="text-4xl font-black text-blue-600 dark:text-blue-400 mt-2">{attendancePercent}%</p>
+              <p className="text-[11px] text-gray-400 mt-2 font-bold italic">{data.attendance?.evaluation}</p>
             </div>
-            <a href="#" className="text-sm font-bold text-secretary hover:text-orange-600 flex items-center gap-1 sm:ml-auto group">
-              Xử lý ngay
-              <span className="material-symbols-outlined text-base group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
-            </a>
-          </div>
-        </section>
-
-        {/* Stats Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Attendance Card */}
-          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-xl border border-[#e6e2db] dark:border-[#3d3321] shadow-sm flex items-center justify-between">
-            <div className="flex flex-col h-full justify-center">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tỷ lệ đi học</h3>
-              <p className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2">Rất tốt</p>
-              <p className="text-xs text-gray-400 mt-1">Dựa trên 5 buổi học gần nhất</p>
-            </div>
-            <div className="relative w-28 h-28 flex-shrink-0">
+            <div className="relative w-28 h-28">
               <svg className="w-full h-full transform -rotate-90">
-                <circle className="text-blue-50 dark:text-blue-900/20" cx="56" cy="56" fill="transparent" r="48" stroke="currentColor" strokeWidth="8"></circle>
-                <circle className="text-blue-600 dark:text-blue-500" cx="56" cy="56" fill="transparent" r="48" stroke="currentColor" strokeDasharray="301.59" strokeDashoffset="15.08" strokeLinecap="round" strokeWidth="8"></circle>
+                <circle cx="56" cy="56" r={radius} stroke="currentColor" strokeWidth="10" className="text-blue-50 dark:text-blue-900/20" fill="transparent" />
+                <circle cx="56" cy="56" r={radius} stroke="currentColor" strokeWidth="10" className="text-blue-600" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-black text-[#181611] dark:text-white">95%</span>
-              </div>
             </div>
           </div>
 
-          {/* Funds Card */}
-          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-xl border border-[#e6e2db] dark:border-[#3d3321] shadow-sm flex flex-col justify-center">
+          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-[2rem] border border-[#e6e2db] dark:border-[#3d3321] shadow-sm">
             <div className="flex justify-between items-start mb-4">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quỹ Chi Đoàn</h3>
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <span className="material-symbols-outlined text-green-600 dark:text-green-400">savings</span>
-              </div>
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Quỹ Chi Đoàn</h3>
+              <span className="material-symbols-outlined text-green-500">payments</span>
             </div>
-            <div className="flex items-end gap-2">
-              <p className="text-3xl font-black text-[#181611] dark:text-white">1.500.000đ</p>
-            </div>
-            <div className="mt-4">
-              <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-gray-500">Đã thu</span>
-                <span className="text-green-600">40/45 bạn</span>
+            <p className="text-4xl font-black text-gray-900 dark:text-white">{data.funds?.total_amount?.toLocaleString()}đ</p>
+            <div className="mt-6 space-y-2">
+              <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
+                <span>Tiến độ thu</span>
+                <span className="text-green-600">{data.funds?.collected_count}/{data.funds?.total_members} bạn</span>
               </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
-                <div className="bg-green-500 h-2 rounded-full" style={{width: '88%'}}></div>
+              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                <div className="bg-green-500 h-full transition-all duration-1000" style={{width: `${(data.funds?.collected_count / data.funds?.total_members) * 100}%`}}></div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Quick Actions */}
+        {/* QUICK ACTIONS */}
         <section>
-          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-6 bg-secretary rounded-full"></span>
-            Phím tắt nhanh
-          </h3>
+          <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Phím tắt nhanh</h3>
           <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-            <ActionBtn icon="qr_code_scanner" label="Quét Check-in" color="blue" />
-            <ActionBtn icon="calendar_add_on" label="Tạo Sự Kiện" color="purple" />
-            <ActionBtn icon="campaign" label="Loa Thông Báo" color="orange" />
+            <QuickActionBtn icon="qr_code_scanner" label="Quét mã QR" color="blue" onClick={() => setActiveModal('qr')} />
+            <QuickActionBtn icon="calendar_add_on" label="Tạo Sự Kiện" color="purple" onClick={() => setActiveModal('event')} />
+            <QuickActionBtn icon="campaign" label="Thông Báo" color="orange" onClick={() => setActiveModal('notif')} />
           </div>
         </section>
 
-        {/* Recent Activity */}
+        {/* RECENT ACTIVITY */}
         <section>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-              Hoạt động mới nhất
-            </h3>
-          </div>
-          <div className="bg-white dark:bg-[#2d2516] rounded-xl border border-[#e6e2db] dark:border-[#3d3321] divide-y dark:divide-[#3d3321] shadow-sm">
-            <ActivityItem 
-              name="Nguyễn Văn An" 
-              time="5 phút trước" 
-              action="Vừa check-in: Hội thảo AI" 
-              avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuBCnNZwETHpbuehXE8yizgLmaqBdabSWDa8C1E6nZTIjz9H22xB6gHOJo-z7h9JzUi9P6I1ct95koTUE_-B-hQN6Z8GXwpbhsCDqV4VOMiFgHgxj2AKA8HPPvJ9cjA2NQUvgGyXjVgcponIpSpknLYnUtyzEEbut7fl4qK-CKuZWQEbzXBIHX_QUYI95ok1TBuyteQuTKNfv4mFew7fl5NW7JPnHg2nSa3KpE41cF2nzlZRjzb2uffvJNoYD7IP78oo80pjCJQl0wIn" 
-            />
-            <ActivityItem 
-              name="Lê Thị Bình" 
-              time="1 giờ trước" 
-              action="Yêu cầu cộng điểm: Hiến máu" 
-              avatar="https://lh3.googleusercontent.com/aida-public/AB6AXuCOZ4vPpesGUdExIKU9YzuSXT8Bfm6KtMs-TE0XMO9WkIXzd2Nfgj5MDjIaygk3NLVXbIqo2oOb10v_Vd5fH2nJ38vamSz4S0o7mmoESEAIJU_croC-4f_ZIrA0139R-fIN6gWw8d2zQT4QBpIqlR210XUZKDWfU-PWelqiEGBMYsXGo0VANiM3STx-bLcjy3h86hSiZNztXlL0lE68ki5ziolX1DGyqRDWoX2ttF3n6CShnVrT3PwONvuwl5ea2ezqCvl_DpdbIcsE" 
-            />
+          <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Hoạt động mới nhất</h3>
+          <div className="bg-white dark:bg-[#2d2516] rounded-3xl border border-[#e6e2db] dark:border-[#3d3321] divide-y dark:divide-[#3d3321] shadow-sm overflow-hidden">
+            {data.recent_activities?.length > 0 ? (
+              data.recent_activities.map((act, i) => (
+                <ActivityItem key={i} name={act.user_name} time={act.time_ago} action={act.description} avatar={act.avatar_url} />
+              ))
+            ) : (
+              <div className="p-6 text-center text-gray-500 italic">Chưa có hoạt động nào gần đây.</div>
+            )}
           </div>
         </section>
 
       </div>
-    </>
+
+      {/* --- MODAL SYSTEM --- */}
+      {activeModal && (
+        <DashboardModal 
+          isOpen={!!activeModal} 
+          onClose={() => setActiveModal(null)}
+          title={activeModal === 'event' ? 'Tạo Sự Kiện Mới' : activeModal === 'notif' ? 'Gửi Thông Báo Chi Đoàn' : 'Quét Mã Check-in'}
+        >
+          {/* Form Tạo Sự Kiện Mới (Full chức năng) */}
+          {activeModal === 'event' && <EventForm onSuccess={() => { setActiveModal(null); fetchDashboardData(); }} />}
+          
+          {activeModal === 'notif' && <NotifForm onSuccess={() => { setActiveModal(null); fetchDashboardData(); }} />}
+          
+          {activeModal === 'qr' && <div className="text-center py-10">Hệ thống quét QR Camera đang được tích hợp...</div>}
+        </DashboardModal>
+      )}
+
+    </div>
   );
 };
 
-// --- Sub Components for cleaner code ---
+// ==========================================
+// 1. MODAL WRAPPER
+// ==========================================
+const DashboardModal = ({ isOpen, onClose, title, children }) => (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
+    <div className="relative bg-white dark:bg-[#1e1c16] w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 border border-gray-100 dark:border-[#3d3321]">
+      <div className="px-8 py-6 border-b border-gray-100 dark:border-[#3d3321] flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+        <h3 className="text-xl font-black text-[#181611] dark:text-white uppercase tracking-tight">{title}</h3>
+        <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/20 flex items-center justify-center transition-all"><span className="material-symbols-outlined">close</span></button>
+      </div>
+      <div className="p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">{children}</div>
+    </div>
+  </div>
+);
 
-const ActionBtn = ({ icon, label, color }) => {
-  // Map color prop to Tailwind classes dynamically is tricky in runtime if not safelisted, 
-  // so we use specific conditions or a mapping object.
-  const colors = {
-    blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-600",
-    purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 group-hover:bg-purple-600",
-    orange: "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 group-hover:bg-orange-600",
+// ==========================================
+// 2. FORM TẠO SỰ KIỆN (FULL OPTIONS)
+// ==========================================
+const EventForm = ({ onSuccess }) => {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: '', description: '', location: '', start_time: '', end_time: '',
+    max_participants: 100, points: 10, status: 'UPCOMING', image_url: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch('http://127.0.0.1:8000/api/v1/events/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        alert("Tạo sự kiện thành công!");
+        onSuccess();
+      } else {
+        alert("Lỗi khi tạo sự kiện");
+      }
+    } catch (err) { alert("Lỗi kết nối server"); }
+    setLoading(false);
   };
 
   return (
-    <button className="flex items-center gap-3 px-6 py-4 bg-white dark:bg-[#2d2516] border border-[#e6e2db] dark:border-[#3d3321] rounded-2xl shadow-sm hover:border-secretary/50 hover:bg-secretary/5 transition-all group min-w-[160px]">
-      <div className={`w-10 h-10 rounded-full flex items-center justify-center group-hover:text-white transition-colors ${colors[color]}`}>
-        <span className="material-symbols-outlined">{icon}</span>
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* 1. Ảnh bìa */}
+      <div className="space-y-2">
+        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Ảnh bìa sự kiện</label>
+        <div className="relative h-40 w-full bg-gray-50 dark:bg-white/5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden group">
+            {formData.image_url ? (
+                <img src={formData.image_url} className="w-full h-full object-cover" />
+            ) : (
+                <div className="text-center">
+                    <span className="material-symbols-outlined text-4xl text-gray-300">add_a_photo</span>
+                    <p className="text-[10px] font-bold text-gray-400 mt-1">Dán link ảnh bên dưới</p>
+                </div>
+            )}
+        </div>
+        <input 
+            type="text" name="image_url" placeholder="https://example.com/anh-su-kien.jpg" 
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 ring-secretary/20"
+            onChange={handleChange}
+        />
       </div>
-      <span className="text-sm font-bold text-gray-700 dark:text-gray-200">{label}</span>
+
+      {/* 2. Thông tin chính */}
+      <div className="grid grid-cols-2 gap-4">
+        <InputWrapper label="Tên hoạt động">
+          <input name="title" required onChange={handleChange} className="form-input" placeholder="VD: Hội trại 26/3" />
+        </InputWrapper>
+        <InputWrapper label="Địa điểm">
+          <input name="location" required onChange={handleChange} className="form-input" placeholder="VD: Sân vận động" />
+        </InputWrapper>
+      </div>
+
+      {/* 3. Thời gian */}
+      <div className="grid grid-cols-2 gap-4">
+        <InputWrapper label="Thời gian bắt đầu">
+          <input name="start_time" type="datetime-local" required onChange={handleChange} className="form-input" />
+        </InputWrapper>
+        <InputWrapper label="Thời gian kết thúc">
+          <input name="end_time" type="datetime-local" onChange={handleChange} className="form-input" />
+        </InputWrapper>
+      </div>
+
+      {/* 4. Chỉ số */}
+      <div className="grid grid-cols-2 gap-4">
+        <InputWrapper label="Số người tối đa">
+          <input name="max_participants" type="number" defaultValue="100" onChange={handleChange} className="form-input" />
+        </InputWrapper>
+        <InputWrapper label="Điểm rèn luyện">
+          <input name="points" type="number" defaultValue="10" onChange={handleChange} className="form-input" />
+        </InputWrapper>
+      </div>
+
+      {/* 5. Mô tả */}
+      <InputWrapper label="Mô tả chi tiết">
+        <textarea name="description" rows="4" onChange={handleChange} className="form-input py-3" placeholder="Nội dung và ý nghĩa sự kiện..."></textarea>
+      </InputWrapper>
+      
+      <button disabled={loading} className="w-full bg-gradient-to-r from-secretary to-orange-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-orange-200 active:scale-95 transition-all uppercase tracking-widest mt-4">
+        {loading ? "ĐANG ĐĂNG..." : "ĐĂNG SỰ KIỆN LÊN HỆ THỐNG"}
+      </button>
+    </form>
+  );
+};
+
+// ==========================================
+// 3. FORM TẠO THÔNG BÁO (GIỮ NGUYÊN)
+// ==========================================
+const NotifForm = ({ onSuccess }) => {
+  const [formData, setFormData] = useState({ title: '', content: '', type: 'info', target_audience: 'ALL', status: 'SENT' });
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch('http://127.0.0.1:8000/api/v1/notifications/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) onSuccess();
+    } catch (err) { console.error(err); }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <InputWrapper label="Tiêu đề thông báo">
+        <input name="title" required onChange={e => setFormData({...formData, title: e.target.value})} className="form-input" placeholder="VD: Thông báo quan trọng..." />
+      </InputWrapper>
+      
+      <InputWrapper label="Loại tin">
+        <div className="flex gap-2">
+            {['info', 'urgent', 'success'].map(t => (
+            <label key={t} className={`flex-1 text-center py-2 rounded-xl border cursor-pointer font-bold text-[10px] uppercase transition-all ${formData.type === t ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-400 border-gray-100'}`}>
+                <input type="radio" name="type" className="hidden" onChange={() => setFormData({...formData, type: t})} /> {t}
+            </label>
+            ))}
+        </div>
+      </InputWrapper>
+
+      <InputWrapper label="Nội dung chi tiết">
+        <textarea name="content" rows="5" onChange={e => setFormData({...formData, content: e.target.value})} className="form-input" placeholder="Nhập nội dung..."></textarea>
+      </InputWrapper>
+
+      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all uppercase tracking-widest">GỬI THÔNG BÁO NGAY</button>
+    </form>
+  );
+};
+
+// Helper UI Components
+const QuickActionBtn = ({ icon, label, color, onClick }) => {
+  const themes = {
+    blue: "bg-blue-50 text-blue-600 border-blue-100 icon-bg:bg-blue-500",
+    purple: "bg-purple-50 text-purple-600 border-purple-100 icon-bg:bg-purple-500",
+    orange: "bg-orange-50 text-orange-600 border-orange-100 icon-bg:bg-orange-500"
+  };
+  return (
+    <button onClick={onClick} className={`flex items-center gap-4 px-6 py-5 bg-white dark:bg-[#2d2516] border rounded-[1.5rem] shadow-sm hover:shadow-lg transition-all active:scale-95 min-w-[200px] shrink-0 ${themes[color].split(' icon-bg:')[0]}`}>
+      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${themes[color].split('icon-bg:')[1]}`}><span className="material-symbols-outlined">{icon}</span></div>
+      <span className="text-sm font-black text-gray-700 dark:text-gray-200">{label}</span>
     </button>
   );
 };
 
 const ActivityItem = ({ name, time, action, avatar }) => (
-  <div className="p-4 flex items-center gap-4 hover:bg-bg-secretary-light dark:hover:bg-white/5 transition-colors group">
-    <div className="w-10 h-10 rounded-full bg-cover bg-center border border-gray-200" style={{backgroundImage: `url('${avatar}')`}}></div>
-    <div className="flex-1">
+  <div className="p-5 flex items-center gap-5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-default">
+    <img src={avatar || "https://i.pravatar.cc/150"} className="w-12 h-12 rounded-full border-2 border-white shadow-md shrink-0" />
+    <div className="flex-1 min-w-0">
       <div className="flex justify-between items-start">
-        <h4 className="text-sm font-bold">{name}</h4>
-        <span className="text-[10px] text-gray-400 font-medium">{time}</span>
+        <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">{name}</h4>
+        <span className="text-[10px] text-gray-500 font-bold bg-gray-100 dark:bg-white/10 px-2 py-0.5 rounded-md shrink-0">{time}</span>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">{action}</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">{action}</p>
     </div>
+  </div>
+);
+
+const InputWrapper = ({ label, children }) => (
+  <div className="flex flex-col gap-1.5">
+    <label className="text-[10px] font-black text-gray-400 uppercase ml-1 tracking-widest">{label}</label>
+    {children}
   </div>
 );
 

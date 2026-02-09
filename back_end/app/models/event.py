@@ -24,3 +24,6 @@ class Event(Base):
 
     # Danh sách các sinh viên tham gia sự kiện này
     participations = relationship("Participation", back_populates="event")
+
+    # Lưu link ảnh
+    image_url = Column(String, nullable=True)

@@ -22,19 +22,10 @@ def create_event(
     if current_user.role not in ["SUPER_ADMIN", "ADMIN", "SUB_ADMIN"]:
          raise HTTPException(status_code=403, detail="Bạn không có quyền tạo sự kiện")
 
-    # Lưu dữ liệu từ Frontend vào Database
+    # Cách sửa lỗi: Sử dụng giải nén dict cho toàn bộ dữ liệu từ Schema
+    # và gán thêm creator_id một cách riêng biệt.
     new_event = Event(
-        title=event_in.title,
-        description=event_in.description,
-        location=event_in.location,
-        start_time=event_in.start_time,
-        end_time=event_in.end_time,
-        
-        # --- [MỚI] Thêm 2 trường này để khớp với Modal Frontend ---
-        max_participants=event_in.max_participants,
-        status=event_in.status, # UPCOMING, ONGOING, etc.
-        # ---------------------------------------------------------
-        
+        **event_in.dict(),
         creator_id=current_user.id
     )
     

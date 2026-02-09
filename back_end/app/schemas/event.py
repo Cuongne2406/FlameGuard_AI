@@ -11,6 +11,7 @@ class EventBase(BaseModel):
     end_time: Optional[datetime] = None
     max_participants: int = 100
     status: str = "UPCOMING" 
+    image_url: Optional[str] = None
 
 # Dữ liệu gửi lên khi tạo 
 class EventCreate(EventBase):
