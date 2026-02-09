@@ -15,6 +15,7 @@ from app.models.system_setting import SystemSetting
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserResponse
 from passlib.context import CryptContext
+from app.api import deps
 
 router = APIRouter()
 
@@ -24,6 +25,10 @@ pwd_context = CryptContext(
     deprecated="auto",
     bcrypt__truncate_error=False
 )
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 # --- API ĐĂNG KÝ (Giữ nguyên) ---
 @router.post("/register", response_model=UserResponse)
@@ -110,6 +115,43 @@ def login_access_token(
         "access_token": access_token, 
         "token_type": "bearer"
     }
+
+
+# --- API ĐỔI MẬT KHẨU
+@router.post("/change-password")
+def change_password(
+    data: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(deps.get_current_user) # Lấy user đang đăng nhập
+):
+    # 1. Kiểm tra mật khẩu hiện tại có đúng không
+    if not pwd_context.verify(data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu hiện tại không chính xác"
+        )
+    
+    # 2. Kiểm tra mật khẩu mới không được trùng mật khẩu cũ (tùy chọn bảo mật)
+    if pwd_context.verify(data.new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mật khẩu mới không được trùng với mật khẩu cũ"
+        )
+
+    # 3. Hash mật khẩu mới và lưu vào database
+    current_user.hashed_password = pwd_context.hash(data.new_password)
+    
+    try:
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Lỗi khi cập nhật mật khẩu")
+
+    return {"message": "Đổi mật khẩu thành công"}
+
+
 
 # --- API XÁC THỰC OTP (Sửa lại logic tìm theo MSSV) ---
 class OTPVerify(BaseModel):
