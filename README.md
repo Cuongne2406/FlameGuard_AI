@@ -37,7 +37,14 @@ git clone https://github.com/Cuongne2406/FlameGuard_AI.git
         - B2:  .\venv\Scripts\activate
         - B3:  pip install -r requirements.txt
                pip install psycopg2-binary
-   
+        - B4: tại back_end/
+              --- tạo một file tên là .env (đây là file cấu hình hệ thống)
+                        ``` Nội dung file cấu hình 
+         DATABASE_URL=postgresql://postgres:********@localhost:5432/TÊN_DATABASE_BẠN_TẠO_TRONG_POSTGRESQL
+         SECRET_KEY="SECRET_KEY_BẠN_TỰ_ĐẶT"
+         MAIL_USERNAME=email bạn dùng để nhận thư feedback
+         MAIL_PASSWORD=App PassWord của email nhận feedback
+
 2. Cách để dự án hoạt động: (Chạy song song 2 terminal)
     a. Front_end
         - cd front_end/web

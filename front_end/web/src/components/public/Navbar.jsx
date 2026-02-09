@@ -71,13 +71,6 @@ const Navbar = () => {
             />
           </div>
 
-          {/* Nút Login này có thể ẩn đi nếu user đã đăng nhập, nhưng giữ nguyên cũng không sao */}
-          <Link
-            to="/login"
-            className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center gap-2"
-          >
-            <LogIn size={14} /> Đăng nhập
-          </Link>
         </div>
 
       </div>

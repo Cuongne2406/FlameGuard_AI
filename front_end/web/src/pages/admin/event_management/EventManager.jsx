@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
-// Hãy chắc chắn đường dẫn import này đúng với cấu trúc folder của bạn (lùi ra 3 cấp)
-import AddEventModal from '../../../components/admin/AddEventModal'; 
+// 1. Xóa bỏ import AddEventModal cũ
+// import AddEventModal from '../../../components/admin/AddEventModal'; 
+import CreateEvent from '../../../components/common/CreateEvent';
 
 const EventManagement = () => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("ALL"); // State cho bộ lọc
+  const [filterStatus, setFilterStatus] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // 1. Hàm gọi API (Có tham số filter)
   const fetchEvents = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("access_token");
-      // Tạo URL với query params
       let url = `http://127.0.0.1:8000/api/v1/events/?search=${searchTerm}`;
       if (filterStatus !== "ALL") {
         url += `&status=${filterStatus}`;
@@ -34,15 +33,13 @@ const EventManagement = () => {
     }
   };
 
-  // Gọi API khi filter hoặc search thay đổi
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchEvents();
-    }, 300); // Debounce để tránh gọi API quá nhiều khi gõ phím
+    }, 300);
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, filterStatus]);
 
-  // Format ngày tháng đẹp
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -60,12 +57,10 @@ const EventManagement = () => {
           </div>
 
           <div className="flex gap-3">
-             {/* Nút cài đặt (UI cũ) */}
              <button className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
                 <span className="material-symbols-outlined text-slate-600 dark:text-slate-300">tune</span>
              </button>
 
-             {/* --- NÚT TẠO SỰ KIỆN (MỚI & ĐẸP HƠN) --- */}
              <button 
                 onClick={() => setIsModalOpen(true)}
                 className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-cyan-500/30 flex items-center gap-2 transform hover:-translate-y-0.5 transition-all duration-200"
@@ -76,39 +71,11 @@ const EventManagement = () => {
           </div>
         </div>
 
-        {/* TOOLBAR & FILTER */}
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-t-xl border-b border-slate-100 dark:border-slate-700 flex flex-wrap gap-4 justify-between items-center shadow-sm">
-            {/* Search */}
-            <div className="relative flex-1 min-w-[300px]">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
-                    <span className="material-symbols-outlined">search</span>
-                </span>
-                <input 
-                    type="text" 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-lg focus:ring-2 focus:ring-blue-500/50 outline-none text-slate-700 dark:text-white transition-all"
-                    placeholder="Tìm kiếm sự kiện theo tên hoặc địa điểm..."
-                />
-            </div>
+        {/* TOOLBAR & FILTER (Giữ nguyên) */}
+        {/* ... */}
 
-            {/* --- BỘ LỌC HOẠT ĐỘNG --- */}
-            <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-500">Trạng thái:</span>
-                <select 
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="bg-slate-50 dark:bg-slate-900 border-none text-sm font-semibold text-slate-700 dark:text-white py-2 pl-3 pr-8 rounded-lg outline-none cursor-pointer hover:bg-slate-100 transition-colors"
-                >
-                    <option value="ALL">Tất cả</option>
-                    <option value="UPCOMING">Sắp diễn ra</option>
-                    <option value="ONGOING">Đang diễn ra</option>
-                    <option value="COMPLETED">Đã kết thúc</option>
-                </select>
-            </div>
-        </div>
-
-        {/* TABLE */}
+        {/* TABLE (Giữ nguyên) */}
+        {/* ... (Các phần table bên dưới không đổi) ... */}
         <div className="bg-white dark:bg-slate-800 rounded-b-xl shadow-sm border border-t-0 border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -173,20 +140,17 @@ const EventManagement = () => {
                 </table>
             </div>
             
-            {/* Pagination UI (Tĩnh) */}
             <div className="p-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                 <span className="text-xs text-slate-500">Hiển thị {events.length} sự kiện</span>
-                {/* Pagination Controls... */}
             </div>
         </div>
-
       </div>
 
-      {/* Modal Import */}
-      <AddEventModal 
+      {/* --- 2. THAY THẾ MODAL TẠI ĐÂY --- */}
+      <CreateEvent 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onRefresh={fetchEvents}
+        onSuccess={fetchEvents} // fetchEvents sẽ được gọi lại để reload danh sách sau khi tạo thành công
       />
     </div>
   );

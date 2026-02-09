@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.models import User, Event, notification, certificate
 from app.api.v1 import auth, events, dashboard, users, notifications, transactions, achievements, ai_analysis, system, ranking, certificates
-from app.api.v1 import dashboard_sub, feedback
+from app.api.v1 import dashboard_sub, feedback, upload
 from app.db.session import engine, Base
 from app.models.user import User
 from app.models.event import Event
@@ -55,6 +55,7 @@ app.include_router(ranking.router, prefix="/api/v1/ranking", tags=["Ranking"])
 app.include_router(certificates.router, prefix="/api/v1/certificates", tags=["Certificates"])
 app.include_router(dashboard_sub.router, prefix="/api/v1/sub-dashboard", tags=["Sub Dashboard"])
 app.include_router(feedback.router, prefix="/api/v1/feedback", tags=["Feedback"])
+app.include_router(upload.router, prefix="/api/v1/upload", tags=["Upload"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
