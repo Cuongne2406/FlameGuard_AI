@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 
 // NHẬN PROP settings VÀ role TỪ ADMINLAYOUT
-const Sidebar = ({ role, settings }) => { 
+const Sidebar = ({ role, settings, isOpen = false, onClose }) => { 
   
   // Style cho menu: 
   const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-white/20 text-white font-medium shadow-sm transition-all duration-200";
@@ -10,9 +10,17 @@ const Sidebar = ({ role, settings }) => {
   // Normal: Chữ trắng, không nền (hoặc nền trong suốt), hover vào mới hiện nền
   const normalStyle = "flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:bg-white/10 transition-colors duration-200";
 
+  const handleNavClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
-    // bg-primary: Dùng màu xanh chủ đạo bạn đã cài trong tailwind.config.js
-    <aside className="w-64 h-screen bg-primary text-white flex flex-col">
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/40 z-30 lg:hidden" onClick={onClose} />
+      )}
+      {/* bg-primary: Dung mau xanh chu dao ban da cai trong tailwind.config.js */}
+    <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 h-screen bg-primary text-white flex flex-col transform transition-transform duration-300 lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}> 
       
       {/* --- PHẦN HEADER: LOGO & TÊN ĐƠN VỊ (ĐÃ SỬA) --- */}
       <div className="h-16 flex items-center px-6 border-b border-white/10 shadow-sm shrink-0">
@@ -35,19 +43,19 @@ const Sidebar = ({ role, settings }) => {
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
 
         {/* Mục 1: Tổng Quan */}
-        <NavLink to="/admin/dashboard" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/dashboard" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">dashboard</span>
           <span className="text-sm">Tổng Quan</span>
         </NavLink>
 
         {/* Mục 2: Thông Báo */}
-        <NavLink to="/admin/notifications" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/notifications" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">notifications</span>
           <span className="text-sm">Thông Báo</span>
         </NavLink>
 
         {/* Mục 3: Danh sách chờ duyệt */}
-        <NavLink to="/admin/approvals" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/approvals" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">assignment</span>
           <span className="text-sm">Danh sách chờ duyệt</span>
           {/* số lượng thông báo đỏ */}
@@ -55,32 +63,32 @@ const Sidebar = ({ role, settings }) => {
         </NavLink>
 
         {/* Mục 4: Quản lý & Nhân sự */}
-        <NavLink to="/admin/members" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/members" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">manage_accounts</span>
           <span className="text-sm">Quản lý & Nhân sự</span>
         </NavLink>
 
         {/* Mục 5: Tài Chính & Hậu Cần */}
-        <NavLink to="/admin/finance" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/finance" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">account_balance_wallet</span>
           <span className="text-sm">Tài Chính & Hậu Cần</span>
         </NavLink>
 
         {/* Mục 6: Quản lý sự kiện */}
-        <NavLink to="/admin/events" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/events" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">calendar_month</span>
           <span className="text-sm">Quản lý sự kiện</span>
         </NavLink>
 
 
         {/* Mục 8: Thi đua & Danh hiệu */}
-        <NavLink to="/admin/achievements" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/achievements" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">equalizer</span> {/* Icon biểu đồ cột */}
           <span className="text-sm">Thi đua & Danh hiệu</span>
         </NavLink>
 
         {/* Mục 9: Phân tích & AI */}
-        <NavLink to="/admin/ai-analysis" className={({ isActive }) => isActive ? activeStyle : normalStyle}>
+        <NavLink to="/admin/ai-analysis" onClick={handleNavClick} className={({ isActive }) => isActive ? activeStyle : normalStyle}>
           <span className="material-symbols-outlined">psychology</span> {/* Icon đầu người/AI */}
           <span className="text-sm">Phân tích & AI</span>
         </NavLink>
@@ -90,7 +98,7 @@ const Sidebar = ({ role, settings }) => {
       {/* 3. FOOTER (Cài đặt & User Info như ảnh) */}
       <div className="p-4 border-t border-white/10 mt-auto shrink-0">
         {/* Lưu ý: Link này dẫn đến trang Cài đặt hệ thống mà chúng ta vừa làm */}
-        <NavLink to="/system-settings/general" className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
+        <NavLink to="/system-settings/general" onClick={handleNavClick} className={normalStyle + " mb-4 px-0 hover:bg-transparent"}>
           <span className="material-symbols-outlined">settings</span>
           <span className="text-sm">Cài Đặt Hệ Thống</span>
         </NavLink>
@@ -107,6 +115,7 @@ const Sidebar = ({ role, settings }) => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import NotificationBell from '../common/NotificationBell'; 
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const navigate = useNavigate();
 
@@ -26,9 +26,16 @@ const Header = () => {
   };
 
   return (
-    <header className="h-16 bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 shadow-sm z-10 flex-shrink-0">
-      <div className="flex items-center gap-4">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white">Bảng Điều Khiển</h2>
+    <header className="h-16 bg-surface-light dark:bg-surface-dark border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 md:px-6 lg:px-8 shadow-sm z-10 flex-shrink-0">
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          onClick={() => onMenuClick && onMenuClick()}
+          className="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+          title="Mo menu"
+        >
+          <span className="material-symbols-outlined">menu</span>
+        </button>
+        <h2 className="text-lg md:text-xl font-bold text-gray-800 dark:text-white truncate">Bảng Điều Khiển</h2>
       </div>
       <div className="flex items-center gap-6">
         {/* Search Bar */}
