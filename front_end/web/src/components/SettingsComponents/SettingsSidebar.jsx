@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 
 /**
@@ -9,7 +9,7 @@ const SettingsSidebar = () => {
     const navigate = useNavigate();
 
 
-
+    
     // --- LOGIC KÉO API ---
     const [userData, setUserData] = useState({
         full_name: '',
@@ -55,12 +55,6 @@ const SettingsSidebar = () => {
     // --- GIỮ NGUYÊN GIAO DIỆN ---
     const activeStyle = "flex items-center gap-3 px-4 py-3 rounded-lg bg-blue-50 text-primary font-medium border-l-4 border-primary transition-all";
     const normalStyle = "flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all border-l-4 border-transparent";
-
-    const navigate = useNavigate();
-    const handleLogout = () => {
-        // Có thể thêm logic xóa localstorage/token tại đây
-        navigate('/login');
-    };
 
     const menuItems = [
         { to: '/settings/profile', icon: 'person', label: 'Thông Tin Cá Nhân' },
