@@ -1,65 +1,81 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Modal, Toast } from '../../../components/ui';
-import RegisterForm from '../../../components/UserComponents/RegisterForm';
-import ForgotPasswordForm from '../../../components/UserComponents/ForgotPasswordForm';
 
-/**
- * Login Page - Giao diện đăng nhập cao cấp tích hợp API thực tế
- */
 const Login = () => {
   const navigate = useNavigate();
-
-  // UI State
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-
-  // Auth State
+  // State quản lý dữ liệu nhập vào
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- 1. HÀM XỬ LÝ ĐĂNG NHẬP THỰC TẾ ---
+  // Hàm xử lý khi bấm nút Đăng Nhập
   const handleLogin = async (e) => {
-    e.preventDefault();
+    e.preventDefault(); 
     setError('');
     setLoading(true);
 
     try {
+      // --- BƯỚC 1: GỌI API LOGIN ĐỂ LẤY TOKEN ---
+      const formData = new URLSearchParams();
+      formData.append('username', username); 
+      formData.append('password', password); 
+
       const response = await fetch('http://127.0.0.1:8000/api/v1/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Đăng nhập thất bại!');
 
+      if (!response.ok) {
+        throw new Error(data.detail || 'Đăng nhập thất bại! Kiểm tra lại tài khoản.');
+      }
+
+      // Lưu Token vào kho
       localStorage.setItem('access_token', data.access_token);
+      console.log("1. Token đã lưu thành công.");
 
-      // Lấy thông tin User để xác định Role
+      // --- BƯỚC 2: GỌI API LẤY THÔNG TIN USER (ĐÃ THÊM AUTHORIZATION) ---
+      // Lưu ý: Phải dùng Bearer token vừa lấy được gửi ngược lên header
       const meResponse = await fetch('http://127.0.0.1:8000/api/v1/users/me', {
-        headers: { 'Authorization': `Bearer ${data.access_token}` }
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${data.access_token}`, // Dòng cực kỳ quan trọng
+            'Content-Type': 'application/json'  
+        }
       });
 
-      if (!meResponse.ok) throw new Error("Không thể xác thực vai trò người dùng.");
+      if (!meResponse.ok) {
+        // Nếu DB thiếu mã OTP hoặc lỗi Schema, nó sẽ rơi vào đây
+        throw new Error("Xác thực thông tin người dùng thất bại (Có thể do dữ liệu DB chưa đủ).");
+      }
 
       const userData = await meResponse.json();
-      localStorage.setItem('user_role', userData.role);
+      console.log("Dữ liệu User nhận được:", userData);
+      
+      // --- BƯỚC 3: LƯU ROLE VÀ ĐIỀU HƯỚNG ---
+      localStorage.setItem('user_role', userData.role); // Lưu role để AppRoutes sử dụng
 
-      // Điều hướng
-      if (userData.role === 'SUPER_ADMIN') navigate('/admin/dashboard');
-      else if (userData.role === 'SUB_ADMIN' || userData.role === 'ADMIN') navigate('/admin-sub/dashboard');
-      else navigate('/home');
+      // Phân luồng điều hướng dựa trên Role
+      if (userData.role === 'SUPER_ADMIN') {
+          navigate('/admin/dashboard');
+      } 
+      else if (userData.role === 'SUB_ADMIN') { 
+          navigate('/admin_sub/dashboard');
+      } 
+      else {
+          // Sinh viên và các role khác
+          navigate('/home');
+      }
 
     } catch (err) {
+      console.error("Lỗi hệ thống:", err);
       setError(err.message);
+      // Xóa dữ liệu cũ nếu lỗi để đảm bảo an toàn
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_role');
     } finally {
@@ -67,63 +83,47 @@ const Login = () => {
     }
   };
 
-  // --- 2. HÀM LOGIN NHANH (CHO DEV) ---
-  const handleFakeLogin = (role) => {
-    localStorage.setItem('user_role', role);
-    localStorage.setItem('access_token', 'dev-token-only');
-    if (role === 'SUPER_ADMIN') navigate('/admin/dashboard');
-    else if (role === 'SUB_ADMIN') navigate('/admin-sub/dashboard');
-    else navigate('/home');
-  };
-
-  const handleSuccess = (msg) => {
-    setIsRegisterOpen(false);
-    setIsForgotOpen(false);
-    setToastMsg(msg);
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 3000);
-  };
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#f8faff] gap-6 font-display relative p-4">
-      {showToast && <Toast message={toastMsg} type="success" onClose={() => setShowToast(false)} />}
-
-      {/* Header */}
-      <div className="text-center space-y-2 animate-fade-in">
-        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-100 rotate-3">
-          <span className="material-symbols-outlined text-white text-3xl">school</span>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white shadow-lg rounded-xl">
+        <div className="text-center">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            LHU YouthHub
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Đăng nhập hệ thống quản lý
+          </p>
         </div>
-        <h1 className="text-3xl font-black text-[#1e293b] uppercase tracking-tight">Hệ Thống YouthHub</h1>
-        <p className="text-gray-400 font-medium text-sm md:text-base">Hệ sinh thái số quản lý hoạt động Đoàn Khoa</p>
-      </div>
-
-      {/* Main Login Card */}
-      <div className="bg-white p-8 rounded-3xl shadow-2xl shadow-blue-50/50 flex flex-col gap-6 w-full max-w-md border border-gray-100 animate-slide-up">
+        
         {error && (
-          <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-xs font-bold animate-shake text-center">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative animate-pulse" role="alert">
+            <span className="block sm:inline text-xs font-bold">{error}</span>
           </div>
         )}
 
-        <form className="space-y-4" onSubmit={handleLogin}>
-          <div className="space-y-4">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">person</span>
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div className="mb-4">
+              <label htmlFor="username" className="sr-only">Tài khoản</label>
               <input
+                id="username"
+                name="username"
                 type="text"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
-                placeholder="Tài khoản / MSSV"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="MSSV / Email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">lock</span>
+            <div>
+              <label htmlFor="password" className="sr-only">Mật khẩu</label>
               <input
+                id="password"
+                name="password"
                 type="password"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Mật khẩu"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -131,54 +131,22 @@ const Login = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-200 transition-all active:scale-[0.98] disabled:bg-gray-300"
-          >
-            {loading ? "Đang xác thực..." : "Đăng Nhập"}
-          </button>
-
-          <div className="text-right">
-            <button type="button" onClick={() => setIsForgotOpen(true)} className="text-xs text-gray-400 hover:text-primary font-medium">Bạn quên mật khẩu?</button>
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 transition-all shadow-md active:scale-95"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                   <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24"></svg>
+                   Đang xác thực...
+                </span>
+              ) : 'Đăng Nhập'}
+            </button>
           </div>
         </form>
-
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-gray-100"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-300 text-[10px] font-bold uppercase tracking-widest">Hoặc đăng ký</span>
-          <div className="flex-grow border-t border-gray-100"></div>
-        </div>
-
-        <div className="text-center">
-          <p className="text-sm text-gray-500">
-            Chưa có tài khoản?{' '}
-            <button onClick={() => setIsRegisterOpen(true)} className="text-primary font-bold hover:underline">Hãy đăng ký ngay</button>
-          </p>
-        </div>
       </div>
-
-      {/* Quick Access (Dev Only) */}
-      <div className="w-full max-w-md space-y-3">
-        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest text-center">Truy cập nhanh (Chế độ phát triển)</p>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => handleFakeLogin('SUPER_ADMIN')} className="flex items-center justify-center gap-2 bg-[#1e293b] text-white py-2 rounded-lg text-[10px] font-bold opacity-80 hover:opacity-100 transition-all">
-            <span className="material-symbols-outlined text-sm">admin_panel_settings</span> ADMIN TỔNG
-          </button>
-          <button onClick={() => handleFakeLogin('SUB_ADMIN')} className="flex items-center justify-center gap-2 bg-[#f2a60d] text-white py-2 rounded-lg text-[10px] font-bold opacity-80 hover:opacity-100 transition-all">
-            <span className="material-symbols-outlined text-sm">local_police</span> BÍ THƯ CHI ĐOÀN
-          </button>
-        </div>
-      </div>
-
-      {/* Modals */}
-      <Modal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} title="Đăng Ký Thành Viên Mới" size="xl">
-        <RegisterForm onSuccess={() => handleSuccess('Đăng ký tài khoản thành công!')} onToggleLogin={() => setIsRegisterOpen(false)} />
-      </Modal>
-
-      <Modal isOpen={isForgotOpen} onClose={() => setIsForgotOpen(false)} title="Khôi Phục Mật Khẩu" size="lg">
-        <ForgotPasswordForm onSuccess={() => handleSuccess('Đã đặt lại mật khẩu thành công!')} onToggleLogin={() => setIsForgotOpen(false)} />
-      </Modal>
     </div>
   );
 };
