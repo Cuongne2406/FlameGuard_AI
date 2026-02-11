@@ -94,7 +94,7 @@ const AppRoutes = () => {
         </PrivateRoute>
       }>
         <Route path="/trang-chu" element={<Home />} />
-        
+
         <Route path="/tin-tuc" element={<News />} />
         <Route path="/tin-tuc/:id" element={<NewsDetail />} />
         <Route path="/hoat-dong" element={<Activities />} />
@@ -116,7 +116,7 @@ const AppRoutes = () => {
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/settings" element={<SettingsLayout />}>
-          <Route index element={<Navigate to="profile" replace />} />
+          <Route index element={<EditProfile />} />
           <Route path="profile" element={<EditProfile />} />
           <Route path="password" element={<ChangePassword />} />
           <Route path="social" element={<SocialLinks />} />
