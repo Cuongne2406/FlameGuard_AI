@@ -43,9 +43,18 @@ import Privacy from '../pages/user/settings/privacy/Privacy';
 
 // --- SUB ADMIN ---
 import SubAdminDashboard from '../pages/admin_sub/dashboard/SubAdminDashboard';
-import SubAdminManagement from '../pages/admin_sub/management/SubAdminManagement';
 import SubAdminNotifications from '../pages/admin_sub/notifications/SubAdminNotifications';
 import SubAdminEvents from '../pages/admin_sub/events/SubAdminEvents';
+import SubAdminClasses from '../pages/admin_sub/classes/SubAdminClasses';
+import SubAdminAIAnalysis from '../pages/admin_sub/aianalysis/SubAdminAIAnalysis';
+import SubAdminApprovals from '../pages/admin_sub/approvals/SubAdminApprovals';
+import SubAdminFinance from '../pages/admin_sub/finance/SubAdminFinance';
+import SubAdminAwards from '../pages/admin_sub/awards/SubAdminAwards';
+import SubAdminClubs from '../pages/admin_sub/clubs/SubAdminClubs';
+import SubAdminSettings from '../pages/admin_sub/settings/SubAdminSettings';
+import EventRegistrationApproval from '../pages/admin_sub/events/EventRegistrationApproval';
+import EventLiveReport from '../pages/admin_sub/events/EventLiveReport';
+import EventFeedbackAnalysis from '../pages/admin_sub/events/EventFeedbackAnalysis';
 
 // --- SUPER ADMIN ---
 import AdminDashboard from '../pages/admin/dashboard/Dashboard';
@@ -80,6 +89,12 @@ const getRedirectPath = (role) => {
 };
 
 const AppRoutes = () => {
+  // Dev Mode: Auto-set token if not exist (check first!)
+  if (!localStorage.getItem("access_token") && import.meta.env.DEV) {
+    localStorage.setItem("access_token", "dev_test_token_2026");
+    localStorage.setItem("user_role", "SUB_ADMIN");
+  }
+
   const token = localStorage.getItem("access_token");
   const role = localStorage.getItem("user_role");
 
@@ -135,9 +150,20 @@ const AppRoutes = () => {
 
         {/* Đường dẫn thực tế: /admin_sub/dashboard */}
         <Route path="dashboard" element={<SubAdminDashboard />} />
-        <Route path="management" element={<SubAdminManagement />} />
+        <Route path="ai-analysis" element={<SubAdminAIAnalysis />} />
+        <Route path="classes" element={<SubAdminClasses />} />
+        <Route path="approvals" element={<SubAdminApprovals />} />
+        <Route path="finance" element={<SubAdminFinance />} />
+        <Route path="awards" element={<SubAdminAwards />} />
+        <Route path="clubs" element={<SubAdminClubs />} />
+        {/* `management` page was removed; redirect to `classes` */}
+        <Route path="management" element={<Navigate to="classes" replace />} />
         <Route path="events" element={<SubAdminEvents />} />
+        <Route path="events/:id/registrations" element={<EventRegistrationApproval />} />
+        <Route path="events/:id/live" element={<EventLiveReport />} />
+        <Route path="events/:id/feedback" element={<EventFeedbackAnalysis />} />
         <Route path="notifications" element={<SubAdminNotifications />} />
+        <Route path="settings" element={<SubAdminSettings />} />
       </Route>
 
       {/* --- SUPER ADMIN (QUẢN TRỊ VIÊN) --- */}

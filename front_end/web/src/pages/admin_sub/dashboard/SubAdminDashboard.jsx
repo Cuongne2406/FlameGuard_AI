@@ -1,346 +1,225 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import CreateEvent from '../../../components/common/CreateEvent';
+import React, { useState } from 'react';
+import Toast from '../../../components/ui/Toast';
 
 const SubAdminDashboard = () => {
-  const navigate = useNavigate();
+  const [toast, setToast] = useState(null);
 
-  // --- 1. STATE DỮ LIỆU ---
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const stats = [
+    { label: 'Tổng Chi Đoàn', val: '20 Lớp', sub: '100% đã có BCH', icon: 'groups', color: 'blue' },
+    { label: 'Tổng Sinh viên', val: '1,500', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
+    { label: 'Quỹ Khoa hiện tại', val: '50.000.000', unit: 'VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
+    { label: 'Chi tiêu năm', val: 'Đạt 85%', sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
+  ];
 
-  // --- 2. STATE QUẢN LÝ MODAL (POPUP) ---
-  const [activeModal, setActiveModal] = useState(null);
+  const activities = [
+    { id: '23CT112', name: 'Chi đoàn 23CT112', year: 'Khóa 2023 - CNTT', leader: 'Nguyễn Văn A', fee: '100% (Đã nộp đủ)', status: 'Excellent', statusColor: 'emerald' },
+    { id: '23CT113', name: 'Chi đoàn 23CT113', year: 'Khóa 2023 - CNTT', leader: 'Trần Thị B', fee: 'Missing: Báo cáo tháng 10', status: 'Warning', statusColor: 'orange', alert: 'Gửi nhắc nhở ngay' },
+  ];
 
-  // --- 3. GỌI API LẤY THỐNG KÊ DASHBOARD ---
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("access_token");
-      const response = await fetch('http://127.0.0.1:8000/api/v1/sub-dashboard/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error("Lỗi kết nối server");
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleAction = (msg) => {
+    setToast({ message: msg, type: 'success' });
   };
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  if (loading) return <div className="p-20 text-center animate-pulse italic text-gray-400">Đang đồng bộ dữ liệu...</div>;
-  if (!data) return <div className="p-20 text-center text-red-500">Lỗi: {error}</div>;
-
-  // SVG Math
-  const radius = 48;
-  const circumference = 2 * Math.PI * radius;
-  const attendancePercent = data.attendance?.rate || 0;
-  const offset = circumference - (attendancePercent / 100) * circumference;
-
   return (
-    <div className="min-h-screen bg-bg-secretary-light dark:bg-[#181611] pb-10">
-
-      {/* HEADER */}
-      <header className="sticky top-0 z-20 bg-white/80 dark:bg-[#181611]/80 backdrop-blur-xl border-b border-[#e6e2db] dark:border-[#3d3321] px-6 py-4">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-[#181611] dark:text-white uppercase">{data.greeting} 👋</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium mt-1">
-              {data.current_date} — {data.event_count > 0 ? `Hôm nay có ${data.event_count} sự kiện` : "Hôm nay không có sự kiện"}
-            </p>
+    <div className="p-4 md:p-8 bg-[#F8FAFC] min-h-screen space-y-8 font-sans">
+      {/* Header */}
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm">
+            <span className="material-symbols-outlined text-3xl">school</span>
           </div>
-          <button className="p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 hover:text-secretary transition-colors"><span className="material-symbols-outlined">settings</span></button>
+          <div>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Ban Chấp Hành Đoàn - Hội Khoa CNTT</h1>
+            <p className="text-xs font-medium text-slate-400 mt-0.5">Dashboard Điều Hành & Giám Sát</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <select className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 outline-none focus:ring-2 ring-blue-500/10">
+            <option>Năm học 2025-2026</option>
+          </select>
+          <select className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 outline-none focus:ring-2 ring-blue-500/10">
+            <option>Học kỳ 1</option>
+          </select>
+          <div className="h-10 w-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center relative cursor-pointer">
+            <span className="material-symbols-outlined text-slate-400">notifications</span>
+            <span className="absolute top-2 right-2.5 h-2 w-2 rounded-full bg-rose-500 border-2 border-white"></span>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in duration-700">
-
-        {/* STATS CARDS */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-[2rem] border border-[#e6e2db] dark:border-[#3d3321] shadow-sm flex items-center justify-between">
-            <div className="flex flex-col">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tỷ lệ đi học</h3>
-              <p className="text-4xl font-black text-blue-600 dark:text-blue-400 mt-2">{attendancePercent}%</p>
-              <p className="text-[11px] text-gray-400 mt-2 font-bold italic">{data.attendance?.evaluation}</p>
-            </div>
-            <div className="relative w-28 h-28">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="56" cy="56" r={radius} stroke="currentColor" strokeWidth="10" className="text-blue-50 dark:text-blue-900/20" fill="transparent" />
-                <circle cx="56" cy="56" r={radius} stroke="currentColor" strokeWidth="10" className="text-blue-600" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-[#2d2516] p-6 rounded-[2rem] border border-[#e6e2db] dark:border-[#3d3321] shadow-sm">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Quỹ Chi Đoàn</h3>
-              <span className="material-symbols-outlined text-green-500">payments</span>
-            </div>
-            <p className="text-4xl font-black text-gray-900 dark:text-white">{data.funds?.total_amount?.toLocaleString()}đ</p>
-            <div className="mt-6 space-y-2">
-              <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
-                <span>Tiến độ thu</span>
-                <span className="text-green-600">{data.funds?.collected_count}/{data.funds?.total_members} bạn</span>
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((s, i) => (
+          <div key={i} className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between h-44 relative overflow-hidden group hover:shadow-xl transition-all">
+            <div className="flex justify-between items-start">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">{s.label}</p>
+              <div className={`h-10 w-10 rounded-xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center shrink-0`}>
+                <span className="material-symbols-outlined">{s.icon}</span>
               </div>
-              <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
-                <div className="bg-green-500 h-full transition-all duration-1000" style={{ width: `${(data.funds?.collected_count / data.funds?.total_members) * 100}%` }}></div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-slate-900 tracking-tighter">{s.val}</span>
+                {s.unit && <span className="text-xs font-bold text-slate-400">{s.unit}</span>}
+              </div>
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${s.color === 'orange' ? 'emerald' : s.color}-50 text-${s.color === 'orange' ? 'emerald' : s.color}-600 text-[10px] font-bold`}>
+                {s.color !== 'orange' && <span className="material-symbols-outlined text-sm">check_circle</span>}
+                {s.color === 'orange' && <span className="material-symbols-outlined text-sm">trending_up</span>}
+                {s.sub}
               </div>
             </div>
           </div>
-        </section>
-
-        {/* QUICK ACTIONS */}
-        <section>
-          <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Phím tắt nhanh</h3>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
-            <QuickActionBtn icon="qr_code_scanner" label="Quét mã QR" color="blue" onClick={() => setActiveModal('qr')} />
-            <QuickActionBtn icon="calendar_add_on" label="Tạo Sự Kiện" color="purple" onClick={() => setActiveModal('event')} />
-            <QuickActionBtn icon="campaign" label="Thông Báo" color="orange" onClick={() => setActiveModal('notif')} />
-          </div>
-        </section>
-
-        {/* RECENT ACTIVITY */}
-        <section>
-          <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4">Hoạt động mới nhất</h3>
-          <div className="bg-white dark:bg-[#2d2516] rounded-3xl border border-[#e6e2db] dark:border-[#3d3321] divide-y dark:divide-[#3d3321] shadow-sm overflow-hidden">
-            {data.recent_activities?.length > 0 ? (
-              data.recent_activities.map((act, i) => (
-                <ActivityItem key={i} name={act.user_name} time={act.time_ago} action={act.description} avatar={act.avatar_url} />
-              ))
-            ) : (
-              <div className="p-6 text-center text-gray-500 italic">Chưa có hoạt động nào gần đây.</div>
-            )}
-          </div>
-        </section>
-
+        ))}
       </div>
 
-      {/* --- MODAL SYSTEM --- */}
-      <CreateEvent
-        isOpen={activeModal === 'event'}
-        onClose={() => setActiveModal(null)}
-        onSuccess={() => {
-          setActiveModal(null);
-          fetchDashboardData(); // Load lại số liệu dashboard sau khi tạo xong
-        }}
-      />
-
-      {/* 2. Modal chung cho các tính năng khác (Thông báo, QR) */}
-      {activeModal && activeModal !== 'event' && (
-        <DashboardModal
-          isOpen={!!activeModal}
-          onClose={() => setActiveModal(null)}
-          title={activeModal === 'notif' ? 'Gửi Thông Báo Chi Đoàn' : 'Quét Mã Check-in'}
-        >
-          {activeModal === 'notif' && <NotifForm onSuccess={() => { setActiveModal(null); fetchDashboardData(); }} />}
-
-          {activeModal === 'qr' && <div className="text-center py-10">Hệ thống quét QR Camera đang được tích hợp...</div>}
-        </DashboardModal>
-      )}
-
-    </div>
-  );
-};
-
-// ==========================================
-// 1. MODAL WRAPPER
-// ==========================================
-const DashboardModal = ({ isOpen, onClose, title, children }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
-    <div className="relative bg-white dark:bg-[#1e1c16] w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 border border-gray-100 dark:border-[#3d3321]">
-      <div className="px-8 py-6 border-b border-gray-100 dark:border-[#3d3321] flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
-        <h3 className="text-xl font-black text-[#181611] dark:text-white uppercase tracking-tight">{title}</h3>
-        <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/20 flex items-center justify-center transition-all"><span className="material-symbols-outlined">close</span></button>
-      </div>
-      <div className="p-8 max-h-[80vh] overflow-y-auto custom-scrollbar">{children}</div>
-    </div>
-  </div>
-);
-
-// ==========================================
-// 2. FORM TẠO SỰ KIỆN (FULL OPTIONS)
-// ==========================================
-const EventForm = ({ onSuccess }) => {
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '', description: '', location: '', start_time: '', end_time: '',
-    max_participants: 100, points: 10, status: 'UPCOMING', image_url: ''
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch('http://127.0.0.1:8000/api/v1/events/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      if (res.ok) {
-        alert("Tạo sự kiện thành công!");
-        onSuccess();
-      } else {
-        alert("Lỗi khi tạo sự kiện");
-      }
-    } catch (err) { alert("Lỗi kết nối server"); }
-    setLoading(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* 1. Ảnh bìa */}
-      <div className="space-y-2">
-        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest ml-1">Ảnh bìa sự kiện</label>
-        <div className="relative h-40 w-full bg-gray-50 dark:bg-white/5 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center overflow-hidden group">
-          {formData.image_url ? (
-            <img src={formData.image_url} className="w-full h-full object-cover" />
-          ) : (
-            <div className="text-center">
-              <span className="material-symbols-outlined text-4xl text-gray-300">add_a_photo</span>
-              <p className="text-[10px] font-bold text-gray-400 mt-1">Dán link ảnh bên dưới</p>
-            </div>
-          )}
+      {/* Monitoring Section */}
+      <div className="bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+            <span className="material-symbols-outlined text-blue-600">analytics</span>
+            Theo dõi Hoạt động các Chi Đoàn (Live)
+          </h3>
+          <div className="flex items-center gap-3">
+            <button className="h-10 px-4 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-500 flex items-center gap-2">
+              <span className="material-symbols-outlined text-xl">tune</span> Bộ lọc
+            </button>
+            <button onClick={() => handleAction('Đã chuẩn bị báo cáo Export!')} className="h-10 px-5 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-100">
+              <span className="material-symbols-outlined text-xl">download</span> Xuất báo cáo
+            </button>
+          </div>
         </div>
-        <input
-          type="text" name="image_url" placeholder="https://example.com/anh-su-kien.jpg"
-          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm outline-none focus:ring-2 ring-secretary/20"
-          onChange={handleChange}
-        />
-      </div>
 
-      {/* 2. Thông tin chính */}
-      <div className="grid grid-cols-2 gap-4">
-        <InputWrapper label="Tên hoạt động">
-          <input name="title" required onChange={handleChange} className="form-input" placeholder="VD: Hội trại 26/3" />
-        </InputWrapper>
-        <InputWrapper label="Địa điểm">
-          <input name="location" required onChange={handleChange} className="form-input" placeholder="VD: Sân vận động" />
-        </InputWrapper>
-      </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {activities.map((a) => (
+            <div key={a.id} className={`p-8 rounded-[2rem] border transition-all relative group ${a.status === 'Warning' ? 'border-orange-200 ring-2 ring-orange-500/10' : 'border-slate-100 hover:bg-slate-50'}`}>
+              {a.status === 'Warning' && <div className="absolute left-0 top-0 h-full w-1.5 bg-orange-500 rounded-l-[2rem]"></div>}
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-5">
+                  <div className={`h-14 w-14 rounded-2xl ${a.status === 'Excellent' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'} flex items-center justify-center text-xl font-bold`}>
+                    {a.id.substring(0, 2)}
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900">{a.name}</h4>
+                    <p className="text-xs text-slate-400 font-medium">{a.year}</p>
+                  </div>
+                </div>
+                <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 ${a.status === 'Excellent' ? 'bg-emerald-50 text-emerald-600' : 'bg-orange-50 text-orange-600'
+                  }`}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse"></span>
+                  {a.status}
+                </span>
+              </div>
 
-      {/* 3. Thời gian */}
-      <div className="grid grid-cols-2 gap-4">
-        <InputWrapper label="Thời gian bắt đầu">
-          <input name="start_time" type="datetime-local" required onChange={handleChange} className="form-input" />
-        </InputWrapper>
-        <InputWrapper label="Thời gian kết thúc">
-          <input name="end_time" type="datetime-local" onChange={handleChange} className="form-input" />
-        </InputWrapper>
-      </div>
+              <div className="grid grid-cols-2 gap-6 pt-6 border-t border-slate-50">
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Bí thư</p>
+                  <p className="text-sm font-bold text-slate-700 mt-2">{a.leader}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Đoàn phí</p>
+                  <p className={`text-sm font-bold mt-2 ${a.status === 'Excellent' ? 'text-emerald-500' : 'text-slate-400'}`}>{a.fee}</p>
+                </div>
+              </div>
 
-      {/* 4. Chỉ số */}
-      <div className="grid grid-cols-2 gap-4">
-        <InputWrapper label="Số người tối đa">
-          <input name="max_participants" type="number" defaultValue="100" onChange={handleChange} className="form-input" />
-        </InputWrapper>
-        <InputWrapper label="Điểm rèn luyện">
-          <input name="points" type="number" defaultValue="10" onChange={handleChange} className="form-input" />
-        </InputWrapper>
-      </div>
-
-      {/* 5. Mô tả */}
-      <InputWrapper label="Mô tả chi tiết">
-        <textarea name="description" rows="4" onChange={handleChange} className="form-input py-3" placeholder="Nội dung và ý nghĩa sự kiện..."></textarea>
-      </InputWrapper>
-
-      <button disabled={loading} className="w-full bg-gradient-to-r from-secretary to-orange-600 text-white py-4 rounded-2xl font-black shadow-xl shadow-orange-200 active:scale-95 transition-all uppercase tracking-widest mt-4">
-        {loading ? "ĐANG ĐĂNG..." : "ĐĂNG SỰ KIỆN LÊN HỆ THỐNG"}
-      </button>
-    </form>
-  );
-};
-
-// ==========================================
-// 3. FORM TẠO THÔNG BÁO (GIỮ NGUYÊN)
-// ==========================================
-const NotifForm = ({ onSuccess }) => {
-  const [formData, setFormData] = useState({ title: '', content: '', type: 'info', target_audience: 'ALL', status: 'SENT' });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem("access_token");
-      const res = await fetch('http://127.0.0.1:8000/api/v1/notifications/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify(formData)
-      });
-      if (res.ok) onSuccess();
-    } catch (err) { console.error(err); }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <InputWrapper label="Tiêu đề thông báo">
-        <input name="title" required onChange={e => setFormData({ ...formData, title: e.target.value })} className="form-input" placeholder="VD: Thông báo quan trọng..." />
-      </InputWrapper>
-
-      <InputWrapper label="Loại tin">
-        <div className="flex gap-2">
-          {['info', 'urgent', 'success'].map(t => (
-            <label key={t} className={`flex-1 text-center py-2 rounded-xl border cursor-pointer font-bold text-[10px] uppercase transition-all ${formData.type === t ? 'bg-gray-900 text-white border-gray-900' : 'text-gray-400 border-gray-100'}`}>
-              <input type="radio" name="type" className="hidden" onChange={() => setFormData({ ...formData, type: t })} /> {t}
-            </label>
+              {a.alert && (
+                <div className="mt-6 p-4 rounded-xl bg-orange-50/50 border border-orange-100">
+                  <div className="flex items-center gap-3 text-rose-600 mb-2">
+                    <span className="material-symbols-outlined text-lg">error</span>
+                    <p className="text-xs font-bold uppercase tracking-widest">Missing: Báo cáo tháng 10</p>
+                  </div>
+                  <button className="text-[11px] font-bold text-blue-600 underline ml-8 decoration-2 underline-offset-4">{a.alert}</button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
-      </InputWrapper>
-
-      <InputWrapper label="Nội dung chi tiết">
-        <textarea name="content" rows="5" onChange={e => setFormData({ ...formData, content: e.target.value })} className="form-input" placeholder="Nhập nội dung..."></textarea>
-      </InputWrapper>
-
-      <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black shadow-lg shadow-blue-200 active:scale-95 transition-all uppercase tracking-widest">GỬI THÔNG BÁO NGAY</button>
-    </form>
-  );
-};
-
-// Helper UI Components
-const QuickActionBtn = ({ icon, label, color, onClick }) => {
-  const themes = {
-    blue: "bg-blue-50 text-blue-600 border-blue-100 icon-bg:bg-blue-500",
-    purple: "bg-purple-50 text-purple-600 border-purple-100 icon-bg:bg-purple-500",
-    orange: "bg-orange-50 text-orange-600 border-orange-100 icon-bg:bg-orange-500"
-  };
-  return (
-    <button onClick={onClick} className={`flex items-center gap-4 px-6 py-5 bg-white dark:bg-[#2d2516] border rounded-[1.5rem] shadow-sm hover:shadow-lg transition-all active:scale-95 min-w-[200px] shrink-0 ${themes[color].split(' icon-bg:')[0]}`}>
-      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-lg ${themes[color].split('icon-bg:')[1]}`}><span className="material-symbols-outlined">{icon}</span></div>
-      <span className="text-sm font-black text-gray-700 dark:text-gray-200">{label}</span>
-    </button>
-  );
-};
-
-const ActivityItem = ({ name, time, action, avatar }) => (
-  <div className="p-5 flex items-center gap-5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-default">
-    <img src={avatar || "https://i.pravatar.cc/150"} className="w-12 h-12 rounded-full border-2 border-white shadow-md shrink-0" />
-    <div className="flex-1 min-w-0">
-      <div className="flex justify-between items-start">
-        <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate">{name}</h4>
-        <span className="text-[10px] text-gray-500 font-bold bg-gray-100 dark:bg-white/10 px-2 py-0.5 rounded-md shrink-0">{time}</span>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-1">{action}</p>
-    </div>
-  </div>
-);
 
-const InputWrapper = ({ label, children }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-[10px] font-black text-gray-400 uppercase ml-1 tracking-widest">{label}</label>
-    {children}
-  </div>
-);
+      {/* Bottom Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left: Events */}
+        <div className="lg:col-span-5 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
+          <h3 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+            <span className="material-symbols-outlined text-blue-600">event_note</span>
+            Tiến độ Sự kiện Chuyên môn & Phong trào
+          </h3>
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <p className="text-sm font-bold text-slate-700">Hội thảo AI & Big Data</p>
+                <p className="text-xs font-bold text-blue-600">60%</p>
+              </div>
+              <div className="h-2 rounded-full bg-slate-50"><div className="h-full bg-blue-600 rounded-full" style={{ width: '60%' }}></div></div>
+              <p className="text-[10px] font-medium text-slate-400 leading-none">Đang trong giai đoạn chuẩn bị diễn giả</p>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-50 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-900">Giải bóng đá Khoa CNTT</p>
+                <p className="text-[10px] text-slate-400 font-medium">Khởi tranh: 15/11/2025</p>
+              </div>
+              <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-widest">Upcoming</span>
+            </div>
+
+            <div className="p-5 rounded-2xl bg-slate-50/50 border border-slate-50 flex items-center justify-between opacity-60">
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-slate-900">Tiếp sức mùa thi 2025</p>
+                <p className="text-[10px] text-slate-400 font-medium">Đã hoàn thành xuất sắc</p>
+              </div>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-widest">Completed</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Quick Approvals */}
+        <div className="lg:col-span-7 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-3 text-nowrap">
+              <span className="material-symbols-outlined text-orange-500">bolt</span>
+              Cần Duyệt Gấp <span className="h-6 w-6 rounded-full bg-rose-500 text-white text-[10px] flex items-center justify-center font-bold">3</span>
+            </h3>
+            <button className="text-xs font-bold text-blue-600 underline underline-offset-4 decoration-2">Xem tất cả</button>
+          </div>
+
+          <div className="space-y-4">
+            {[
+              { icon: 'payments', color: 'rose', title: 'Lớp 22CT111 xin rút quỹ', sub: 'Số tiền: 2.000.000 VNĐ' },
+              { icon: 'domain', color: 'indigo', title: 'CLB Robot xin mượn phòng Lab', sub: 'Địa điểm: Phòng C.302' },
+              { icon: 'description', color: 'blue', title: 'Danh sách Đoàn viên ưu tú', sub: 'DS_DoanVien.pdf', isFile: true },
+            ].map((app, i) => (
+              <div key={i} className="p-6 rounded-3xl border border-slate-50 bg-slate-50/30 flex items-center justify-between hover:bg-white hover:shadow-xl hover:border-slate-100 transition-all group">
+                <div className="flex items-center gap-5">
+                  <div className={`h-12 w-12 rounded-2xl bg-${app.color}-50 text-${app.color}-600 flex items-center justify-center shrink-0 overflow-hidden`}>
+                    <span className="material-symbols-outlined text-2xl leading-none">{app.icon}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{app.title}</p>
+                    {app.isFile ? (
+                      <div className="flex items-center gap-1.5 text-blue-600 text-[11px] font-bold underline mt-1 cursor-pointer">
+                        <span className="material-symbols-outlined text-sm">attachment</span> {app.sub}
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{app.sub}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleAction('Đã phê duyệt thành công!')} className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all flex items-center justify-center border border-emerald-100">
+                    <span className="material-symbols-outlined">check</span>
+                  </button>
+                  <button className="h-10 w-10 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center border border-rose-100">
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+};
 
 export default SubAdminDashboard;
