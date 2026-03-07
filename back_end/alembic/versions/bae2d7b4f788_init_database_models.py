@@ -1,8 +1,8 @@
-"""Add access_logs table
+"""Init database models
 
-Revision ID: d4b5f166be75
-Revises: a8a0e108cb88
-Create Date: 2026-02-06 18:34:55.285605
+Revision ID: bae2d7b4f788
+Revises: ed9ccc8d436f
+Create Date: 2026-03-07 17:01:38.731174
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd4b5f166be75'
-down_revision: Union[str, Sequence[str], None] = 'a8a0e108cb88'
+revision: str = 'bae2d7b4f788'
+down_revision: Union[str, Sequence[str], None] = 'ed9ccc8d436f'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

@@ -23,6 +23,10 @@ import Profile from "../pages/user/Profile/Profile";
 import Event from "../pages/user/Event/Event";
 import WalletPage from "../pages/user/Wallet/Wallet";
 
+//public
+
+
+
 const AppRoutes = () => {
   return (
     <Routes>

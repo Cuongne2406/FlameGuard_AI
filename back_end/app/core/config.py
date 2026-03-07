@@ -1,24 +1,25 @@
 import os
 from pydantic_settings import BaseSettings
-from pathlib import Path
-
-# Trỏ về thư mục back_end (nơi chứa file .env)
-# __file__ là file config.py -> parent (core) -> parent (app) -> parent (back_end)
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "LHU YouthHub API"
-    API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "secret_key_tam_thoi")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
+    PROJECT_NAME: str = "FlameGuard AI API"
     
-    # Nếu không tìm thấy trong .env, nó sẽ báo lỗi ngay lập tức để mình biết
-    DATABASE_URL: str 
+    # DATABASE
+    POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")
+    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
+    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "postgres")
+    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "flameguard_db")
+    POSTGRES_PORT: str = "5432"
+
+    from pydantic import Field
+    SQLALCHEMY_DATABASE_URI: str = Field(
+        default="postgresql://postgres:postgres@localhost:5432/flameguard_db",
+        validation_alias="DATABASE_URL"
+    )
 
     class Config:
         case_sensitive = True
-        # Dùng đường dẫn tuyệt đối tới file .env
-        env_file = str(BASE_DIR / ".env")
-        extra = "ignore"
+        env_file = ".env"
+        extra = "allow" # Allows extra env variables like SECRET_KEY and MAIL_USERNAME without crashing
 
 settings = Settings()
