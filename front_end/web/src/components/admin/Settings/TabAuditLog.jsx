@@ -1,0 +1,208 @@
+import React from "react";
+import {
+  Search,
+  Filter,
+  Download,
+  Trash2,
+  LogIn,
+  Save,
+  RefreshCw,
+  FileText,
+  User,
+} from "lucide-react";
+
+const TabAuditLog = () => {
+  // Dữ liệu mẫu dựa trên thiết kế
+  const logs = [
+    {
+      time: "26/10/2023 14:32:01",
+      user: "Admin_Hau",
+      initials: "AH",
+      role: "Super Admin",
+      action: "Xóa Chiến dịch",
+      target: 'Chiến dịch "Mùa Hè Xanh 2024"',
+      type: "danger",
+      icon: <Trash2 size={14} />,
+    },
+    {
+      time: "26/10/2023 14:30:15",
+      user: "User_Khoa_CNTT",
+      initials: "KC",
+      role: "Bí thư Khoa",
+      action: "Đăng nhập",
+      target: "System Access",
+      type: "info",
+      icon: <LogIn size={14} />,
+    },
+    {
+      time: "26/10/2023 14:15:00",
+      user: "System_Auto",
+      initials: "SYS",
+      role: "System",
+      action: "Sao lưu tự động",
+      target: "Database Snapshot",
+      type: "success",
+      icon: <RefreshCw size={14} />,
+    },
+    {
+      time: "26/10/2023 13:45:22",
+      user: "BiThu_Lop18",
+      initials: "BL",
+      role: "Bí thư Lớp",
+      action: "Cập nhật Hồ sơ",
+      target: "Sinh viên: Nguyễn Văn A",
+      type: "neutral",
+      icon: <Save size={14} />,
+    },
+    {
+      time: "26/10/2023 10:12:05",
+      user: "BanTruyenThong",
+      initials: "BT",
+      role: "Ban Truyền thông",
+      action: "Đăng bài viết",
+      target: 'Bài viết: "Chào tân sinh viên"',
+      type: "neutral",
+      icon: <FileText size={14} />,
+    },
+  ];
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Bộ lọc và Công cụ */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Lọc theo ngày */}
+          <div className="relative">
+            <input
+              type="text"
+              defaultValue="25/10/2023 - 26/10/2023"
+              className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+            <Search
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+              size={14}
+            />
+          </div>
+
+          {/* Lọc theo vai trò */}
+          <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none">
+            <option>Mọi Vai trò</option>
+            <option>Super Admin</option>
+            <option>Bí thư Khoa</option>
+          </select>
+
+          {/* Nút lọc nâng cao */}
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+            <Filter size={14} /> Lọc
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-slate-400">
+            <div className="w-8 h-4 bg-slate-200 rounded-full relative">
+              <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-wider">
+              Auto-purge {">"} 2 năm
+            </span>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all">
+            <Download size={14} /> Xuất báo cáo
+          </button>
+        </div>
+      </div>
+
+      {/* Bảng Nhật ký */}
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50/50 border-b border-slate-100">
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Thời gian
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Người thực hiện
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Vai trò
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Hành động
+              </th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Đối tượng tác động
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {logs.map((log, index) => (
+              <tr
+                key={index}
+                className={`hover:bg-slate-50/80 transition-colors ${log.type === "danger" ? "bg-red-50/30" : ""}`}
+              >
+                <td className="px-6 py-4 text-[11px] font-bold text-slate-500 italic">
+                  {log.time}
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-white ring-2 ring-slate-50">
+                      {log.initials}
+                    </div>
+                    <span className="text-xs font-black text-slate-700">
+                      {log.user}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-400">
+                  {log.role}
+                </td>
+                <td className="px-6 py-4">
+                  <div
+                    className={`flex items-center gap-2 text-xs font-black ${
+                      log.type === "danger"
+                        ? "text-red-600"
+                        : log.type === "success"
+                          ? "text-emerald-600"
+                          : log.type === "info"
+                            ? "text-blue-600"
+                            : "text-slate-700"
+                    }`}
+                  >
+                    {log.icon}
+                    {log.action}
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-500">
+                  {log.target}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Phân trang */}
+        <div className="p-5 border-t border-slate-100 flex justify-between items-center bg-slate-50/30">
+          <p className="text-[11px] font-bold text-slate-400">
+            Đang hiển thị 1 đến 50 trong tổng số 12,482 bản ghi
+          </p>
+          <div className="flex gap-1">
+            {[1, 2, 3, "...", 8].map((page, i) => (
+              <button
+                key={i}
+                className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all ${
+                  page === 1
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                    : "hover:bg-white text-slate-400"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TabAuditLog;

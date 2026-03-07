@@ -23,35 +23,23 @@ Hệ thống quản lý hoạt động Đoàn - Hội thông minh dành cho sinh
 1. Clone dự án:
    ```bash
 git clone https://github.com/Cuongne2406/FlameGuard_AI.git
- 
-2. Cài đặt thư viện và cấu hình
+
+2. Cài đặt thư viện
     a. Front_end
-            Terminal: cd front_end/web
         - npm install
         - npm install react react-dom react-router-dom@6.22.3
         - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
-   
     b. Back_end
-            Terminal: cd back_end
         - B1:  python -m venv venv
         - B2:  .\venv\Scripts\activate
         - B3:  pip install -r requirements.txt
-               pip install psycopg2-binary
-        - B4: tại back_end/
-              --- tạo một file tên là .env (đây là file cấu hình hệ thống)
-                        ``` Nội dung file cấu hình 
-         DATABASE_URL=postgresql://postgres:********@localhost:5432/TÊN_DATABASE_BẠN_TẠO_TRONG_POSTGRESQL
-         SECRET_KEY="SECRET_KEY_BẠN_TỰ_ĐẶT"
-         MAIL_USERNAME=email bạn dùng để nhận thư feedback
-         MAIL_PASSWORD=App PassWord của email nhận feedback
 
-2. Cách để dự án hoạt động: (Chạy song song 2 terminal)
+3. Cách để dự án hoạt động:
     a. Front_end
         - cd front_end/web
         - npm run dev
     b. Back_end
-        -   cd back_end
         -   .\venv\Scripts\activate
         -   uvicorn app.main:app --reload
-   
-        -   (dành cho swagger) truy cập: 127.0.0.1:8000/docs 
+        -   truy cập: 127.0.0.1:8000/docs
+

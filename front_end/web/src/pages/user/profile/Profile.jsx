@@ -1,401 +1,352 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Button, Avatar, Badge, Tabs, Modal, Toast } from '../../../components/ui';
+import React, { useState } from "react";
+import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  RadarChart as RechartsRadarChart,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  CheckCircle,
+  ExternalLink,
+  FileDown,
+  MapPin,
+  GraduationCap,
+  Award,
+  Zap,
+  X,
+  Globe,
+  Download,
+  CheckCircle2,
+  FileText,
+  Clock,
+} from "lucide-react";
 
-/**
- * Profile Page - Hồ sơ cá nhân người dùng (Đã kết nối API & Cho phép cập nhật)
- */
 const Profile = () => {
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('general');
-    const [isCardOpen, setIsCardOpen] = useState(false);
-    const [showToast, setShowToast] = useState(false);
-    const [avatarPreview, setAvatarPreview] = useState(null);
-    const inputRef = useRef(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // --- STATE QUẢN LÝ DỮ LIỆU ---
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [isSaving, setIsSaving] = useState(false);
+  const skillData = [
+    { subject: "Tình nguyện", A: 100, fullMark: 100 },
+    { subject: "Hội nhập", A: 75, fullMark: 100 },
+    { subject: "Học tập", A: 85, fullMark: 100 },
+    { subject: "Thể lực", A: 40, fullMark: 100 },
+    { subject: "Đạo đức", A: 90, fullMark: 100 },
+  ];
 
-    // --- 1. HÀM LẤY DỮ LIỆU TỪ API ---
-    const fetchProfile = async () => {
-        try {
-            const token = localStorage.getItem("access_token");
-            const response = await fetch('http://127.0.0.1:8000/api/v1/users/me/profile', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+  return (
+    <div className="min-h-screen bg-slate-50/50 p-3 md:p-8 font-sans relative">
+      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        {/* 1. COVER & BASIC INFO CARD */}
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
+          <div className="h-32 md:h-40 bg-gradient-to-r from-blue-700 via-indigo-800 to-blue-900 relative">
+            <div className="absolute bottom-3 right-3 md:bottom-4 md:right-8 flex gap-2 md:gap-3">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg md:rounded-xl text-white text-[10px] md:text-xs font-bold hover:bg-white/20 transition-all">
+                <ExternalLink size={12} />
+                <span className="hidden sm:inline">Link Hồ sơ</span>
+              </button>
 
-            if (response.ok) {
-                const data = await response.json();
-                setUser(data);
-            }
-        } catch (error) {
-            console.error("Lỗi kết nối:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+              {/* NÚT XUẤT CV ĐÃ ĐƯỢC FIX */}
+              <button
+                onClick={() => {
+                  console.log("Opening Modal..."); // Debug check
+                  setIsModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-white text-blue-700 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 group z-20"
+              >
+                <FileDown size={12} className="group-hover:animate-bounce" />
+                Xuất CV
+              </button>
+            </div>
+          </div>
 
-    useEffect(() => {
-        fetchProfile();
-    }, []);
-
-    // --- 2. HÀM XỬ LÝ THAY ĐỔI INPUT ---
-    // Cập nhật các trường ở cấp 1 (name)
-    const handleMainInfoChange = (field, value) => {
-        setUser(prev => ({ ...prev, [field]: value }));
-    };
-
-    // Cập nhật các trường lồng trong info (phone, birthday, gender...)
-    const handleNestedInfoChange = (field, value) => {
-        setUser(prev => ({
-            ...prev,
-            info: { ...prev.info, [field]: value }
-        }));
-    };
-
-    // --- 3. HÀM LƯU THAY ĐỔI (PUT API) ---
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
-            const token = localStorage.getItem("access_token");
-            
-            // Format lại ngày sinh: dd/mm/yyyy -> yyyy-mm-dd để Backend đọc được
-            let formattedBirthday = null;
-            if (user.info?.birthday && user.info.birthday.includes('/')) {
-                const parts = user.info.birthday.split('/');
-                if (parts.length === 3) {
-                    formattedBirthday = `${parts[2]}-${parts[1]}-${parts[0]}`;
-                }
-            }
-
-            // Chuẩn bị dữ liệu theo Schema UserUpdate của Backend
-            const updateData = {
-                full_name: user.name,
-                phone: user.info?.phone,
-                gender: user.info?.gender,
-                birthday: formattedBirthday || user.info?.birthday,
-                ethnicity: user.info?.ethnicity,
-                address: user.info?.address
-            };
-
-            const response = await fetch('http://127.0.0.1:8000/api/v1/users/me/profile', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(updateData)
-            });
-
-            if (response.ok) {
-                setShowToast(true);
-                setTimeout(() => setShowToast(false), 3000);
-                // Refresh lại dữ liệu để đảm bảo đồng bộ
-                fetchProfile();
-            } else {
-                const errData = await response.json();
-                alert("Lỗi cập nhật: " + (errData.detail || "Không rõ nguyên nhân"));
-            }
-        } catch (error) {
-            console.error("Lỗi khi lưu:", error);
-            alert("Lỗi kết nối máy chủ");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleAvatarEdit = () => inputRef.current.click();
-
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setAvatarPreview(reader.result);
-            reader.readAsDataURL(file);
-        }
-    };
-
-    if (loading) return <div className="p-20 text-center text-gray-500">Đang tải hồ sơ cá nhân...</div>;
-    if (!user) return <div className="p-20 text-center text-red-500">Không thể tải thông tin.</div>;
-
-    return (
-        <div className="space-y-6 relative animate-fade-in">
-            {showToast && (
-                <Toast
-                    message="Cập nhật thông tin hồ sơ thành công!"
-                    type="success"
-                    onClose={() => setShowToast(false)}
-                />
-            )}
-
-            {/* Header Profile Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                    <div className="flex-shrink-0 relative group">
-                        <Avatar
-                            src={avatarPreview || user.avatar}
-                            name={user.name}
-                            size="xl"
-                            className="w-32 h-32 text-3xl ring-4 ring-gray-50 bg-white"
-                        />
-                        <button
-                            onClick={handleAvatarEdit}
-                            className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full shadow-lg hover:bg-primary-hover transition-all z-10 border-2 border-white"
-                        >
-                            <span className="material-symbols-outlined text-sm">photo_camera</span>
-                        </button>
-                        <input type="file" ref={inputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
-                    </div>
-
-                    <div className="flex-1">
-                        {/* Họ tên cho phép sửa ngay tại đây */}
-                        <input
-                            type="text"
-                            value={user.name}
-                            onChange={(e) => handleMainInfoChange('name', e.target.value)}
-                            className="text-2xl font-bold text-gray-900 mb-1 bg-transparent border-b border-dashed border-gray-200 focus:border-primary focus:outline-none w-full md:w-auto px-1"
-                        />
-                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-4 mt-1">
-                            <span className="flex items-center gap-1">
-                                <span className="material-symbols-outlined text-lg">school</span>
-                                MSSV: {user.studentId}
-                            </span>
-                            <span className="hidden md:inline text-gray-300">|</span>
-                            <span>Chi đoàn: {user.chidoan || "Chưa cập nhật"}</span>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mb-4">
-                            <Badge variant="success" dot>Đang hoạt động</Badge>
-                            <Badge variant="primary" dot>Ngày vào Đoàn: {user.joinedDate}</Badge>
-                            <Badge variant="warning">{user.role || "Đoàn viên"}</Badge>
-                        </div>
-
-                        <div className="flex flex-wrap gap-3">
-                            <Button
-                                variant="secondary"
-                                leftIcon={<span className="material-symbols-outlined">qr_code</span>}
-                                onClick={() => setIsCardOpen(true)}
-                            >
-                                Thẻ đoàn viên
-                            </Button>
-                            <Button
-                                variant="primary"
-                                leftIcon={<span className="material-symbols-outlined">{isSaving ? 'sync' : 'save'}</span>}
-                                onClick={handleSave}
-                                disabled={isSaving}
-                            >
-                                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+          <div className="px-5 md:px-8 pb-6 md:pb-8 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 -mt-10 md:-mt-12 relative z-10">
+            <div className="relative group">
+              <img
+                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                alt="Avatar"
+                className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-xl bg-slate-100 object-cover"
+              />
+              <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 p-1 bg-blue-500 rounded-full border-2 border-white text-white">
+                <CheckCircle size={14} fill="currentColor" />
+              </div>
             </div>
 
-            <div className="border-b border-gray-200">
-                <Tabs
-                    tabs={[
-                        { id: 'general', label: 'Thông tin chung', icon: 'person' },
-                        { id: 'awards', label: 'Khen thưởng & Kỷ luật', icon: 'emoji_events' }
-                    ]}
-                    defaultTab={activeTab}
-                    onChange={setActiveTab}
-                    variant="underline"
-                />
+            <div className="flex-1 text-center md:text-left">
+              <div className="flex flex-col md:flex-row items-center gap-2 mb-2">
+                <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">
+                  Lê Trọng Phúc Hậu
+                </h2>
+                <span className="text-[9px] md:text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 md:py-1 rounded-lg uppercase border border-blue-100">
+                  MSSV: 23CT112
+                </span>
+              </div>
+              <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
+                <span className="text-blue-600 font-bold flex items-center gap-1">
+                  <Zap size={14} fill="currentColor" /> SV loại Giỏi
+                </span>
+                <span className="flex items-center gap-1">
+                  <GraduationCap size={14} /> ĐH Lạc Hồng
+                </span>
+                <span className="flex items-center gap-1">
+                  <MapPin size={14} /> Đồng Nai
+                </span>
+              </div>
             </div>
-
-            {/* Content Section */}
-            {activeTab === 'general' && (
-                <div className="space-y-6 animate-fade-in">
-                    <Card title="Chỉnh sửa thông tin cá nhân & Liên hệ" icon="edit_note">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Số điện thoại */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Số điện thoại</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">phone</span>
-                                    <input
-                                        type="text"
-                                        value={user.info?.phone || ""}
-                                        onChange={(e) => handleNestedInfoChange('phone', e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        placeholder="Nhập số điện thoại"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Email (Read Only) */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Email liên hệ</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">mail</span>
-                                    <input
-                                        type="email"
-                                        value={user.info?.email || user.email || ""}
-                                        readOnly
-                                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Ngày sinh */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Ngày sinh</label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">calendar_today</span>
-                                    <input
-                                        type="text"
-                                        value={user.info?.birthday || ""}
-                                        onChange={(e) => handleNestedInfoChange('birthday', e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                        placeholder="dd/mm/yyyy"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Giới tính */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Giới tính</label>
-                                <select
-                                    value={user.info?.gender || "Nam"}
-                                    onChange={(e) => handleNestedInfoChange('gender', e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
-                                >
-                                    <option value="Nam">Nam</option>
-                                    <option value="Nữ">Nữ</option>
-                                    <option value="Khác">Khác</option>
-                                </select>
-                            </div>
-
-                            {/* Dân tộc */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Dân tộc</label>
-                                <input
-                                    type="text"
-                                    value={user.info?.ethnicity || ""}
-                                    onChange={(e) => handleNestedInfoChange('ethnicity', e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    placeholder="Ví dụ: Kinh"
-                                />
-                            </div>
-
-                            {/* Địa chỉ */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Địa chỉ thường trú</label>
-                                <input
-                                    type="text"
-                                    value={user.info?.address || ""}
-                                    onChange={(e) => handleNestedInfoChange('address', e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                                    placeholder="Số nhà, tên đường, phường/xã..."
-                                />
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card title="Thông tin sinh hoạt Đoàn" icon="groups">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <p className="text-xs text-gray-500 uppercase font-semibold mb-1">CHI ĐOÀN</p>
-                                <p className="font-medium text-gray-900">{user.chidoan}</p>
-                            </div>
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <p className="text-xs text-gray-500 uppercase font-semibold mb-1">CHỨC VỤ</p>
-                                <p className="font-medium text-gray-900">{user.unionInfo?.position || user.role}</p>
-                            </div>
-                            <div className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">MÃ QR CÁ NHÂN</p>
-                                    <button onClick={() => setIsCardOpen(true)} className="text-primary text-sm font-medium flex items-center gap-1 hover:underline">
-                                        <span className="material-symbols-outlined text-base">visibility</span> Xem mã định danh
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-            )}
-
-            {/* Awards section (Keep as read-only as awards are usually given by admin) */}
-            {activeTab === 'awards' && (
-                <div className="space-y-4 animate-fade-in">
-                    <Card title="Danh sách Khen thưởng" icon="emoji_events">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="pb-3 text-xs font-bold text-gray-400 uppercase px-2">Danh hiệu</th>
-                                        <th className="pb-3 text-xs font-bold text-gray-400 uppercase px-4">Năm học</th>
-                                        <th className="pb-3 text-xs font-bold text-gray-400 uppercase text-right">Ngày cấp</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {user.awards?.length > 0 ? user.awards.map((award) => (
-                                        <tr key={award.id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="py-4 px-2">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${award.type === 'award' ? 'bg-yellow-50 text-yellow-600' : 'bg-blue-50 text-blue-600'}`}>
-                                                        <span className="material-symbols-outlined text-lg">{award.type === 'award' ? 'workspace_premium' : 'info'}</span>
-                                                    </div>
-                                                    <span className="font-semibold text-gray-900">{award.title}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4"><Badge variant="outline">{award.year}</Badge></td>
-                                            <td className="py-4 text-right text-gray-500 text-sm">{award.date}</td>
-                                        </tr>
-                                    )) : (
-                                        <tr><td colSpan="3" className="py-8 text-center text-gray-400 italic">Chưa có dữ liệu khen thưởng</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                </div>
-            )}
-
-            {/* Modal Thẻ đoàn viên (Keep as dynamic display) */}
-            <Modal isOpen={isCardOpen} onClose={() => setIsCardOpen(false)} title="Thẻ Đoàn viên Điện tử">
-                <div className="flex flex-col items-center">
-                    <div className="w-full max-w-[320px] bg-gradient-to-br from-blue-700 to-blue-900 rounded-2xl overflow-hidden shadow-2xl relative border border-white/10 p-6 text-white flex flex-col items-center">
-                        <div className="w-24 h-24 rounded-full border-4 border-white/20 mb-4 overflow-hidden bg-white/10">
-                            <Avatar src={user.avatar} name={user.name} size="xl" className="w-full h-full" />
-                        </div>
-                        <h3 className="text-lg font-black tracking-wide mb-1 uppercase text-center">{user.name}</h3>
-                        <p className="text-xs text-white/60 mb-4">MSSV: {user.studentId}</p>
-                        <div className="grid grid-cols-2 gap-4 w-full mb-6">
-                            <div className="text-center p-2 bg-white/5 rounded-xl">
-                                <p className="text-[8px] text-white/50 uppercase">Chi đoàn</p>
-                                <p className="text-[10px] font-bold">{user.chidoan}</p>
-                            </div>
-                            <div className="text-center p-2 bg-white/5 rounded-xl">
-                                <p className="text-[8px] text-white/50 uppercase">Ngày vào Đoàn</p>
-                                <p className="text-[10px] font-bold">{user.joinedDate}</p>
-                            </div>
-                        </div>
-                        <div className="bg-white p-3 rounded-2xl shadow-inner mb-2">
-                             <div className="w-32 h-32 flex items-center justify-center border-2 border-dashed border-gray-200 relative">
-                                <span className="material-symbols-outlined text-gray-200 text-6xl">qr_code_2</span>
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 backdrop-blur-[1px]">
-                                    <p className="text-[10px] text-blue-900 font-black px-2">LHU-ID: {user.studentId}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-8 flex gap-3 w-full">
-                        <Button variant="outline" className="flex-1" leftIcon={<span className="material-symbols-outlined">download</span>}>Tải về</Button>
-                        <Button variant="primary" className="flex-1" leftIcon={<span className="material-symbols-outlined">print</span>}>In thẻ</Button>
-                    </div>
-                </div>
-            </Modal>
-
-            <div className="text-center mt-8 text-xs text-gray-400">© 2024 Đoàn TNCS Hồ Chí Minh - Văn phòng Đoàn Khoa</div>
+          </div>
         </div>
-    );
+
+        {/* NỘI DUNG NĂNG LỰC & HÀNH TRÌNH (GIỮ NGUYÊN) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+          {/* ... (Phần Năng lực và Hành trình của bạn) ... */}
+          <div className="lg:col-span-4 bg-white rounded-[1.5rem] p-5 shadow-sm">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">
+              Năng lực
+            </h4>
+            <div className="h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="80%"
+                  data={skillData}
+                >
+                  <PolarGrid />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+                  <Radar
+                    dataKey="A"
+                    stroke="#2563eb"
+                    fill="#3b82f6"
+                    fillOpacity={0.15}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="lg:col-span-8 bg-white rounded-[1.5rem] p-5 shadow-sm">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">
+              Chứng nhận mới
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <h5 className="font-black text-xs uppercase">
+                  Giải Nhất Hackathon 2026
+                </h5>
+                <p className="text-[10px] text-slate-500">Tháng 02/2026</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                <h5 className="font-black text-xs uppercase">
+                  Cán bộ Đoàn tiêu biểu
+                </h5>
+                <p className="text-[10px] text-slate-500">2024 - 2025</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. MODAL XUẤT PDF - FIXED PORTAL-LIKE STYLE */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center overflow-hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity duration-300"
+            onClick={() => setIsModalOpen(false)}
+          ></div>
+
+          {/* Modal Content */}
+          <div className="relative bg-white w-full max-w-5xl h-[90vh] md:h-[85vh] mx-2 md:mx-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="p-4 md:p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-600 text-white rounded-lg">
+                  <FileText size={20} />
+                </div>
+                <h3 className="font-black text-slate-800 uppercase text-sm md:text-base">
+                  Tùy chỉnh & Xuất CV
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={24} className="text-slate-400" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-50">
+              {/* Preview */}
+              <div className="flex-[1.2] p-4 md:p-8 overflow-auto flex justify-center border-r border-slate-200">
+                <div className="bg-white w-[595px] min-h-[842px] shadow-2xl p-10 origin-top scale-[0.45] sm:scale-[0.6] md:scale-[0.8] lg:scale-[0.9]">
+                  <div className="border-b-4 border-blue-600 pb-4 mb-6">
+                    <h1 className="text-3xl font-black text-slate-900 uppercase">
+                      Lê Trọng Phúc Hậu
+                    </h1>
+                    <p className="text-blue-600 font-bold text-xs uppercase tracking-widest mt-1">
+                      Sinh viên 5 Tốt | LHU
+                    </p>
+                    <div className="flex gap-4 mt-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                      <span className="bg-slate-100 px-2 py-1 rounded">
+                        MSSV: 23CT112
+                      </span>
+                      <span>letrongphuchau@email.com</span>
+                      <span>(+84) 909 123 456</span>
+                    </div>
+                  </div>
+                  {/* Summary */}
+                  <div className="mb-6">
+                    <h4 className="text-blue-600 font-black text-xs uppercase mb-2">
+                      Tóm tắt
+                    </h4>
+                    <p className="text-[11px] leading-relaxed text-slate-600">
+                      Sinh viên năng động với nền tảng vững chắc về Công nghệ
+                      thông tin và kỹ năng lãnh đạo đã được kiểm chứng. Có kinh
+                      nghiệm tổ chức các sự kiện quy mô lớn và đạt nhiều giải
+                      thưởng trong các cuộc thi học thuật. Hướng tới mục tiêu
+                      trở thành một nhà quản lý dự án công nghệ chuyên nghiệp.
+                    </p>
+                  </div>
+                  {/* Experience */}
+                  <div className="mb-6">
+                    <h4 className="text-blue-600 font-black text-xs uppercase mb-3">
+                      Kinh nghiệm & Hoạt động
+                    </h4>
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <h5 className="font-bold text-xs uppercase">
+                            Trưởng BTC IT Tech Day
+                          </h5>
+                          <span className="text-[10px] text-slate-400">
+                            03/2026 - Hiện tại
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 italic">
+                          Đại học Lạc Hồng, Đồng Nai
+                        </p>
+                        <ul className="list-disc ml-4 mt-1 text-[10px] text-slate-600 space-y-1">
+                          <li>Lãnh đạo nhóm 20 thành viên nòng cốt.</li>
+                          <li>
+                            Tổ chức thành công sự kiện công nghệ quy mô 500 sinh
+                            viên tham gia.
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Awards */}
+                  <div className="mb-6">
+                    <h4 className="text-blue-600 font-black text-xs uppercase mb-3">
+                      Thành tích nổi bật
+                    </h4>
+                    <div className="flex justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                      <div>
+                        <h5 className="font-bold text-[11px]">
+                          Giải Nhất Hackathon 2026
+                        </h5>
+                        <p className="text-[10px] text-slate-500">
+                          Cấp Trường - Tháng 02/2026
+                        </p>
+                      </div>
+                      <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
+                        <Globe size={14} className="text-slate-300" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="flex-1 p-6 md:p-8 bg-white overflow-y-auto">
+                {/* Section 1: Template */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Giao diện (Template)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button className="relative p-1 rounded-xl border-2 border-blue-600 bg-white group overflow-hidden">
+                      <div className="aspect-[4/3] bg-slate-50 rounded-lg mb-2 border border-slate-100 flex flex-col p-2 gap-1">
+                        <div className="h-1.5 w-1/2 bg-slate-200 rounded" />
+                        <div className="h-1 w-full bg-slate-100 rounded" />
+                        <div className="h-1 w-full bg-slate-100 rounded" />
+                      </div>
+                      <span className="text-[10px] font-black text-blue-600 uppercase">
+                        Chuẩn ATS (Minimalist)
+                      </span>
+                      <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-0.5">
+                        <CheckCircle2 size={12} />
+                      </div>
+                    </button>
+                    <button className="p-1 rounded-xl border-2 border-slate-50 bg-white group opacity-50">
+                      <div className="aspect-[4/3] bg-slate-50 rounded-lg mb-2 border border-slate-100" />
+                      <span className="text-[10px] font-bold text-slate-400 uppercase">
+                        Sáng tạo (Creative)
+                      </span>
+                    </button>
+                  </div>
+                </section>
+
+                {/* Section 2: Language */}
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Ngôn ngữ hiển thị
+                  </h4>
+                  <div className="flex p-1 bg-slate-50 rounded-xl">
+                    <button className="flex-1 py-2 text-[10px] font-black bg-white shadow-sm rounded-lg text-slate-800">
+                      Tiếng Việt
+                    </button>
+                    <button className="flex-1 py-2 text-[10px] font-bold text-slate-400">
+                      Tiếng Anh (Auto-translate)
+                    </button>
+                  </div>
+                </section>
+
+                <section>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Dữ liệu hiển thị
+                  </h4>
+                  <div className="space-y-2">
+                    {[
+                      "Thông tin cơ bản",
+                      "Biểu đồ năng lực",
+                      "Lịch sử cống hiến",
+                      "Chứng nhận & Giải thưởng",
+                    ].map((item) => (
+                      <label
+                        key={item}
+                        className="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          defaultChecked
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-0"
+                        />
+                        <span className="text-xs font-bold text-slate-600">
+                          {item}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 md:p-6 border-t bg-white flex flex-col sm:flex-row gap-3">
+              <button className="flex-1 py-3 px-6 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase">
+                Gửi qua Email
+              </button>
+              <button className="flex-[2] py-3 px-6 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                <Download size={16} /> Tải xuống PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default Profile;

@@ -1,14 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   darkMode: "class",
   theme: {
     extend: {
       colors: {
-        primary: "#0062b2", 
+        primary: "#0062b2",
         "primary-hover": "#005596",
         "primary-dark": "#005494",
         "bg-secretary-light": "#f8f7f5",
@@ -23,19 +20,27 @@ export default {
         "text-muted-dark": "#94a3b8",
         "brand-blue": "#0066B3",
         "brand-blue-dark": "#005291",
-        success: "#078838",  
+        success: "#078838",
         danger: "#e73908",
         accent: "#FFAB00",
         silver: "#94a3b8",
         bronze: "#b45309",
-        secretary: "#f97316",
       },
       fontFamily: {
         display: ["Inter", "sans-serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+        mono: [
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
         body: ["Inter", "sans-serif"],
       },
     },
   },
-  plugins: [],
-}
+  plugins: [
+    require("tailwindcss-animate"), // Thêm dòng này vào mảng plugins
+  ],
+};
