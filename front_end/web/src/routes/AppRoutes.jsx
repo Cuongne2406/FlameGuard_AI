@@ -89,12 +89,6 @@ const getRedirectPath = (role) => {
 };
 
 const AppRoutes = () => {
-  // Dev Mode: Auto-set token if not exist (check first!)
-  if (!localStorage.getItem("access_token") && import.meta.env.DEV) {
-    localStorage.setItem("access_token", "dev_test_token_2026");
-    localStorage.setItem("user_role", "SUB_ADMIN");
-  }
-
   const token = localStorage.getItem("access_token");
   const role = localStorage.getItem("user_role");
 
@@ -196,6 +190,23 @@ const AppRoutes = () => {
         <Route path="integrations" element={<IntegrationSettings />} />
         <Route path="help" element={<HelpCenter />} />
       </Route>
+              {/* === ROUTE TEST SUB-ADMIN (KHÔNG CẦN ĐĂNG NHẬP) HÃY Xóa nếu test xong === */}
+        <Route path="/subadmin" element={<SubAdminLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<SubAdminDashboard />} />
+          <Route path="ai-analysis" element={<SubAdminAIAnalysis />} />
+          <Route path="classes" element={<SubAdminClasses />} />
+          <Route path="approvals" element={<SubAdminApprovals />} />
+          <Route path="finance" element={<SubAdminFinance />} />
+          <Route path="awards" element={<SubAdminAwards />} />
+          <Route path="clubs" element={<SubAdminClubs />} />
+          <Route path="events" element={<SubAdminEvents />} />
+          <Route path="events/:id/registrations" element={<EventRegistrationApproval />} />
+          <Route path="events/:id/live" element={<EventLiveReport />} />
+          <Route path="events/:id/feedback" element={<EventFeedbackAnalysis />} />
+          <Route path="notifications" element={<SubAdminNotifications />} />
+          <Route path="settings" element={<SubAdminSettings />} />
+        </Route>
 
       {/* --- FALLBACK --- */}
       <Route path="*" element={<Navigate to="/" replace />} />
