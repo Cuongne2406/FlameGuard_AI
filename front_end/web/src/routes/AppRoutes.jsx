@@ -72,7 +72,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* admin_sub */}
-      <Route path="/admin_sub" element={<SubAdminLayout />}>
+      <Route path="/admin-sub" element={<SubAdminLayout />}>
         <Route index element={<SubAdminDashboard />} />
         <Route path="dashboard" element={<SubAdminDashboard />} />
         <Route path="approvals" element={<SubAdminApprovals />} />

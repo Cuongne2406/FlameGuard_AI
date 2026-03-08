@@ -21,7 +21,13 @@ const Login = () => {
     setTimeout(() => {
       if (username === "admin" && password === "123456") {
         setLoading(false);
-        navigate("/admin/dashboard"); // Chuyển hướng khi thành công
+        navigate("/admin/dashboard"); // Vào trang admin Liên Chi Đoàn / Đoàn Trường
+      } else if (username === "subadmin" && password === "123456") {
+        setLoading(false);
+        navigate("/admin-sub/dashboard"); // Vào trang admin_sub (Khoa)
+      } else if (username === "user" && password === "123456") {
+        setLoading(false);
+        navigate("/user/dashboard"); // Vào trang User (Sinh viên)
       } else {
         setLoading(false);
         setError("Tên đăng nhập hoặc mật khẩu không chính xác!");
