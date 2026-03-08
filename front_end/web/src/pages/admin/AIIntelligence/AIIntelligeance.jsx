@@ -140,7 +140,7 @@ const IntelligeanceAI = () => {
             <AuditItem
               status="Auto-Hidden & Reported"
               time="09:40 AM"
-              text='"*** *** ban tổ chức làm ăn như ***..."'
+              text='"ban tổ chức thiếu chuyên nghiệp trong khâu tác chuẩn bị..."'
               color="text-red-500 bg-red-50"
             />
             <AuditItem

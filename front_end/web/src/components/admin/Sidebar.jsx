@@ -44,7 +44,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     {
       icon: <LayoutDashboard size={20} />,
       label: "Dashboard",
-      path: "dashboard",
+      path: "/admin/dashboard",
     },
     {
       icon: <Users size={20} />,
