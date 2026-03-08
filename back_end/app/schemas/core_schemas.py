@@ -8,19 +8,19 @@ from enum import Enum
 # Enums from Models
 # ==========================================
 class UserStatusEnum(str, Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
-    SUSPENDED = "Suspended"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
 
 class OrgTypeEnum(str, Enum):
-    UNIVERSITY = "University"
-    FACULTY = "Faculty"
-    CLUB = "Club"
-    CLASS = "Class"
+    UNIVERSITY = "UNIVERSITY"
+    FACULTY = "FACULTY"
+    CLUB = "CLUB"
+    CLASS = "CLASS"
 
 class OrgStatusEnum(str, Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 
 # ==========================================

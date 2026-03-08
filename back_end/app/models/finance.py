@@ -6,23 +6,23 @@ from app.db.base_class import Base
 import enum
 
 class FundRequestStatus(enum.Enum):
-    PENDING = "Pending"
-    APPROVED = "Approved"
-    REJECTED = "Rejected"
-    DISBURSED = "Disbursed"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    DISBURSED = "DISBURSED"
 
 class AssetStatus(enum.Enum):
-    AVAILABLE = "Available"
-    IN_USE = "In Use"
-    MAINTENANCE = "Maintenance"
-    BROKEN = "Broken"
+    AVAILABLE = "AVAILABLE"
+    IN_USE = "IN_USE"
+    MAINTENANCE = "MAINTENANCE"
+    BROKEN = "BROKEN"
 
 class AssetLoanStatus(enum.Enum):
-    REQUESTED = "Requested"
-    APPROVED = "Approved"
-    BORROWED = "Borrowed"
-    RETURNED = "Returned"
-    OVERDUE = "Overdue"
+    REQUESTED = "REQUESTED"
+    APPROVED = "APPROVED"
+    BORROWED = "BORROWED"
+    RETURNED = "RETURNED"
+    OVERDUE = "OVERDUE"
 
 class Budget(Base):
     __tablename__ = "budgets"

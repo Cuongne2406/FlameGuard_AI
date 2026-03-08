@@ -8,10 +8,22 @@ from app.schemas.event_schemas import (
     EventRegistrationCreate, EventRegistrationUpdate
 )
 
+from app.models.core import Organization, AcademicTerm
+
 # ==========================================
 # Campaign Services
 # ==========================================
 def create_campaign(db: Session, campaign_in: CampaignCreate):
+    # Verify organization exists
+    organization = db.query(Organization).filter(Organization.id == campaign_in.organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=400, detail="Organization not found")
+
+    # Verify academic term exists
+    term = db.query(AcademicTerm).filter(AcademicTerm.id == campaign_in.academic_term_id).first()
+    if not term:
+        raise HTTPException(status_code=400, detail="Academic Term not found")
+
     db_campaign = Campaign(**campaign_in.dict())
     db.add(db_campaign)
     db.commit()
@@ -96,14 +108,14 @@ def register_for_event(db: Session, registration_in: EventRegistrationCreate):
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
         
-    if event.status.value in ["Draft", "Ended"]:
+    if event.status.value in ["DRAFT", "ENDED"]:
         raise HTTPException(status_code=400, detail="Registration is not open for this event")
         
     # 2. Check Capacity
     if event.capacity is not None:
         current_regs = db.query(EventRegistration).filter(
             EventRegistration.event_id == event.id,
-            EventRegistration.status != "Cancelled"
+            EventRegistration.status != "CANCELLED"
         ).count()
         if current_regs >= event.capacity:
             raise HTTPException(status_code=400, detail="Event is already full")
@@ -115,9 +127,9 @@ def register_for_event(db: Session, registration_in: EventRegistrationCreate):
     ).first()
     
     if existing_reg:
-        if existing_reg.status.value == "Cancelled":
+        if existing_reg.status.value == "CANCELLED":
             # Re-register
-            existing_reg.status = "Registered"
+            existing_reg.status = "REGISTERED"
             db.commit()
             db.refresh(existing_reg)
             return existing_reg

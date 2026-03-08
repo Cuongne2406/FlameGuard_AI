@@ -9,21 +9,21 @@ from decimal import Decimal
 # Enums from Models
 # ==========================================
 class CampaignStatusEnum(str, Enum):
-    PLANNING = "Planning"
-    ONGOING = "Ongoing"
-    COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
+    PLANNING = "PLANNING"
+    ONGOING = "ONGOING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 class EventStatusEnum(str, Enum):
-    DRAFT = "Draft"
-    PUBLISHED = "Published"
-    LIVE = "Live"
-    ENDED = "Ended"
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    LIVE = "LIVE"
+    ENDED = "ENDED"
 
 class EventRegistrationStatusEnum(str, Enum):
-    REGISTERED = "Registered"
-    ATTENDED = "Attended"
-    CANCELLED = "Cancelled"
+    REGISTERED = "REGISTERED"
+    ATTENDED = "ATTENDED"
+    CANCELLED = "CANCELLED"
 
 
 # ==========================================

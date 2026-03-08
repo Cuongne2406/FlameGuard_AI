@@ -9,14 +9,14 @@ from decimal import Decimal
 # Enums from Models
 # ==========================================
 class SentimentLabelEnum(str, Enum):
-    POSITIVE = "Positive"
-    NEUTRAL = "Neutral"
-    NEGATIVE = "Negative"
+    POSITIVE = "POSITIVE"
+    NEUTRAL = "NEUTRAL"
+    NEGATIVE = "NEGATIVE"
 
 class AuditActionEnum(str, Enum):
-    AUTO_PUBLISHED = "Auto-Published"
-    FLAGGED_FOR_REVIEW = "Flagged for Review"
-    AUTO_HIDDEN = "Auto-Hidden"
+    AUTO_PUBLISHED = "AUTO_PUBLISHED"
+    FLAGGED_FOR_REVIEW = "FLAGGED_FOR_REVIEW"
+    AUTO_HIDDEN = "AUTO_HIDDEN"
 
 
 # ==========================================

@@ -9,23 +9,23 @@ from decimal import Decimal
 # Enums from Models
 # ==========================================
 class FundRequestStatusEnum(str, Enum):
-    PENDING = "Pending"
-    APPROVED = "Approved"
-    REJECTED = "Rejected"
-    DISBURSED = "Disbursed"
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    DISBURSED = "DISBURSED"
 
 class AssetStatusEnum(str, Enum):
-    AVAILABLE = "Available"
-    IN_USE = "In Use"
-    MAINTENANCE = "Maintenance"
-    BROKEN = "Broken"
+    AVAILABLE = "AVAILABLE"
+    IN_USE = "IN_USE"
+    MAINTENANCE = "MAINTENANCE"
+    BROKEN = "BROKEN"
 
 class AssetLoanStatusEnum(str, Enum):
-    REQUESTED = "Requested"
-    APPROVED = "Approved"
-    BORROWED = "Borrowed"
-    RETURNED = "Returned"
-    OVERDUE = "Overdue"
+    REQUESTED = "REQUESTED"
+    APPROVED = "APPROVED"
+    BORROWED = "BORROWED"
+    RETURNED = "RETURNED"
+    OVERDUE = "OVERDUE"
 
 # ==========================================
 # Budget Schemas

@@ -6,19 +6,19 @@ from app.db.base_class import Base
 import enum
 
 class UserStatus(enum.Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
-    SUSPENDED = "Suspended"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
 
 class OrgType(enum.Enum):
-    UNIVERSITY = "University"
-    FACULTY = "Faculty"
-    CLUB = "Club"
-    CLASS = "Class"
+    UNIVERSITY = "UNIVERSITY"
+    FACULTY = "FACULTY"
+    CLUB = "CLUB"
+    CLASS = "CLASS"
 
 class OrgStatus(enum.Enum):
-    ACTIVE = "Active"
-    INACTIVE = "Inactive"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
 
 # Association tables
 role_permissions = Table(
@@ -51,7 +51,7 @@ class User(Base):
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     organizations = relationship("UserOrganization", back_populates="user")
     event_registrations = relationship("EventRegistration", back_populates="user")
-    fund_requests = relationship("FundRequest", back_populates="requester")
+    fund_requests = relationship("FundRequest", foreign_keys="[FundRequest.requested_by]", back_populates="requester")
     asset_loans = relationship("AssetLoan", back_populates="borrower")
 
 class Role(Base):

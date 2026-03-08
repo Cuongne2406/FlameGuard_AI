@@ -6,14 +6,14 @@ from app.db.base_class import Base
 import enum
 
 class SentimentLabel(enum.Enum):
-    POSITIVE = "Positive"
-    NEUTRAL = "Neutral"
-    NEGATIVE = "Negative"
+    POSITIVE = "POSITIVE"
+    NEUTRAL = "NEUTRAL"
+    NEGATIVE = "NEGATIVE"
 
 class AuditAction(enum.Enum):
-    AUTO_PUBLISHED = "Auto-Published"
-    FLAGGED_FOR_REVIEW = "Flagged for Review"
-    AUTO_HIDDEN = "Auto-Hidden"
+    AUTO_PUBLISHED = "AUTO_PUBLISHED"
+    FLAGGED_FOR_REVIEW = "FLAGGED_FOR_REVIEW"
+    AUTO_HIDDEN = "AUTO_HIDDEN"
 
 class AISentiment(Base):
     __tablename__ = "ai_sentiments"

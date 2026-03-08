@@ -6,21 +6,21 @@ from app.db.base_class import Base
 import enum
 
 class CampaignStatus(enum.Enum):
-    PLANNING = "Planning"
-    ONGOING = "Ongoing"
-    COMPLETED = "Completed"
-    CANCELLED = "Cancelled"
+    PLANNING = "PLANNING"
+    ONGOING = "ONGOING"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 class EventStatus(enum.Enum):
-    DRAFT = "Draft"
-    PUBLISHED = "Published"
-    LIVE = "Live"
-    ENDED = "Ended"
+    DRAFT = "DRAFT"
+    PUBLISHED = "PUBLISHED"
+    LIVE = "LIVE"
+    ENDED = "ENDED"
 
 class EventRegistrationStatus(enum.Enum):
-    REGISTERED = "Registered"
-    ATTENDED = "Attended"
-    CANCELLED = "Cancelled"
+    REGISTERED = "REGISTERED"
+    ATTENDED = "ATTENDED"
+    CANCELLED = "CANCELLED"
 
 class Campaign(Base):
     __tablename__ = "campaigns"
