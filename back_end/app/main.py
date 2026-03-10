@@ -2,6 +2,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
 
+from app.db.session import engine
+from app.models import Base
+
+# Auto-create database tables
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="FlameGuard AI API",
     description="Enterprise API Core for DYUS Management",

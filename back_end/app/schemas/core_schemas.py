@@ -41,7 +41,7 @@ class PermissionResponse(PermissionBase):
     id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ==========================================
@@ -64,7 +64,7 @@ class RoleResponse(RoleBase):
     permissions: List[PermissionResponse] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ==========================================
@@ -91,7 +91,7 @@ class OrganizationResponse(OrganizationBase):
     id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ==========================================
@@ -118,7 +118,7 @@ class AcademicTermResponse(AcademicTermBase):
     id: UUID
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # ==========================================
@@ -152,4 +152,4 @@ class UserResponse(UserBase):
     roles: List[RoleResponse] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
