@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldAlert,
   FileText,
   CheckCircle,
   MessageSquare,
 } from "lucide-react";
+import { notificationService } from "../../../services/notificationService";
 
 const NotificationItem = ({ type, title, time, isUnread }) => {
   // Định nghĩa Icon và màu sắc dựa trên loại thông báo
@@ -53,6 +54,19 @@ const NotificationItem = ({ type, title, time, isUnread }) => {
 };
 
 const NotificationDropdown = ({ onClose }) => {
+  const [notifications, setNotifications] = useState([]);
+  
+  useEffect(() => {
+    const fetchNotifs = async () => {
+       try {
+         const data = await notificationService.getNotifications();
+         // map to the structure we need if valid
+         setNotifications(data || []);
+       } catch (err) { console.error("Error fetching notifications", err); }
+    };
+    fetchNotifs();
+  }, []);
+
   return (
     <>
       {/* Lớp phủ để bấm ra ngoài thì đóng hộp thoại */}
@@ -69,30 +83,19 @@ const NotificationDropdown = ({ onClose }) => {
 
         {/* Danh sách thông báo */}
         <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
-          <NotificationItem
-            type="danger"
-            title="Sự kiện Hội trại 26/3 đã vượt ngưỡng ngân sách dự trù 15%."
-            time="5 phút trước"
-            isUnread={true}
-          />
-          <NotificationItem
-            type="file"
-            title="Khoa CNTT vừa nộp kế hoạch Mùa Hè Xanh 2026 chờ bạn phê duyệt."
-            time="30 phút trước"
-            isUnread={true}
-          />
-          <NotificationItem
-            type="success"
-            title="Hệ thống đã tự động sao lưu dữ liệu (Daily Backup) thành công."
-            time="2 giờ trước"
-            isUnread={false}
-          />
-          <NotificationItem
-            type="ai"
-            title="AI Intelligence phát hiện 10 bình luận tiêu cực cần xử lý tại sự kiện Hội thao."
-            time="4 giờ trước"
-            isUnread={false}
-          />
+          {notifications.length > 0 ? (
+            notifications.map((notif, index) => (
+              <NotificationItem
+                key={notif.id || index}
+                type={notif.type || "file"} // Assuming type matches our UI configs
+                title={notif.message || notif.title}
+                time={new Date(notif.created_at || Date.now()).toLocaleString()}
+                isUnread={!notif.is_read}
+              />
+            ))
+          ) : (
+             <div className="p-8 text-center text-slate-400 text-sm">Chưa có thông báo nào</div>
+          )}
         </div>
 
         {/* Footer của hộp thoại */}

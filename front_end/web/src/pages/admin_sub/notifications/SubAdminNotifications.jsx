@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
+import { aiService } from '../../../services/aiService';
 
 const SubAdminNotifications = () => {
   const [toast, setToast] = useState(null);
   const [filter, setFilter] = useState('All');
+  const [data, setData] = useState(null);
 
-  const feedbacks = [
-    { id: 1, user: 'Lê Trọng Phúc Hậu', role: 'Bí thư 22CT111', type: 'Positive', content: 'Sự kiện Code War rất tuyệt vời, nội dung về GenAI rất cuốn hút và thực tế.', time: '2 giờ trước', icon: 'sentiment_very_satisfied' },
-    { id: 2, user: 'Ẩn danh (Khóa 23)', role: 'Sinh viên', type: 'Neutral', content: 'Đăng ký trên app rất nhanh nhưng khi đến hội trường wifi lại không load được mã QR để điểm danh.', time: '5 giờ trước', icon: 'sentiment_neutral' },
-    { id: 3, user: 'Nguyễn Văn A', role: 'Lớp 23CT112', type: 'Critical', content: 'Cần bổ sung thêm khu vực gửi xe cho các sự kiện quy mô lớn tại sân trường.', time: '1 ngày trước', icon: 'sentiment_very_dissatisfied' },
-  ];
+  useEffect(() => {
+    const fetchData = async () => {
+      const res = await aiService.getSubAdminAnalysis();
+      setData(res);
+    };
+    fetchData();
+  }, []);
+
+  // For demonstration, use autoModeration items from Admin Analysis as feedbacks
+  // if not available, default to empty array
+  const feedbacks = data?.autoModeration || [];
 
   return (
     <div className="p-4 md:p-8 bg-[#F8FAFC] min-h-screen space-y-8 font-sans">
@@ -90,23 +98,27 @@ const SubAdminNotifications = () => {
           </div>
         </div>
         <div className="divide-y divide-slate-50">
-          {feedbacks.map((f) => (
-            <div key={f.id} className="p-8 hover:bg-slate-50/50 transition-all flex flex-col md:flex-row gap-8 group">
-              <div className={`h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${f.type === 'Positive' ? 'text-emerald-500' : f.type === 'Critical' ? 'text-rose-500' : 'text-blue-500'}`}>
-                <span className="material-symbols-outlined text-3xl">{f.icon}</span>
+          {feedbacks.length > 0 ? feedbacks.map((f, i) => {
+            const typeClass = f.color?.includes('emerald') ? 'Positive' : f.color?.includes('red') ? 'Critical' : 'Neutral';
+            const iconType = typeClass === 'Positive' ? 'sentiment_very_satisfied' : typeClass === 'Critical' ? 'sentiment_very_dissatisfied' : 'sentiment_neutral';
+            
+            return (
+            <div key={f.id || i} className="p-8 hover:bg-slate-50/50 transition-all flex flex-col md:flex-row gap-8 group">
+              <div className={`h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${typeClass === 'Positive' ? 'text-emerald-500' : typeClass === 'Critical' ? 'text-rose-500' : 'text-blue-500'}`}>
+                <span className="material-symbols-outlined text-3xl">{iconType}</span>
               </div>
               <div className="flex-1 space-y-6">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900">{f.user}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{f.role} • {f.time}</p>
+                    <h4 className="text-lg font-bold text-slate-900">{f.user || 'Người dùng ẩn danh'}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{f.status} • {f.time}</p>
                   </div>
-                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${f.type === 'Positive' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : f.type === 'Critical' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                    {f.type}
+                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${typeClass === 'Positive' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : typeClass === 'Critical' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                    {typeClass}
                   </span>
                 </div>
-                <div className={`p-6 rounded-[2rem] border transition-all ${f.type === 'Positive' ? 'bg-emerald-50/30 border-emerald-100' : f.type === 'Critical' ? 'bg-rose-50/30 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-                  <p className="text-sm font-medium text-slate-700 italic leading-relaxed">"{f.content}"</p>
+                <div className={`p-6 rounded-[2rem] border transition-all ${typeClass === 'Positive' ? 'bg-emerald-50/30 border-emerald-100' : typeClass === 'Critical' ? 'bg-rose-50/30 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
+                  <p className="text-sm font-medium text-slate-700 italic leading-relaxed">{f.text}</p>
                 </div>
                 <div className="flex gap-4">
                   <button className="h-11 px-8 rounded-xl bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-blue-600 shadow-lg shadow-slate-100 transition-all">Phản hồi SV</button>
@@ -114,7 +126,9 @@ const SubAdminNotifications = () => {
                 </div>
               </div>
             </div>
-          ))}
+          )}) : (
+             <div className="p-8 text-center text-slate-400">Không có phản hồi nào</div>
+          )}
         </div>
       </section>
 

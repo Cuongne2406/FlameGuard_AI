@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { awardService } from '../../../services/awardService';
 
 const SubAdminAwards = () => {
     const [toast, setToast] = useState(null);
@@ -16,58 +17,33 @@ const SubAdminAwards = () => {
     const [showRemindModal, setShowRemindModal] = useState(false);
     const [remindItem, setRemindItem] = useState(null);
     const [showAllStudentsModal, setShowAllStudentsModal] = useState(false);
-    const [students, setStudents] = useState([
-        { id: 'SV1', name: 'Nguyễn Văn A', class: '23CT112', status: 'Đã duyệt', points: 98, rank: 'Top 5 Khoa', assessed: true, assessment: { criteria: ['Tham gia Check-in', 'Đặt câu hỏi hay'], note: 'Đã tham gia tích cực', image: null } },
-        { id: 'SV2', name: 'Trần Thị B', class: '22CT111', status: 'Chờ duyệt', points: 85, rank: 'Tiềm năng', assessed: false, assessment: null },
-        { id: 'SV3', name: 'Lê Văn C', class: '23CT113', status: 'Chờ duyệt', points: 45, rank: 'Cần cố gắng', assessed: false },
-    ]);
+    const [students, setStudents] = useState([]);
+    const [stats, setStats] = useState([]);
+    const [rankings, setRankings] = useState([]);
+    const [warningClass, setWarningClass] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Dữ liệu theo thời gian (mô phỏng)
-    const dataByTime = {
-        'Tháng này': {
-            stats: [
-                { label: 'Dẫn đầu tháng', title: 'Chi đoàn 23CT112', val: '98 Điểm', icon: 'military_tech', color: 'orange', trend: 'Giữ vững phong độ' },
-                { label: 'Sinh viên 5 tốt', title: '125 Hồ sơ', sub: 'Đạt chuẩn cấp Khoa', progress: 80, icon: 'school', color: 'blue', action: 'Đã duyệt 80%' },
-                { label: 'Cần nỗ lực', title: '03 Chi đoàn', sub: 'Nhóm cuối bảng', icon: 'trending_down', color: 'rose', alert: 'Cần nhắc nhở gấp' },
-            ],
-            rankings: [
-                { rank: 1, class: '23CT112', dept: 'Kỹ thuật PM', score: '98/100', trend: 'Lên hạng', trendColor: 'emerald', tags: ['100% Đoàn phí', 'Vô địch Bóng đá'], icon: '🏆' },
-                { rank: 2, class: '21CT111', dept: 'Mạng MT', score: '95/100', trend: 'Ổn định', trendColor: 'slate', icon: '🥈' },
-                { rank: 3, class: '24CT115', dept: 'Tân SV', score: '92/100', trend: 'Lên hạng', trendColor: 'emerald', icon: '🥉' },
-                { rank: 4, class: '22CT112', dept: 'Kỹ thuật PM', score: '88/100', trend: 'Ổn định', trendColor: 'slate', icon: '4' },
-            ],
-            warningClass: { rank: 20, class: '23CT113', dept: 'Hệ thống TT', score: '45/100', trend: 'Tụt hạng', trendColor: 'rose', note: 'Chưa nộp báo cáo tháng' }
-        },
-        'Học kỳ 1': {
-            stats: [
-                { label: 'Dẫn đầu học kỳ', title: 'Chi đoàn 21CT111', val: '560 Điểm', icon: 'military_tech', color: 'orange', trend: 'Dẫn đầu bảng' },
-                { label: 'Sinh viên 5 tốt', title: '210 Hồ sơ', sub: 'Đạt chuẩn cấp Khoa', progress: 85, icon: 'school', color: 'blue', action: 'Đã duyệt 85%' },
-                { label: 'Cần nỗ lực', title: '05 Chi đoàn', sub: 'Nhóm cuối bảng', icon: 'trending_down', color: 'rose', alert: 'Cần theo dõi' },
-            ],
-            rankings: [
-                { rank: 1, class: '21CT111', dept: 'Mạng MT', score: '560/600', trend: 'Lên hạng', trendColor: 'emerald', tags: ['Xuất sắc'], icon: '🏆' },
-                { rank: 2, class: '23CT112', dept: 'Kỹ thuật PM', score: '545/600', trend: 'Ổn định', trendColor: 'slate', icon: '🥈' },
-            ],
-            warningClass: { rank: 18, class: '23CT113', dept: 'Hệ thống TT', score: '320/600', trend: 'Tụt hạng', trendColor: 'rose', note: 'Thiếu hoạt động' }
-        },
-        'Cả năm': {
-            stats: [
-                { label: 'Dẫn đầu năm', title: 'Chi đoàn 21CT111', val: '1250 Điểm', icon: 'military_tech', color: 'orange', trend: 'Xuất sắc' },
-                { label: 'Sinh viên 5 tốt', title: '350 Hồ sơ', sub: 'Đạt chuẩn cấp Khoa', progress: 90, icon: 'school', color: 'blue', action: 'Đã duyệt 90%' },
-                { label: 'Cần nỗ lực', title: '08 Chi đoàn', sub: 'Nhóm cuối bảng', icon: 'trending_down', color: 'rose', alert: 'Cần hỗ trợ' },
-            ],
-            rankings: [
-                { rank: 1, class: '21CT111', dept: 'Mạng MT', score: '1250/1400', trend: 'Lên hạng', trendColor: 'emerald', tags: ['Top 1'], icon: '🏆' },
-                { rank: 2, class: '23CT112', dept: 'Kỹ thuật PM', score: '1180/1400', trend: 'Ổn định', trendColor: 'slate', icon: '🥈' },
-            ],
-            warningClass: { rank: 22, class: '23CT113', dept: 'Hệ thống TT', score: '680/1400', trend: 'Tụt hạng', trendColor: 'rose', note: 'Cần cải thiện' }
-        }
-    };
-
-    const currentData = dataByTime[activeTimescale] || dataByTime['Tháng này'];
-    const stats = currentData.stats;
-    const rankings = currentData.rankings;
-    const warningClass = currentData.warningClass;
+    useEffect(() => {
+        const fetchAwardData = async () => {
+            try {
+                setLoading(true);
+                const [studentsData, statsData] = await Promise.all([
+                    awardService.getAwardsList(activeTimescale),
+                    awardService.getAwardStats(activeTimescale)
+                ]);
+                
+                setStudents(studentsData);
+                setStats(statsData.stats || []);
+                setRankings(statsData.rankings || []);
+                setWarningClass(statsData.warningClass || null);
+            } catch (err) {
+                console.error("Failed to fetch award data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAwardData();
+    }, [activeTimescale]);
 
     // State cho assessment modal
     const [assessmentForm, setAssessmentForm] = useState({
@@ -136,40 +112,53 @@ const SubAdminAwards = () => {
         }
     };
 
-    const saveAssessment = () => {
+    const saveAssessment = async () => {
         let addedPoints = 0;
         if (assessmentForm.criteria.includes('checkin')) addedPoints += 2;
         if (assessmentForm.criteria.includes('question')) addedPoints += 1;
         if (assessmentForm.criteria.includes('support')) addedPoints += 2;
         if (assessmentForm.criteria.includes('speaker')) addedPoints += 5;
 
-        const newPoints = selectedStudent.points + addedPoints;
-
-        setStudents(prev => prev.map(s =>
-            s.id === selectedStudent.id
-                ? { ...s, points: newPoints, status: 'Đã duyệt', assessed: true, assessment: { ...assessmentForm } }
-                : s
-        ));
-
-        setToast({ message: `Đã cộng ${addedPoints} điểm cho ${selectedStudent.name}!`, type: 'success' });
-        setShowAssessmentModal(false);
+        try {
+            await awardService.updateAwardAssessment(selectedStudent.id, {
+                points: selectedStudent.points + addedPoints,
+                assessment: assessmentForm
+            });
+            const newPoints = selectedStudent.points + addedPoints;
+            setStudents(prev => prev.map(s =>
+                s.id === selectedStudent.id
+                    ? { ...s, points: newPoints, status: 'Đã duyệt', assessed: true, assessment: { ...assessmentForm } }
+                    : s
+            ));
+            setToast({ message: `Đã cộng ${addedPoints} điểm cho ${selectedStudent.name}!`, type: 'success' });
+            setShowAssessmentModal(false);
+        } catch (error) {
+            setToast({ message: 'Lỗi khi lưu đánh giá!', type: 'error' });
+        }
     };
 
-    const updateAssessment = () => {
+    const updateAssessment = async () => {
         let addedPoints = 0;
         if (assessmentForm.criteria.includes('checkin')) addedPoints += 2;
         if (assessmentForm.criteria.includes('question')) addedPoints += 1;
         if (assessmentForm.criteria.includes('support')) addedPoints += 2;
         if (assessmentForm.criteria.includes('speaker')) addedPoints += 5;
 
-        setStudents(prev => prev.map(s =>
-            s.id === selectedStudent.id
-                ? { ...s, points: selectedStudent.points + addedPoints, assessment: { ...assessmentForm } }
-                : s
-        ));
-
-        setToast({ message: `Đã cập nhật đánh giá cho ${selectedStudent.name}!`, type: 'success' });
-        setShowAssessmentModal(false);
+        try {
+            await awardService.updateAwardAssessment(selectedStudent.id, {
+                points: selectedStudent.points + addedPoints,
+                assessment: assessmentForm
+            });
+            setStudents(prev => prev.map(s =>
+                s.id === selectedStudent.id
+                    ? { ...s, points: selectedStudent.points + addedPoints, assessment: { ...assessmentForm } }
+                    : s
+            ));
+            setToast({ message: `Đã cập nhật đánh giá cho ${selectedStudent.name}!`, type: 'success' });
+            setShowAssessmentModal(false);
+        } catch (error) {
+            setToast({ message: 'Lỗi khi cập nhật đánh giá!', type: 'error' });
+        }
     };
 
     const exportToExcel = () => {
@@ -307,6 +296,7 @@ const SubAdminAwards = () => {
                                 </tr>
                             ))}
                             {/* Warning Row */}
+                            {warningClass && (
                             <tr className="bg-rose-50/30">
                                 <td className="py-4 md:py-6 lg:py-8 px-4 md:px-6 lg:px-10">
                                     <span className="text-sm md:text-base font-bold text-rose-500">{warningClass.rank}</span>
@@ -338,6 +328,7 @@ const SubAdminAwards = () => {
                                     </button>
                                 </td>
                             </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

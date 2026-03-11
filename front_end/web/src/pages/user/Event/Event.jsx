@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
+import { eventService } from "../../../services/eventService";
 import {
   Search,
   Calendar as CalendarIcon,
@@ -151,7 +153,7 @@ const RegistrationModal = ({ isOpen, onClose, onSuccess }) => {
               </label>
               <input
                 disabled
-                value="Lê Trọng Phúc Hậu"
+                value={isOpen?.user?.full_name || ""}
                 className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-400"
               />
             </div>
@@ -161,7 +163,7 @@ const RegistrationModal = ({ isOpen, onClose, onSuccess }) => {
               </label>
               <input
                 disabled
-                value="23800926"
+                value={isOpen?.user?.student_id || ""}
                 className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-400"
               />
             </div>
@@ -181,7 +183,7 @@ const RegistrationModal = ({ isOpen, onClose, onSuccess }) => {
               Hủy
             </button>
             <button
-              onClick={onSuccess}
+              onClick={() => onSuccess(isOpen?.event)}
               className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-200 flex items-center justify-center gap-2"
             >
               Xác nhận Đăng ký
@@ -448,12 +450,40 @@ const TicketModal = ({ isOpen, onClose, studentInfo }) => {
 };
 // --- MAIN PORTAL COMPONENT ---
 const Event = () => {
+  const { user } = useContext(AuthContext);
   const [isCertOpen, setIsCertOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [regOpen, setRegOpen] = useState(false);
+  const [regOpen, setRegOpen] = useState(false); // Can hold { event, user } object to pass to modal
   const [successOpen, setSuccessOpen] = useState(false);
-  // BỔ SUNG THÊM STATE NÀY
   const [ticketOpen, setTicketOpen] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await eventService.getEvents();
+        // Fallback to empty array if no data
+        setEvents(data || []);
+      } catch (err) {
+        console.error("Failed to load events", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
+
+  const handleRegisterConfirmed = async (event) => {
+    if (!user || !event) return;
+    try {
+      await eventService.registerForEvent(event.id, user.id);
+      setRegOpen(false);
+      setSuccessOpen(true);
+    } catch (err) {
+      alert("Đăng ký thất bại: " + (err.message || "Lỗi hệ thống"));
+    }
+  };
 
   const categories = [
     "Tất cả",
@@ -462,25 +492,12 @@ const Event = () => {
     "Tình nguyện ❤️",
     "Sắp diễn ra",
   ];
-  const myEvents = [
-    {
-      id: 1,
-      title: "Hội thảo AI & Big Data",
-      time: "08:00 • Hội trường A",
-      date: "12",
-    },
-    {
-      id: 2,
-      title: "DYUS Marathon 2026",
-      time: "05:30 • Công viên 30/4",
-      date: "15",
-    },
-  ];
-  // Dữ liệu mẫu
+  const myEvents = [];
+
   const studentInfo = {
-    name: "Lê Trọng Phúc Hậu",
-    id: "23800926",
-    class: "23CT112",
+    name: user?.full_name || "Lê Trọng Phúc Hậu",
+    id: user?.student_id || "23800926",
+    class: user?.student_id ? "" : "23CT112",
   };
 
   return (
@@ -497,10 +514,7 @@ const Event = () => {
       <RegistrationModal
         isOpen={regOpen}
         onClose={() => setRegOpen(false)}
-        onSuccess={() => {
-          setRegOpen(false);
-          setSuccessOpen(true);
-        }}
+        onSuccess={handleRegisterConfirmed}
       />
       <SuccessModal
         isOpen={successOpen}
@@ -580,90 +594,97 @@ const Event = () => {
 
           {/* EVENTS GRID */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Card 1: Đang mở (Dùng để test flow Ảnh 1 -> Ảnh 2 -> Ảnh 3) */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm group hover:shadow-xl transition-all duration-500">
-              <div className="h-48 bg-slate-900 relative">
-                <img
-                  src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80"
-                  className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-all duration-700"
-                  alt="event"
-                />
-                <span className="absolute top-4 left-4 bg-orange-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  ● Đang mở đăng ký
-                </span>
-              </div>
-              <div className="p-6 space-y-4">
-                <h4 className="font-black text-slate-800 text-lg leading-tight">
-                  Code War Season 5
-                </h4>
-                <div className="space-y-2 text-[11px] text-slate-500 font-bold">
-                  <div className="flex items-center gap-2">
-                    <CalendarIcon size={14} /> 20/11/2026
-                  </div>
-                  <div className="text-orange-600">
-                    🔥 Đã có 120 đội đăng ký
-                  </div>
+            {loading ? (
+               <div className="col-span-3 text-center py-10 text-slate-500 font-bold">Đang tải sự kiện...</div>
+            ) : events.length === 0 ? (
+               <div className="col-span-3 text-center py-10 text-slate-500 font-bold">Không có sự kiện nào.</div>
+            ) : events.map(event => (
+              <div key={event.id} className={`bg-white rounded-[2rem] border overflow-hidden shadow-sm transition-all duration-500 group relative ${event.status === 'LIVE' ? 'border-blue-500 shadow-xl' : 'border-slate-100 hover:shadow-xl'} ${event.status === 'ENDED' ? 'opacity-75 grayscale-[0.5] hover:grayscale-0 hover:opacity-100' : ''}`}>
+                
+                {/* Image Section */}
+                <div className={`h-48 relative flex flex-col items-center justify-center text-white ${event.status === 'LIVE' ? 'bg-blue-900' : event.status === 'ENDED' ? 'bg-slate-200' : 'bg-slate-900'}`}>
+                  {event.status === 'ENDED' ? (
+                     <>
+                        <img 
+                          src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80" 
+                          className="w-full h-full object-cover opacity-30" 
+                          alt="ended" 
+                        />
+                        <span className="absolute top-4 left-4 bg-slate-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                          ✓ Đã hoàn thành
+                        </span>
+                        <span className="text-5xl group-hover:scale-125 transition-transform duration-500">
+                          🏁
+                        </span>
+                     </>
+                  ) : event.status === 'LIVE' ? (
+                     <>
+                        <div className="absolute top-4 left-4 bg-blue-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                          ● Đang diễn ra
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">
+                          {event.name}
+                        </span>
+                        <span className="text-3xl font-black">🔥</span>
+                     </>
+                  ) : (
+                     <img
+                       src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80"
+                       className="w-full h-full object-cover opacity-60 group-hover:scale-110 transition-all duration-700"
+                       alt="upcoming"
+                     />
+                  )}
+                  {event.status === 'PUBLISHED' && (
+                     <span className="absolute top-4 left-4 bg-orange-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                        ● Đang mở đăng ký
+                     </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => setDetailOpen(true)}
-                  className="w-full py-4 bg-slate-50 text-slate-800 rounded-2xl text-[11px] font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                >
-                  Xem chi tiết & Thể lệ
-                </button>
-              </div>
-            </div>
 
-            {/* Card 2: Đang diễn ra (Dùng để test Hiện mã QR) */}
-            <div className="bg-white rounded-[2rem] border-2 border-blue-500 overflow-hidden shadow-xl relative group">
-              <div className="h-48 bg-blue-900 relative flex flex-col items-center justify-center text-white">
-                <div className="absolute top-4 left-4 bg-blue-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  ● Đang diễn ra
+                {/* Content Section */}
+                <div className="p-6 space-y-4">
+                  <h4 className={`font-black text-lg mb-4 leading-tight ${event.status === 'LIVE' ? 'text-blue-600' : 'text-slate-800'}`}>
+                    {event.name}
+                  </h4>
+                  {event.status === 'DRAFT' || event.status === 'PUBLISHED' ? (
+                     <>
+                        <div className="space-y-2 text-[11px] text-slate-500 font-bold">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon size={14} /> {event.start_time ? new Date(event.start_time).toLocaleDateString() : 'Chưa xác định'}
+                          </div>
+                          <div className="text-orange-600">
+                            🔥 Sức chứa: {event.capacity || 'Không giới hạn'}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                             // This should ideally fetch event details and pass to DetailModal, but for simplicity we directly open reg Open.
+                             // setDetailOpen(true);
+                             setRegOpen({ event, user }); 
+                          }}
+                          className="w-full py-4 bg-slate-50 text-slate-800 rounded-2xl text-[11px] font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                        >
+                          Xem chi tiết & Thể lệ
+                        </button>
+                     </>
+                  ) : event.status === 'LIVE' ? (
+                     <button
+                        onClick={() => setTicketOpen(true)}
+                        className="w-full py-4 bg-blue-600 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-blue-200 flex items-center justify-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
+                     >
+                        <QrCode size={18} /> HIỆN MÃ QR CHECK-IN
+                     </button>
+                  ) : (
+                     <button
+                        onClick={() => setIsCertOpen(true)}
+                        className="w-full py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[11px] font-black border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"
+                     >
+                        Nhận chứng nhận & Điểm RL
+                     </button>
+                  )}
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">
-                  Tiến độ Check-in
-                </span>
-                <span className="text-3xl font-black">90%</span>
               </div>
-              <div className="p-6">
-                <h4 className="font-black text-blue-600 text-lg mb-4">
-                  IT TECH DAY 2026
-                </h4>
-                <button
-                  onClick={() => setTicketOpen(true)}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl text-[11px] font-black shadow-lg shadow-blue-200 flex items-center justify-center gap-2 hover:bg-blue-700 transition-all active:scale-95"
-                >
-                  <QrCode size={18} /> HIỆN MÃ QR CHECK-IN
-                </button>
-              </div>
-            </div>
-
-            {/* Card 3: Đã hoàn thành (Dùng để test Nhận chứng nhận) */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm opacity-75 grayscale-[0.5] hover:grayscale-0 hover:opacity-100 transition-all duration-500 group">
-              <div className="h-48 bg-slate-200 flex items-center justify-center relative">
-                <img
-                  src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80"
-                  className="w-full h-full object-cover opacity-30"
-                  alt="football"
-                />
-                <span className="absolute top-4 left-4 bg-slate-500 text-white text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                  ✓ Đã hoàn thành
-                </span>
-                <span className="text-5xl group-hover:scale-125 transition-transform duration-500">
-                  ⚽
-                </span>
-              </div>
-              <div className="p-6">
-                <h4 className="font-black text-slate-800 text-lg mb-4 leading-tight">
-                  Giải bóng đá Nam Khoa CNTT 2025
-                </h4>
-                <button
-                  onClick={() => setIsCertOpen(true)}
-                  className="w-full py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[11px] font-black border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"
-                >
-                  Nhận chứng nhận & Điểm RL
-                </button>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -752,12 +773,7 @@ const Event = () => {
       </div>
 
       {/* FLOATING CHAT */}
-      {/* <button className="fixed bottom-10 right-10 w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all group z-[900]">
-        <MessageSquare size={24} />
-        <span className="absolute right-full mr-4 bg-white px-4 py-2 rounded-xl text-slate-800 text-xs font-black shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
-          Hỗ trợ BTC 24/7
-        </span>
-      </button> */}
+      {/* Đã chuyển GlobalChatbot sang UserLayout */}
     </div>
   );
 };

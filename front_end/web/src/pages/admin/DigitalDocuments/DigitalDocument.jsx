@@ -1,4 +1,5 @@
-import React, { useState } from "react"; // Bổ sung useState
+import React, { useState, useEffect } from "react";
+import { documentService } from "../../../services/documentService";
 import {
   FileText,
   Send,
@@ -17,6 +18,32 @@ import {
 const DigitalDocument = () => {
   // --- PHẦN BỔ SUNG: STATE QUẢN LÝ MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [docs, setDocs] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const fetchDocs = async () => {
+       try {
+         const data = await documentService.getDocuments();
+         setDocs(data || []);
+       } catch (err) {
+         console.error('Failed to fetch admin docs:', err);
+       }
+    };
+    fetchDocs();
+  }, []);
+
+  const filteredDocs = docs.filter(doc => (doc.title || doc.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
+
+  const handleCreate = async (e) => {
+     e.preventDefault();
+     // Extract values, fake creating for now
+     try {
+       const newDoc = await documentService.createRequest('Quyết định');
+       setDocs([newDoc, ...docs]);
+       setIsModalOpen(false);
+     } catch (err) { alert('Lỗi ban hành'); }
+  };
 
   return (
     <div className="flex gap-4 h-full animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
@@ -81,6 +108,8 @@ const DigitalDocument = () => {
               />
               <input
                 type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Tìm số hiệu, trích yếu..."
                 className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-500/10 transition-all"
               />
@@ -99,25 +128,18 @@ const DigitalDocument = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                <DocRow
-                  id="KH-102/ĐTN"
-                  date="24/03/2026"
-                  title="Kế hoạch tổ chức Hội trại Truyền thống 26/3"
-                  target="Toàn trường"
-                  active
-                />
-                <DocRow
-                  id="QĐ-45/ĐTN"
-                  date="23/03/2026"
-                  title="Quyết định Khen thưởng Chiến dịch Mùa Hè Xanh"
-                  target="Khoa CNTT, Kinh Tế"
-                />
-                <DocRow
-                  id="TB-12/ĐTN"
-                  date="22/03/2026"
-                  title="Thông báo triệu tập Đại hội Đại biểu Đoàn trường"
-                  target="BCH các cấp"
-                />
+                {filteredDocs.length > 0 ? filteredDocs.map((doc, idx) => (
+                   <DocRow
+                      key={doc.id || idx}
+                      id={doc.code || `DOC-${doc.id}`}
+                      date={new Date(doc.created_at || Date.now()).toLocaleDateString()}
+                      title={doc.title || doc.name}
+                      target={doc.target || 'Toàn trường'}
+                      active={idx === 0}
+                    />
+                )) : (
+                  <tr><td colSpan="5" className="text-center p-8 text-slate-400">Không có văn bản nào</td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -257,10 +279,7 @@ const DigitalDocument = () => {
 
             <form
               className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsModalOpen(false);
-              }}
+              onSubmit={handleCreate}
             >
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">

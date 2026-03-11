@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, MapPin, Users } from "lucide-react";
+import { publicService } from "../../services/publicService";
 
 const ActivityCard = ({ title, date, location, status, participants }) => (
   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
@@ -36,32 +37,56 @@ const ActivityCard = ({ title, date, location, status, participants }) => (
   </div>
 );
 
-const Activities = () => (
-  <div className="max-w-7xl mx-auto px-6 py-10">
-    <h1 className="text-3xl font-black text-gray-900 mb-2 uppercase italic">
-      Hoạt động sắp tới
-    </h1>
-    <p className="text-gray-500 mb-8">
-      Nơi tổng hợp các phong trào, sự kiện dành cho Đoàn viên sinh viên.
-    </p>
+const Activities = () => {
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <ActivityCard
-        title="Chiến dịch Xuân tình nguyện 2026"
-        date="15/01/2026"
-        location="Huyện Định Quán"
-        status="Sắp diễn ra"
-        participants="200"
-      />
-      <ActivityCard
-        title="Giải chạy S-Race Sinh viên khỏe"
-        date="20/02/2026"
-        location="Sân vận động trường"
-        status="Sắp diễn ra"
-        participants="500"
-      />
-      {/* Thêm nhiều card khác */}
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const data = await publicService.getActivities();
+        setActivities(data);
+      } catch (error) {
+        console.error("Failed to fetch activities:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchActivities();
+  }, []);
+
+  return (
+    <div className="max-w-7xl mx-auto px-6 py-10">
+      <h1 className="text-3xl font-black text-gray-900 mb-2 uppercase italic">
+        Hoạt động sắp tới
+      </h1>
+      <p className="text-gray-500 mb-8">
+        Nơi tổng hợp các phong trào, sự kiện dành cho Đoàn viên sinh viên.
+      </p>
+
+      {loading ? (
+        <div className="text-center py-10 text-slate-500 font-bold">Đang tải dữ liệu...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {activities.length > 0 ? (
+            activities.map((activity) => (
+              <ActivityCard
+                key={activity.id}
+                title={activity.title}
+                date={activity.date}
+                location={activity.location}
+                status={activity.status}
+                participants={activity.participants}
+              />
+            ))
+          ) : (
+            <div className="col-span-full py-10 text-center text-slate-500 italic">
+              Không có hoạt động nào.
+            </div>
+          )}
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 export default Activities;

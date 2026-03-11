@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
+import { financeService } from "../../../services/financeService";
 import {
   Wallet,
   Plus,
@@ -19,39 +21,29 @@ import {
 } from "lucide-react";
 
 const WalletPage = () => {
-  // Quản lý trạng thái đóng/mở Modal
-  const [activeModal, setActiveModal] = useState(null); // 'topup' | 'fee' | 'stats' | null
+  const { user } = useContext(AuthContext);
+  const [activeModal, setActiveModal] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const transactions = [
-    {
-      id: 1,
-      title: "Nộp Quỹ lớp tháng 03",
-      time: "08:30 • 05/03/2026",
-      amount: -50000,
-      type: "expense",
-    },
-    {
-      id: 2,
-      title: "Hoàn tiền sự kiện Tech Day",
-      time: "14:20 • 01/03/2026",
-      amount: 20000,
-      type: "income",
-    },
-    {
-      id: 3,
-      title: "Đóng góp quỹ thiện nguyện",
-      time: "09:15 • 28/02/2026",
-      amount: -30000,
-      type: "expense",
-    },
-    {
-      id: 4,
-      title: "Nộp Quỹ lớp tháng 02",
-      time: "10:00 • 05/02/2026",
-      amount: -50000,
-      type: "expense",
-    },
-  ];
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        const data = await financeService.getTransactions();
+        setTransactions(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWallet();
+  }, []);
+
+  const studentClass = user?.student_id ? '23CT112' : '23CT112'; // Placeholder
+  const nameParts = user?.full_name ? user.full_name.split(" ") : ["HAU"];
+  const firstName = nameParts[nameParts.length - 1].toUpperCase();
+  const topUpCode = `NAP QUY ${firstName} ${studentClass}`;
 
   // Component Modal dùng chung để đồng bộ giao diện
   const Modal = ({ title, onClose, children }) => (
@@ -235,7 +227,7 @@ const WalletPage = () => {
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wider">
                 <BarChart3 className="text-blue-600" size={18} /> Biểu đồ chi
-                tiêu của Lớp 23CT112
+                tiêu của Lớp {studentClass}
               </h4>
               <Info size={16} className="text-slate-300" />
             </div>
@@ -339,44 +331,50 @@ const WalletPage = () => {
             </div>
 
             <div className="space-y-6">
-              {transactions.map((t) => (
-                <div
-                  key={t.id}
-                  className="flex items-center justify-between group cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                        t.type === "income"
-                          ? "bg-emerald-50 text-emerald-600"
-                          : "bg-red-50 text-red-500"
+              {loading ? (
+                <p className="text-xs text-slate-400 font-bold text-center">Đang tải lịch sử...</p>
+              ) : transactions.length === 0 ? (
+                <p className="text-xs text-slate-400 font-bold text-center">Chưa có giao dịch nào.</p>
+              ) : (
+                transactions.map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
+                          t.type === "income"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-red-50 text-red-500"
+                        }`}
+                      >
+                        {t.type === "income" ? (
+                          <ArrowDownLeft size={18} />
+                        ) : (
+                          <ArrowUpRight size={18} />
+                        )}
+                      </div>
+                      <div>
+                        <h6 className="text-[13px] font-black text-slate-800 leading-none mb-1 group-hover:text-blue-600 transition-colors">
+                          {t.title}
+                        </h6>
+                        <p className="text-[10px] text-slate-400 font-bold">
+                          {t.time}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[13px] font-black ${
+                        t.type === "income" ? "text-emerald-500" : "text-red-500"
                       }`}
                     >
-                      {t.type === "income" ? (
-                        <ArrowDownLeft size={18} />
-                      ) : (
-                        <ArrowUpRight size={18} />
-                      )}
-                    </div>
-                    <div>
-                      <h6 className="text-[13px] font-black text-slate-800 leading-none mb-1 group-hover:text-blue-600 transition-colors">
-                        {t.title}
-                      </h6>
-                      <p className="text-[10px] text-slate-400 font-bold">
-                        {t.time}
-                      </p>
-                    </div>
+                      {t.type === "income" ? "+" : "-"}
+                      {Math.abs(t.amount).toLocaleString()} VNĐ
+                    </span>
                   </div>
-                  <span
-                    className={`text-[13px] font-black ${
-                      t.type === "income" ? "text-emerald-500" : "text-red-500"
-                    }`}
-                  >
-                    {t.type === "income" ? "+" : "-"}
-                    {Math.abs(t.amount).toLocaleString()} VNĐ
-                  </span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <button className="w-full mt-8 py-3 text-[11px] font-black text-blue-600 hover:bg-blue-50 rounded-2xl transition-all uppercase tracking-widest border border-dashed border-blue-200">
@@ -408,7 +406,7 @@ const WalletPage = () => {
                   Nội dung CK:
                 </span>
                 <span className="text-xs font-black text-blue-600">
-                  NAP QUY HAU 23CT112
+                  {topUpCode}
                 </span>
               </div>
             </div>

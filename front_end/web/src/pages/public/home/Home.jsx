@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { QrCode, CreditCard, BookOpen } from "lucide-react";
+import { publicService } from "../../../services/publicService";
 
 // 1. Định nghĩa Component QuickAction
 const QuickAction = ({ icon: Icon, title, desc, color }) => (
@@ -36,13 +37,33 @@ const EventItem = ({ day, month, title, category }) => (
   </div>
 );
 const PublicHome = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const homeData = await publicService.getHomeData();
+        setData(homeData);
+      } catch (error) {
+        console.error("Failed to fetch public home data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="p-8 text-center text-slate-500 font-bold">Đang tải dữ liệu...</div>;
+  if (!data) return <div className="p-8 text-center text-red-500 font-bold">Lỗi tải dữ liệu.</div>;
+
   return (
     <div className="bg-[#f8fafc] min-h-screen font-sans">
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* 2. Hero Banner */}
         <section className="relative rounded-[32px] overflow-hidden bg-slate-900 h-[450px] mb-12 shadow-2xl">
           <img
-            src="https://images.unsplash.com/photo-1523240715630-34160408b495?auto=format&fit=crop&q=80"
+            src={data.featuredEvent?.image || "https://images.unsplash.com/photo-1523240715630-34160408b495?auto=format&fit=crop&q=80"}
             alt="Banner"
             className="absolute inset-0 w-full h-full object-cover opacity-50"
           />
@@ -52,11 +73,10 @@ const PublicHome = () => {
               Tin nổi bật
             </span>
             <h1 className="text-4xl font-bold mt-4 leading-tight">
-              Đại hội Đại biểu Đoàn TNCS Hồ Chí Minh Nhiệm kỳ 2024 - 2027
+              {data.featuredEvent?.title}
             </h1>
             <p className="mt-4 text-gray-300 text-sm leading-relaxed">
-              Hành trình kết nối sức trẻ, sáng tạo và khát vọng cống hiến của
-              sinh viên Khoa CNTT.
+              {data.featuredEvent?.desc}
             </p>
             <div className="flex gap-4 mt-8">
               <button className="bg-blue-600 px-8 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-transform">
@@ -110,31 +130,29 @@ const PublicHome = () => {
               </a>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {[1, 2].map((i) => (
+              {data.news?.map((newsItem) => (
                 <div
-                  key={i}
+                  key={newsItem.id}
                   className="group cursor-pointer bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-gray-100"
                 >
                   <div className="h-44 overflow-hidden bg-gray-200 relative">
                     <img
-                      src={`https://picsum.photos/seed/${i + 10}/600/400`}
+                      src={newsItem.image}
                       className="w-full h-full object-cover group-hover:scale-110 transition-duration-500"
                     />
                     <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-2 py-1 rounded text-[10px] font-bold">
-                      12/10/2024
+                      {newsItem.date}
                     </div>
                   </div>
                   <div className="p-5">
                     <span className="text-[10px] text-blue-600 font-black uppercase">
-                      Tình nguyện
+                      {newsItem.category}
                     </span>
-                    <h3 className="font-bold text-gray-800 mt-2 leading-snug group-hover:text-blue-600 transition-colors">
-                      Ra quân Chiến dịch Mùa hè xanh 2024: Hành trình 30 ngày
-                      cống hiến
+                    <h3 className="font-bold text-gray-800 mt-2 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
+                      {newsItem.title}
                     </h3>
                     <p className="text-xs text-gray-500 mt-2 line-clamp-2 italic leading-relaxed">
-                      Lễ ra quân đã thu hút hơn 300 tình nguyện viên tham gia
-                      với mục tiêu hỗ trợ cộng đồng vùng sâu vùng xa...
+                      {newsItem.desc}
                     </p>
                   </div>
                 </div>
@@ -148,24 +166,15 @@ const PublicHome = () => {
               Lịch sự kiện sắp tới
             </h2>
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-              <EventItem
-                day="20"
-                month="10"
-                title="Giải bóng đá Đại hội Khoa CNTT 2024"
-                category="Bóng đá nam"
-              />
-              <EventItem
-                day="25"
-                month="10"
-                title="Hội diễn Văn nghệ Truyền thống lần IV"
-                category="Văn nghệ"
-              />
-              <EventItem
-                day="02"
-                month="11"
-                title="Hiến máu tình nguyện đợt 2 năm 2024"
-                category="Nhân đạo"
-              />
+              {data.upcomingEvents?.map((evt, idx) => (
+                <EventItem
+                  key={idx}
+                  day={evt.day}
+                  month={evt.month}
+                  title={evt.title}
+                  category={evt.category}
+                />
+              ))}
               <button className="w-full mt-6 py-3 border-2 border-dashed border-gray-200 rounded-xl text-xs font-bold text-gray-400 hover:bg-gray-50 hover:text-blue-600 transition-all">
                 XEM TẤT CẢ LỊCH
               </button>
@@ -181,7 +190,7 @@ const PublicHome = () => {
               <div className="relative">
                 <div className="w-64 h-64 rounded-3xl overflow-hidden border-4 border-white shadow-2xl">
                   <img
-                    src="https://i.pravatar.cc/300?img=32"
+                    src={data.featuredStudent?.image || "https://i.pravatar.cc/300?img=32"}
                     alt="Leader"
                     className="w-full h-full object-cover"
                   />
@@ -196,7 +205,7 @@ const PublicHome = () => {
                 Gương mặt tiêu biểu của tuần
               </span>
               <h2 className="text-4xl font-black text-slate-800 mt-2">
-                Nguyễn Hoàng Nam
+                {data.featuredStudent?.name}
               </h2>
               <p className="text-blue-600 font-bold mt-1 text-sm">
                 Bí thư Chi đoàn CNTT-01 • Sinh viên năm 3

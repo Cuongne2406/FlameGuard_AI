@@ -1,5 +1,5 @@
-import React from "react";
 import { Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./ProtectedRoute";
 import Login from "../components/Login";
 // admin pages
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
@@ -56,9 +56,12 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* admin */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="dashboard" element={<Dashboard />} />
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={['UNIVERSITY_ADMIN']} />
+      }>
+        <Route element={<AdminLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
         <Route path="organization" element={<Organization />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="finance" element={<Finance />} />
@@ -68,14 +71,18 @@ const AppRoutes = () => {
         <Route path="settings" element={<Settings />} />
         <Route path="profile" element={<UserProfile />} />
         <Route path="activity-log" element={<UserActivityLog />} />
-        <Route path="notifications" element={<NotificationManager />} />
+          <Route path="notifications" element={<NotificationManager />} />
+        </Route>
       </Route>
 
       {/* admin_sub */}
-      <Route path="/admin-sub" element={<SubAdminLayout />}>
-        <Route index element={<SubAdminDashboard />} />
-        <Route path="dashboard" element={<SubAdminDashboard />} />
-        <Route path="approvals" element={<SubAdminApprovals />} />
+      <Route path="/admin-sub" element={
+        <ProtectedRoute allowedRoles={['FACULTY_ADMIN', 'UNIVERSITY_ADMIN']} />
+      }>
+        <Route element={<SubAdminLayout />}>
+          <Route index element={<SubAdminDashboard />} />
+          <Route path="dashboard" element={<SubAdminDashboard />} />
+          <Route path="approvals" element={<SubAdminApprovals />} />
         <Route path="classes" element={<SubAdminClasses />} />
         <Route path="clubs" element={<SubAdminClubs />} />
         <Route path="events" element={<SubAdminEvents />} />
@@ -88,18 +95,23 @@ const AppRoutes = () => {
         <Route path="awards" element={<SubAdminAwards />} />
         <Route path="notifications" element={<SubAdminNotifications />} />
         <Route path="ai-analysis" element={<SubAdminAIAnalysis />} />
-        <Route path="settings" element={<SubAdminSettings />} />
+          <Route path="settings" element={<SubAdminSettings />} />
+        </Route>
       </Route>
 
       {/* user */}
-      <Route path="/user" element={<UserLayout />}>
-        <Route index element={<UserDashboard />} />
-        <Route path="dashboard" element={<UserDashboard />} />
-        <Route path="documents" element={<DigitalDocument />} />
+      <Route path="/user" element={
+        <ProtectedRoute allowedRoles={['STUDENT', 'FACULTY_ADMIN', 'UNIVERSITY_ADMIN']} />
+      }>
+        <Route element={<UserLayout />}>
+          <Route index element={<UserDashboard />} />
+          <Route path="dashboard" element={<UserDashboard />} />
+          <Route path="documents" element={<DigitalDocument />} />
         <Route path="settings" element={<UserSetting />} />
         <Route path="profile" element={<Profile />} />
         <Route path="event" element={<Event />} />
-        <Route path="wallet" element={<WalletPage />} />
+          <Route path="wallet" element={<WalletPage />} />
+        </Route>
       </Route>
 
       {/* public */}

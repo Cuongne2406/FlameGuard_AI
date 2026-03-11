@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 import Sidebar from '../../components/admin_sub/Sidebar';
 import Header from '../../components/admin_sub/Header';
 
 const SubAdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const mainRef = useRef(null);
@@ -17,9 +19,7 @@ const SubAdminLayout = () => {
   }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('userName');
+    logout();
     navigate('/login');
   };
 

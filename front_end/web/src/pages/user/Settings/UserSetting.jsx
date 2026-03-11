@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useContext, useEffect } from "react";
+import { AuthContext } from "../../../context/AuthContext";
+import { userService } from "../../../services/userService";
 import {
   User,
   Mail,
@@ -22,8 +24,44 @@ import {
 } from "lucide-react";
 
 const UserSetting = () => {
+  const { user, checkUserLogged } = useContext(AuthContext);
+
   const [twoFactor, setTwoFactor] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
+
+  // Form states
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+
+  // Update form fields when user data is available
+  useEffect(() => {
+    if (user) {
+      setFullName(user.full_name || "");
+      setEmail(user.email || "");
+    }
+  }, [user]);
+
+  // Handle Profile Save
+  const handleSaveProfile = async () => {
+    if (!user || (!fullName && !email)) return;
+    setIsSaving(true);
+    setSaveMessage({ type: '', text: '' });
+    try {
+      await userService.updateUser(user.id, {
+        full_name: fullName,
+        email: email
+      });
+      setSaveMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
+      await checkUserLogged(); // Refresh global user state
+    } catch (error) {
+      setSaveMessage({ type: 'error', text: error.message || 'Có lỗi xảy ra khi lưu thông tin' });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage({ type: '', text: '' }), 3000);
+    }
+  };
 
   // State cho Modal Đổi mật khẩu
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -134,11 +172,26 @@ const UserSetting = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all">
+          {saveMessage.text && (
+            <span className={`text-xs font-bold ${saveMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'} animate-in fade-in`}>
+              {saveMessage.text}
+            </span>
+          )}
+          <button 
+            onClick={() => {
+              setFullName(user?.full_name || "");
+              setEmail(user?.email || "");
+            }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all"
+          >
             <RotateCcw size={16} /> Khôi phục mặc định
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
-            <Save size={16} /> Lưu thay đổi
+          <button 
+            onClick={handleSaveProfile}
+            disabled={isSaving}
+            className={`flex items-center gap-2 px-6 py-2.5 ${isSaving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 transition-all`}
+          >
+            <Save size={16} /> {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
           </button>
         </div>
       </div>
@@ -149,7 +202,7 @@ const UserSetting = () => {
           <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm text-center relative overflow-hidden">
             <div className="relative w-32 h-32 mx-auto mb-6">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                 alt="Avatar"
                 className="w-full h-full rounded-full border-4 border-slate-50 bg-slate-100 object-cover shadow-inner"
               />
@@ -159,13 +212,13 @@ const UserSetting = () => {
             </div>
 
             <h3 className="text-xl font-black text-slate-800">
-              Lê Trọng Phúc Hậu
+              {user?.full_name || "Lê Trọng Phúc Hậu"}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              MSSV: 123000926
+              MSSV: {user?.student_id || "123000926"}
             </p>
             <div className="mt-2 inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase">
-              Lớp: 23CT112
+              Lớp: {user?.student_id ? "" : "23CT112"} {user?.roles?.map(r=>r.name).includes("STUDENT") ? "" : "(SubAdmin)"}
             </div>
 
             <div className="mt-8 space-y-4 text-left">
@@ -180,7 +233,8 @@ const UserSetting = () => {
                   />
                   <input
                     type="text"
-                    defaultValue="Lê Trọng Phúc Hậu"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-200 outline-none transition-all"
                   />
                 </div>
@@ -197,8 +251,9 @@ const UserSetting = () => {
                   />
                   <input
                     type="email"
-                    defaultValue="hau.ltp@dyus.edu.vn"
-                    className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold text-slate-700 outline-none"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-200 outline-none transition-all"
                   />
                   <CheckCircle2
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500"

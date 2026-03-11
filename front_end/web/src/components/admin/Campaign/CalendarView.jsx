@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -6,10 +6,26 @@ import {
   Flag,
   Sparkles,
   ChevronRight as ChevronIcon,
+  Clock,
 } from "lucide-react";
+import { campaignService } from "../../../services/campaignService";
 
-const CalendarView = () => {
-  // Dữ liệu giả lập các sự kiện trên lịch
+const CalendarView = ({ onSelectCampaign }) => {
+  const [campaigns, setCampaigns] = useState([]);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const data = await campaignService.getCampaigns();
+        setCampaigns(data);
+      } catch (error) {
+        console.error("Failed to fetch campaigns:", error);
+      }
+    };
+    fetchCampaigns();
+  }, []);
+
+  // Dữ liệu giả lập các sự kiện trên lịch (có thể tính toán từ campaigns data sau này)
   const events = [
     { day: 1, title: "Lễ Ra quân", color: "bg-blue-600", type: "start" },
     {
@@ -174,12 +190,15 @@ const CalendarView = () => {
               title="Lễ Ra quân Mùa Hè Xanh"
               time="07:00 - 11:00 • Sân A"
             />
-            <UpcomingEvent
-              date="05"
-              month="THG 6"
-              title="Mặt trận Xây cầu"
-              time="Cả ngày • Bến Tre"
-            />
+            {campaigns.slice(0, 2).map((camp, idx) => (
+               <UpcomingEvent
+                 key={`camp-${camp.id}`}
+                 date={String((idx + 1) * 5).padStart(2, "0")}
+                 month="THG 6"
+                 title={camp.name}
+                 time={camp.time}
+               />
+            ))}
           </div>
         </div>
       </div>

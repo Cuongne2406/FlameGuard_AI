@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
+import { eventService } from '../../../services/eventService';
 
 const EventLiveReport = () => {
     const { id } = useParams();
@@ -9,11 +10,37 @@ const EventLiveReport = () => {
     const [activeTab, setActiveTab] = useState('qa');
     const [checkinPaused, setCheckinPaused] = useState(false);
     const [showAllClasses, setShowAllClasses] = useState(false);
+    const [eventData, setEventData] = useState(null);
+    const [registrations, setRegistrations] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchReportData = async () => {
+            try {
+                setLoading(true);
+                const [evt, regs] = await Promise.all([
+                    eventService.getEvent(id),
+                    eventService.getEventRegistrations(id)
+                ]);
+                setEventData(evt);
+                setRegistrations(regs);
+            } catch (err) {
+                console.error("Failed to fetch live report data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (id) fetchReportData();
+    }, [id]);
+
+    const checkedInCount = registrations.filter(r => r.status === 'ATTENDED').length;
+    const totalRegCount = registrations.length || 1; // avoid division by zero
+    const checkinPercent = ((checkedInCount / totalRegCount) * 100).toFixed(1);
 
     const stats = [
-        { label: 'Tổng Check-in', val: '452', total: '/ 500', percent: '90.4%', sub: '+15 người trong 5 phút qua', icon: 'qr_code_scanner', color: 'blue' },
-        { label: 'Đại biểu & Khách mời', val: '05', total: '/ 08 Đại biểu', sub: 'Thầy Trưởng Khoa: Đã đến', icon: 'badge', color: 'orange', extra: 'Doanh nghiệp: Chưa đến', statusIcon: 'check_circle' },
-        { label: 'Tương tác Q&A', val: '120', sub: 'Chủ đề hot: Tuyển dụng', icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
+        { label: 'Tổng Check-in', val: checkedInCount.toString(), total: `/ ${totalRegCount}`, percent: `${checkinPercent}%`, sub: 'Dữ liệu thời gian thực', icon: 'qr_code_scanner', color: 'blue' },
+        { label: 'Đại biểu & Khách mời', val: '0', total: '/ 0 Đại biểu', sub: 'Chưa có data API', icon: 'badge', color: 'orange', extra: '', statusIcon: 'check_circle' },
+        { label: 'Tương tác Q&A', val: '2', sub: 'Chủ đề hot: Tuyển dụng', icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
     ];
 
     const chartData = [10, 25, 40, 85, 30, 20, 15, 12, 10];
@@ -49,13 +76,13 @@ const EventLiveReport = () => {
                         <span>/</span>
                         <span className="text-blue-600 underline">Giám sát Trực tiếp</span>
                     </nav>
-                    <h1 className="text-2xl font-bold text-slate-900">Báo cáo Giám sát Trực tiếp: IT Tech Day 2026</h1>
+                    <h1 className="text-2xl font-bold text-slate-900">Báo cáo Giám sát Trực tiếp: {eventData?.name || 'Đang tải...'}</h1>
                     <div className="flex items-center gap-6 mt-2">
                         <p className="flex items-center gap-2 text-xs font-bold text-rose-600 uppercase tracking-widest">
-                            <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span> LIVE NOW (08:00 - 17:00)
+                            <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span> LIVE NOW
                         </p>
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            <span className="material-symbols-outlined text-sm align-middle mr-1">history</span> Sự kiện đã diễn ra: 02 giờ 30 phút
+                            <span className="material-symbols-outlined text-sm align-middle mr-1">history</span> {eventData ? `Tối đa: ${eventData.max_participants} người` : ''}
                         </p>
                     </div>
                 </div>

@@ -1,0 +1,12 @@
+import uuid
+from sqlalchemy import Column, String, Text
+from sqlalchemy.dialects.postgresql import UUID
+from app.db.base_class import Base
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    key = Column(String, unique=True, index=True, nullable=False)
+    value = Column(Text, nullable=False)
+    description = Column(String, nullable=True)

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Edit3,
@@ -7,12 +7,10 @@ import {
   Download,
   Plus,
   X,
-  UserPlus,
-  CheckCircle2,
-  Filter,
   AlertTriangle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import { organizationService } from "../../../services/organizationService";
 
 const UnitList = () => {
   // --- STATE QUẢN LÝ ---
@@ -23,41 +21,36 @@ const UnitList = () => {
   const [selectedUnit, setSelectedUnit] = useState(null); // Lưu đơn vị đang được chọn để sửa/xóa
 
   // Dữ liệu mẫu
-  const [units, setUnits] = useState([
-    {
-      id: 1,
-      name: "Khoa Công nghệ Thông tin",
-      type: "LCĐ Khoa",
-      leader: "Lê Trọng Phúc Hậu",
-      leaderTitle: "Bí thư LCĐ",
-      size: "1,500 SV",
-      subUnits: "12 Chi đoàn",
-      score: 98,
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "CLB Kỹ Năng Mềm",
-      type: "CLB/Đội/Nhóm",
-      leader: "Trần Thị B",
-      leaderTitle: "Chủ nhiệm",
-      size: "200 SV",
-      subUnits: "Thành viên",
-      score: 85,
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Khoa Kinh tế & Quản trị",
-      type: "LCĐ Khoa",
-      leader: "Nguyễn Văn A",
-      leaderTitle: "Bí thư LCĐ",
-      size: "2,100 SV",
-      subUnits: "18 Chi đoàn",
-      score: 92,
-      status: "Active",
-    },
-  ]);
+  const [units, setUnits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // --- FETCH DATA ---
+  useEffect(() => {
+    const fetchUnits = async () => {
+      setLoading(true);
+      try {
+        const data = await organizationService.getOrganizations();
+        // Xử lý dữ liệu fallback (mock data có định dạng hơi khác)
+        const formattedUnits = data.map((u, index) => ({
+          id: u.id || index + 1,
+          name: u.name,
+          type: u.type === 'CLASS' ? 'LCĐ Khoa' : u.type === 'CLUB' ? 'CLB/Đội/Nhóm' : u.type || 'Đơn vị',
+          leader: u.leader || "Đang cập nhật",
+          leaderTitle: u.type === 'CLASS' ? 'Bí thư LCĐ' : 'Chủ nhiệm',
+          size: u.total ? `${u.total} SV` : u.current_member_count ? `${u.current_member_count} SV` : 'N/A',
+          subUnits: u.type === 'CLASS' ? 'Chi đoàn' : 'Thành viên',
+          score: u.activity || u.fee || 80,
+          status: u.status || "Active",
+        }));
+        setUnits(formattedUnits);
+      } catch (error) {
+        console.error("Failed to fetch units:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUnits();
+  }, []);
 
   // --- LOGIC TÌM KIẾM ---
   const filteredUnits = useMemo(() => {

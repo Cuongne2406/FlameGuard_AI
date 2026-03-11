@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { eventService } from '../../../services/eventService';
 
 const EventRegistrationApproval = () => {
     const { id } = useParams();
@@ -11,39 +12,36 @@ const EventRegistrationApproval = () => {
     const [selectedTeams, setSelectedTeams] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [showAddTeamModal, setShowAddTeamModal] = useState(false);
-    const [teams, setTeams] = useState([
-        {
-            id: 'CW001',
-            name: 'Alpha Code',
-            members: ['22CT111', '22CT112', '22CT113'],
-            time: '10:30 - 20/09/2026',
-            status: '100% Đoàn viên',
-            statusColor: 'emerald',
-            avatar: 'AC',
-            memberAvatars: ['https://randomuser.me/api/portraits/thumb/men/1.jpg', 'https://randomuser.me/api/portraits/thumb/women/2.jpg', 'https://randomuser.me/api/portraits/thumb/men/3.jpg']
-        },
-        {
-            id: 'CW002',
-            name: 'Beta Tech',
-            members: ['230005 không hợp lệ'],
-            time: '11:15 - 20/09/2026',
-            status: 'Nợ Đoàn phí (1 SV)',
-            statusColor: 'orange',
-            avatar: 'BT',
-            isError: true,
-            memberAvatars: ['https://randomuser.me/api/portraits/thumb/women/4.jpg']
-        },
-        {
-            id: 'CW003',
-            name: 'Data Squad',
-            members: ['23CT201', '23CT202', '23CT203'],
-            time: '14:20 - 20/09/2026',
-            status: '100% Đoàn viên',
-            statusColor: 'emerald',
-            avatar: 'DS',
-            memberAvatars: ['https://randomuser.me/api/portraits/thumb/men/5.jpg', 'https://randomuser.me/api/portraits/thumb/men/6.jpg', 'https://randomuser.me/api/portraits/thumb/women/7.jpg']
-        }
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [teams, setTeams] = useState([]);
+
+    useEffect(() => {
+        const fetchRegistrations = async () => {
+            try {
+                setLoading(true);
+                const data = await eventService.getEventRegistrations(id);
+                // Map API data to the UI format
+                // In standard API, data represents list of users registered
+                // We mock team wrapping for now or assume each item is a registration
+                const mappedRegistrations = data.map((reg, index) => ({
+                    id: reg.id || `REG-${index}`,
+                    name: reg.user_id ? `User ${reg.user_id}` : 'Tham gia cá nhân',
+                    members: reg.user_id ? [reg.user_id] : ['-'],
+                    time: new Date(reg.registration_time || Date.now()).toLocaleString(),
+                    status: reg.status === 'REGISTERED' ? 'Đã duyệt' : reg.status === 'PENDING' ? 'Chờ duyệt' : 'Từ chối',
+                    statusColor: reg.status === 'REGISTERED' ? 'emerald' : reg.status === 'PENDING' ? 'orange' : 'rose',
+                    avatar: reg.user_id ? reg.user_id.substring(0, 2).toUpperCase() : 'U',
+                    isError: reg.status === 'REJECTED'
+                }));
+                setTeams(mappedRegistrations);
+            } catch (err) {
+                console.error("Failed to fetch registrations", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRegistrations();
+    }, [id]);
 
     const stats = [
         { label: 'Tổng số đội', val: '120', icon: 'groups', color: 'blue' },
@@ -67,10 +65,16 @@ const EventRegistrationApproval = () => {
         setToast({ message: msg, type: 'success' });
     };
 
-    const handleReject = (teamId) => {
-        setTeams(prev => prev.filter(t => t.id !== teamId));
-        setSelectedTeams(prev => prev.filter(id => id !== teamId));
-        setToast({ message: 'Đã từ chối đội thi!', type: 'success' });
+    const handleReject = async (teamId) => {
+        try {
+            // Suppose it's an API call to update status to 'REJECTED'
+            await eventService.updateRegistration(id, teamId, { status: 'REJECTED' });
+            setTeams(prev => prev.filter(t => t.id !== teamId));
+            setSelectedTeams(prev => prev.filter(tid => tid !== teamId));
+            setToast({ message: 'Đã từ chối đăng ký!', type: 'success' });
+        } catch (error) {
+            setToast({ message: 'Lỗi khi từ chối đăng ký!', type: 'error' });
+        }
     };
 
     const exportToExcel = () => {

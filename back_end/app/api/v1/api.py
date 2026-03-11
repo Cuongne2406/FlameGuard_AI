@@ -16,7 +16,12 @@ from app.api.v1.endpoints import (
     ai_predictions,
     chatbot_logs,
     ai_audits,
-    audit_logs
+    audit_logs,
+    awards,
+    documents,
+    notifications,
+    settings,
+    system
 )
 
 api_router = APIRouter()
@@ -47,3 +52,10 @@ api_router.include_router(ai_predictions.router, prefix="/ai-predictions", tags=
 api_router.include_router(chatbot_logs.router, prefix="/chatbot-logs", tags=["Chatbot Logs"])
 api_router.include_router(ai_audits.router, prefix="/ai-audits", tags=["AI Audits"])
 api_router.include_router(audit_logs.router, prefix="/audit-logs", tags=["System Audit Logs"])
+
+# Phase 5 (Newly added Core features)
+api_router.include_router(awards.router, prefix="/awards", tags=["Awards"])
+api_router.include_router(documents.router, prefix="/digital-documents", tags=["Digital Documents"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(settings.router, prefix="/settings", tags=["System Settings"])
+api_router.include_router(system.router, prefix="/system", tags=["System Dashboard"])

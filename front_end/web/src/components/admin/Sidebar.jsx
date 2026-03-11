@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useRef, useEffect, useContext } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import {
   LayoutDashboard,
   Users,
@@ -19,9 +20,21 @@ import {
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const [showProfileCard, setShowProfileCard] = useState(false);
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // 1. Tạo một Ref để tham chiếu đến vùng footer/menu
   const profileRef = useRef(null);
+
+  // Helper function to extract initials for avatar
+  const getInitials = (name) => {
+    if (!name) return "U";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   // 2. Logic xử lý Click Outside
   useEffect(() => {
@@ -227,7 +240,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
                 <div className="my-1 border-t border-slate-50"></div>
 
-                <button className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-bold group transition-all">
+                <button 
+                  onClick={() => {
+                     logout();
+                     navigate('/login');
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-sm font-bold group transition-all"
+                >
                   <LogOut
                     size={16}
                     className="group-hover:translate-x-1 transition-transform"
@@ -248,11 +267,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             }`}
           >
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black shrink-0 shadow-md shadow-blue-100">
-              LH
+              {getInitials(user?.full_name)}
             </div>
             <div className="flex flex-col min-w-0 text-left">
               <span className="text-[13px] font-black text-slate-800 truncate leading-none mb-1">
-                Lê Trọng Phúc Hậu
+                {user?.full_name || "Admin Khoa"}
               </span>
               <span className="text-[9px] text-emerald-500 font-black uppercase flex items-center gap-1 leading-none">
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>

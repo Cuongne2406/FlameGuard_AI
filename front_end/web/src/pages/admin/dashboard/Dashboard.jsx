@@ -9,14 +9,17 @@ import {
   Info,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { systemService } from "../../../services/systemService";
 
 const MainDashboard = () => {
-  // Dữ liệu cho biểu đồ AI Sentiment
-  const aiData = [
-    { name: "Tích cực", value: 70, color: "#4F46E5" },
-    { name: "Tiêu cực", value: 10, color: "#EF4444" },
-    { name: "Trung lập", value: 20, color: "#CBD5E1" },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState({
+    stats: {},
+    timelines: [],
+    risks: [],
+    aiSentiment: [],
+    aiKeywords: []
+  });
 
   const [selectedYear, setSelectedYear] = useState("2025-2026");
   const [selectedSemester, setSelectedSemester] = useState("Học kỳ 1");
@@ -30,6 +33,21 @@ const MainDashboard = () => {
 
   const years = ["2023-2024", "2024-2025", "2025-2026"];
   const semesters = ["Học kỳ 1", "Học kỳ 2", "Học kỳ Hè"];
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      setLoading(true);
+      try {
+        const data = await systemService.getSystemDashboard({ year: selectedYear, semester: selectedSemester });
+        setDashboardData(data);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, [selectedYear, selectedSemester]);
 
   // --- LOGIC: CLICK RA NGOÀI THÌ ĐÓNG CẢ HAI ---
   useEffect(() => {
@@ -154,20 +172,20 @@ const MainDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <StatCard
           title="Tổng Đoàn viên"
-          value="12,450"
-          sub="+5.2% so với kỳ trước"
+          value={dashboardData.stats.totalMembers || "0"}
+          sub={dashboardData.stats.memberGrowth || ""}
           icon={<UsersIcon />}
         />
         <StatCard
           title="Ngân sách khả dụng"
-          value="2.5 Tỷ VNĐ"
-          sub="65% còn lại"
-          progress={65}
+          value={dashboardData.stats.totalBudgetStr || "0 VNĐ"}
+          sub={`${dashboardData.stats.budgetLeftPercent || 0}% còn lại`}
+          progress={dashboardData.stats.budgetLeftPercent || 0}
           icon={<BankIcon />}
         />
         <StatCard
           title="Sự kiện đang chạy"
-          value="3"
+          value={dashboardData.stats.activeEvents || "0"}
           sub="Đang hoạt động sôi nổi"
           icon={<Flame size={24} className="text-orange-500" />}
         />
@@ -184,24 +202,16 @@ const MainDashboard = () => {
           </div>
         </div>
         <div className="space-y-6">
-          <ProgressRow
-            label="Tháng Thanh Niên"
-            date="01/03/2026 - 31/03/2026"
-            percent={80}
-            color="bg-blue-600"
-          />
-          <ProgressRow
-            label="Chiến dịch Mùa Hè Xanh"
-            date="01/07/2026 - 15/08/2026"
-            status="Planning Phase"
-            color="bg-yellow-500"
-          />
-          <ProgressRow
-            label="Chuỗi sự kiện Chào Tân Sinh Viên"
-            date="15/09/2025 - 30/10/2025"
-            status="Hoàn thành"
-            color="bg-green-500"
-          />
+          {dashboardData.timelines.map((timeline) => (
+            <ProgressRow
+              key={timeline.id}
+              label={timeline.label}
+              date={timeline.date}
+              percent={timeline.percent}
+              status={timeline.status}
+              color={timeline.color}
+            />
+          ))}
         </div>
       </div>
 
@@ -219,16 +229,14 @@ const MainDashboard = () => {
             </span>
           </div>
           <div className="space-y-4">
-            <RiskItem
-              title="Hội Trại 26/3"
-              desc="Vượt ngân sách dự kiến 15% (Thiếu hóa đơn đỏ)"
-              color="bg-red-50"
-            />
-            <RiskItem
-              title="Hệ thống Đăng ký (Server Load)"
-              desc="Lưu lượng truy cập cao bất thường (90% capacity)"
-              color="bg-orange-50"
-            />
+            {dashboardData.risks.map((risk) => (
+              <RiskItem
+                key={risk.id}
+                title={risk.title}
+                desc={risk.desc}
+                color={risk.color}
+              />
+            ))}
           </div>
         </div>
 
@@ -250,13 +258,13 @@ const MainDashboard = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={aiData}
+                    data={dashboardData.aiSentiment}
                     innerRadius={35}
                     outerRadius={50}
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {aiData.map((entry, index) => (
+                    {dashboardData.aiSentiment.map((entry, index) => (
                       <Cell key={index} fill={entry.color} />
                     ))}
                   </Pie>
@@ -264,11 +272,13 @@ const MainDashboard = () => {
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="text-[10px] text-slate-400">Positive</span>
-                <span className="text-lg font-bold text-slate-800">70%</span>
+                <span className="text-lg font-bold text-slate-800">
+                  {dashboardData.aiSentiment.find(a => a.name === "Tích cực")?.value || 0}%
+                </span>
               </div>
             </div>
             <div className="flex-1 space-y-2">
-              {aiData.map((item) => (
+              {dashboardData.aiSentiment.map((item) => (
                 <div
                   key={item.name}
                   className="flex justify-between items-center text-sm"
@@ -292,7 +302,7 @@ const MainDashboard = () => {
               Top Keywords
             </span>
             <div className="flex gap-2 flex-wrap">
-              {["#MùaHèXanh", "#ĐiểmRènLuyện", "#Wifi_yếu"].map((tag) => (
+              {dashboardData.aiKeywords.map((tag) => (
                 <span
                   key={tag}
                   className="text-[11px] px-2 py-1 bg-slate-50 text-slate-500 rounded-md font-medium border border-slate-100 hover:bg-blue-50 hover:text-blue-600 cursor-default transition-colors"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import Toggle from '../../../components/ui/Toggle';
 import Modal from '../../../components/ui/Modal';
@@ -7,16 +7,31 @@ import Input from '../../../components/ui/Input';
 import AddClassModal from '../../../components/admin_sub/AddClassModal';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { organizationService } from '../../../services/organizationService';
 
 const SubAdminClasses = () => {
     const [toast, setToast] = useState(null);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [classes, setClasses] = useState([
-        { id: '23CT112', name: 'Chi đoàn 23CT112', tech: 'Kỹ thuật Phần mềm', leader: 'Nguyễn Văn A', online: true, status: 'Vững mạnh', statusColor: 'emerald', fee: 100, activity: 98, total: '45/45', avatar: 'NV' },
-        { id: '22CT111', name: 'Chi đoàn 22CT111', tech: 'Kỹ thuật Phần mềm', leader: 'Trần Thị B', online: false, lastSeen: '2h', status: 'Khá', statusColor: 'blue', fee: 60, activity: 75, total: '40/42', avatar: 'TB' },
-        { id: '23CT113', name: 'Chi đoàn 23CT113', tech: 'Kỹ thuật Phần mềm', leader: 'Lê Văn C', online: false, lastSeen: '1d', status: 'Yếu', statusColor: 'rose', fee: 20, activity: 0, total: '38/40', avatar: 'LC', alert: 'Thiếu báo cáo tháng' },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [classes, setClasses] = useState([]);
 
+    useEffect(() => {
+        const fetchClasses = async () => {
+            try {
+                const data = await organizationService.getOrganizations('CLASS');
+                // The mock data format from service has UI-specific fields. 
+                // We'll trust the service fallback gives us nicely formatted objects for now.
+                // In a mature integration we would map standard Organization fields to UI ones:
+                // e.g., name -> data.name, leader -> data.leader_name or similar.
+                setClasses(data);
+            } catch (err) {
+                console.error("Failed to fetch classes:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchClasses();
+    }, []);
     // Filter states
     const [showFilterPopup, setShowFilterPopup] = useState(false);
     const [filterStatus, setFilterStatus] = useState('Tất cả');

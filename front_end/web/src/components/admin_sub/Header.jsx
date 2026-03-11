@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from '../../components/common/NotificationBell';
+import { AuthContext } from '../../context/AuthContext';
 
 const Header = ({ onToggleSidebar, onLogout }) => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const userName = localStorage.getItem('userName') || 'SubAdmin';
+  const userName = user?.full_name || 'SubAdmin';
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3 lg:px-6 lg:py-4 flex items-center justify-between">

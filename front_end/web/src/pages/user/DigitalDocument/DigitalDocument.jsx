@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { documentService } from "../../../services/documentService";
 import {
   Search,
   FileText,
@@ -41,29 +42,37 @@ const DigitalDocument = () => {
     },
   ];
 
-  const documents = [
-    {
-      id: 1,
-      name: "Kế hoạch Mùa Hè Xanh 2026",
-      code: "Mã: KH-05/BTN",
-      time: "Cập nhật 2 ngày trước",
-      type: "pdf",
-    },
-    {
-      id: 2,
-      name: "Đơn xin gia nhập CLB",
-      code: "Mã: Mẫu 02",
-      time: "Dành cho tân sinh viên",
-      type: "doc",
-    },
-    {
-      id: 3,
-      name: "Tiêu chí xét duyệt 'Sinh viên 5 Tốt'",
-      code: "Loại: Quy định",
-      time: "Áp dụng năm học 2025-2026",
-      type: "law",
-    },
-  ];
+  const [requests, setRequests] = useState([]);
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [reqData, docData] = await Promise.all([
+           documentService.getRequests(),
+           documentService.getDocuments()
+        ]);
+        setRequests(reqData);
+        setDocs(docData);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleCreateRequest = async (type) => {
+    try {
+       const newReq = await documentService.createRequest(type);
+       setRequests([newReq, ...requests]);
+       alert("Đã gửi yêu cầu thành công!");
+    } catch (err) {
+       alert("Lỗi khi gửi yêu cầu.");
+    }
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -119,6 +128,7 @@ const DigitalDocument = () => {
                 {service.desc}
               </p>
               <button
+                onClick={() => handleCreateRequest(service.title)}
                 className={`w-full py-3.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all
                 ${
                   service.primary
@@ -154,34 +164,44 @@ const DigitalDocument = () => {
             </div>
 
             <div className="space-y-6">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                  Tên thủ tục
-                </span>
-                <h5 className="font-black text-slate-800 text-base mt-1">
-                  Xin xác nhận tham gia Chiến dịch Tình nguyện
-                </h5>
-              </div>
+              {loading ? (
+                 <p className="text-xs text-slate-400 font-bold">Đang tải yêu cầu...</p>
+              ) : requests.length === 0 ? (
+                 <p className="text-xs text-slate-400 font-bold">Chưa có thủ tục nào đang xử lý.</p>
+              ) : (
+                requests.map(req => (
+                  <div key={req.id} className="space-y-6 border-b border-slate-100 pb-6 mb-6 last:border-0 last:pb-0 last:mb-0">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        Mã HS: #{req.id}
+                      </span>
+                      <h5 className="font-black text-slate-800 text-base mt-1">
+                        {req.title}
+                      </h5>
+                    </div>
 
-              <div className="space-y-3">
-                <div className="flex justify-between items-end">
-                  <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded">
-                    Đang đợi Bí thư Khoa ký duyệt
-                  </span>
-                  <span className="text-blue-600 font-black text-sm">60%</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-blue-600 h-full w-[60%] rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]"></div>
-                </div>
-              </div>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-end">
+                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded">
+                          {req.statusText}
+                        </span>
+                        <span className="text-blue-600 font-black text-sm">{req.progress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className={`bg-blue-600 h-full rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]`} style={{ width: `${req.progress}%` }}></div>
+                      </div>
+                    </div>
 
-              <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
-                <Clock size={14} /> Dự kiến hoàn thành trong 2 giờ
-              </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
+                      <Clock size={14} /> {req.estimatedTime}
+                    </div>
 
-              <button className="w-full py-3 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black border border-slate-100 hover:bg-slate-100 transition-colors">
-                XEM CHI TIẾT TIẾN ĐỘ
-              </button>
+                    <button className="w-full py-3 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black border border-slate-100 hover:bg-slate-100 transition-colors">
+                      XEM CHI TIẾT TIẾN ĐỘ
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -208,38 +228,42 @@ const DigitalDocument = () => {
             </div>
 
             <div className="space-y-4">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-slate-100"
-                >
+              {loading ? (
+                <p className="text-xs text-slate-400 font-bold">Đang tải văn bản...</p>
+              ) : (
+                docs.map((doc) => (
                   <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-[10px]
-                    ${doc.type === "pdf" ? "bg-red-50 text-red-500" : doc.type === "doc" ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"}
-                  `}
+                    key={doc.id}
+                    className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-slate-100"
                   >
-                    {doc.type.toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <h5 className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors">
-                      {doc.name}
-                    </h5>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">
-                        {doc.code}
-                      </span>
-                      <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                      <span className="text-[10px] text-slate-400 font-bold">
-                        {doc.time}
-                      </span>
+                    <div
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-[10px]
+                      ${doc.type === "pdf" ? "bg-red-50 text-red-500" : doc.type === "doc" ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"}
+                    `}
+                    >
+                      {doc.type.toUpperCase()}
                     </div>
+                    <div className="flex-1">
+                      <h5 className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors">
+                        {doc.name}
+                      </h5>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">
+                          {doc.code}
+                        </span>
+                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          {doc.time}
+                        </span>
+                      </div>
+                    </div>
+                    <ChevronRight
+                      size={18}
+                      className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"
+                    />
                   </div>
-                  <ChevronRight
-                    size={18}
-                    className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"
-                  />
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <button className="w-full mt-6 py-3 text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] hover:underline">

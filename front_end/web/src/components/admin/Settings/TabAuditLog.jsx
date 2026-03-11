@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -9,62 +9,37 @@ import {
   RefreshCw,
   FileText,
   User,
+  MoreVertical,
 } from "lucide-react";
+import { activityLogService } from "../../../services/activityLogService";
 
 const TabAuditLog = () => {
-  // Dữ liệu mẫu dựa trên thiết kế
-  const logs = [
-    {
-      time: "26/10/2023 14:32:01",
-      user: "Admin_Hau",
-      initials: "AH",
-      role: "Super Admin",
-      action: "Xóa Chiến dịch",
-      target: 'Chiến dịch "Mùa Hè Xanh 2024"',
-      type: "danger",
-      icon: <Trash2 size={14} />,
-    },
-    {
-      time: "26/10/2023 14:30:15",
-      user: "User_Khoa_CNTT",
-      initials: "KC",
-      role: "Bí thư Khoa",
-      action: "Đăng nhập",
-      target: "System Access",
-      type: "info",
-      icon: <LogIn size={14} />,
-    },
-    {
-      time: "26/10/2023 14:15:00",
-      user: "System_Auto",
-      initials: "SYS",
-      role: "System",
-      action: "Sao lưu tự động",
-      target: "Database Snapshot",
-      type: "success",
-      icon: <RefreshCw size={14} />,
-    },
-    {
-      time: "26/10/2023 13:45:22",
-      user: "BiThu_Lop18",
-      initials: "BL",
-      role: "Bí thư Lớp",
-      action: "Cập nhật Hồ sơ",
-      target: "Sinh viên: Nguyễn Văn A",
-      type: "neutral",
-      icon: <Save size={14} />,
-    },
-    {
-      time: "26/10/2023 10:12:05",
-      user: "BanTruyenThong",
-      initials: "BT",
-      role: "Ban Truyền thông",
-      action: "Đăng bài viết",
-      target: 'Bài viết: "Chào tân sinh viên"',
-      type: "neutral",
-      icon: <FileText size={14} />,
-    },
-  ];
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      try {
+        const data = await activityLogService.getLogs();
+        setLogs(data);
+      } catch (error) {
+        console.error("Failed to fetch logs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
+
+  const getLogIcon = (type) => {
+    switch (type) {
+      case "danger": return <Trash2 size={14} />;
+      case "info": return <LogIn size={14} />;
+      case "success": return <RefreshCw size={14} />;
+      default: return <Save size={14} />;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -135,9 +110,9 @@ const TabAuditLog = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
-            {logs.map((log, index) => (
+            {logs.length > 0 ? logs.map((log) => (
               <tr
-                key={index}
+                key={log.id || log.time + log.action}
                 className={`hover:bg-slate-50/80 transition-colors ${log.type === "danger" ? "bg-red-50/30" : ""}`}
               >
                 <td className="px-6 py-4 text-[11px] font-bold text-slate-500 italic">
@@ -168,7 +143,7 @@ const TabAuditLog = () => {
                             : "text-slate-700"
                     }`}
                   >
-                    {log.icon}
+                    {getLogIcon(log.type)}
                     {log.action}
                   </div>
                 </td>
@@ -176,7 +151,13 @@ const TabAuditLog = () => {
                   {log.target}
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan="5" className="px-6 py-8 text-center text-sm text-slate-400">
+                  {loading ? "Đang tải dữ liệu..." : "Chưa có log hệ thống nào."}
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
 

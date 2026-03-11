@@ -26,6 +26,12 @@ export const apiClient = async (endpoint, options = {}) => {
     const data = text ? JSON.parse(text) : {};
 
     if (response.status === 401) {
+      // Don't redirect if it's a login failure
+      if (endpoint === '/auth/login') {
+        const errorMessage = data.detail || data.message || 'Tài khoản hoặc mật khẩu không chính xác.';
+        throw new Error(errorMessage);
+      }
+      
       // Clear token and redirect to login if unauthorized
       localStorage.removeItem('accessToken');
       window.location.href = '/'; 

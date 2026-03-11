@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { financeService } from '../../../services/financeService';
 
 const SubAdminFinance = () => {
     const [toast, setToast] = useState(null);
@@ -18,11 +19,23 @@ const SubAdminFinance = () => {
         from: ''
     });
 
-    const [transactions, setTransactions] = useState([
-        { id: '1', type: 'Chi', title: 'Chi hoạt động', detail: 'Mua nước uống & Băng rôn', user: 'Trần Thị B', amount: '-1.500.000', status: 'Đã thanh toán', statusColor: 'emerald', icon: 'shopping_bag', color: 'rose' },
-        { id: '2', type: 'Thu', title: 'Thu Đoàn phí', detail: 'Chi đoàn 23CT112 nộp phí', user: 'Nguyễn Văn A', amount: '+2.500.000', status: 'Đã nhập quỹ', statusColor: 'emerald', icon: 'payments', color: 'emerald' },
-        { id: '3', type: 'Chi', title: 'Tạm ứng', detail: 'CLB Văn nghệ thuê trang phục', user: 'Lê Văn C', amount: '-500.000', status: 'Chờ duyệt', statusColor: 'orange', icon: 'pending_actions', color: 'orange', actionRequired: true },
-    ]);
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            try {
+                setLoading(true);
+                const data = await financeService.getFacultyTransactions();
+                setTransactions(data);
+            } catch (err) {
+                console.error('Failed to fetch finance records', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTransactions();
+    }, []);
 
     const totalFund = 50500000;
     const totalIncome = 2500000;
@@ -36,14 +49,19 @@ const SubAdminFinance = () => {
         return true;
     });
 
-    const handleApprove = (id) => {
-        setTransactions(prev => prev.map(t =>
-            t.id === id ? { ...t, status: 'Đã thanh toán', statusColor: 'emerald', actionRequired: false } : t
-        ));
-        setToast({ message: 'Đã duyệt chi thành công!', type: 'success' });
+    const handleApprove = async (id) => {
+        try {
+            await financeService.approveFacultyTransaction(id);
+            setTransactions(prev => prev.map(t =>
+                t.id === id ? { ...t, status: 'Đã thanh toán', statusColor: 'emerald', actionRequired: false } : t
+            ));
+            setToast({ message: 'Đã duyệt chi thành công!', type: 'success' });
+        } catch (error) {
+            setToast({ message: 'Lỗi duyệt chi!', type: 'error' });
+        }
     };
 
-    const handleCreateTransaction = () => {
+    const handleCreateTransaction = async () => {
         const newId = `TXN${Date.now()}`;
         const amountNum = parseFloat(newTransaction.amount) || 0;
         const sign = newTransaction.type === 'Thu' ? '+' : '-';
@@ -60,10 +78,16 @@ const SubAdminFinance = () => {
             color: newTransaction.type === 'Thu' ? 'emerald' : 'rose',
             actionRequired: newTransaction.type === 'Chi',
         };
-        setTransactions(prev => [newTxn, ...prev]);
-        setShowCreateModal(false);
-        setNewTransaction({ type: 'Thu', title: '', amount: '', description: '', from: '' });
-        setToast({ message: 'Đã tạo phiếu thành công!', type: 'success' });
+
+        try {
+            await financeService.createFacultyTransaction(newTxn);
+            setTransactions(prev => [newTxn, ...prev]);
+            setShowCreateModal(false);
+            setNewTransaction({ type: 'Thu', title: '', amount: '', description: '', from: '' });
+            setToast({ message: 'Đã tạo phiếu thành công!', type: 'success' });
+        } catch (error) {
+            setToast({ message: 'Lỗi tạo phiếu!', type: 'error' });
+        }
     };
 
     const exportToExcel = () => {

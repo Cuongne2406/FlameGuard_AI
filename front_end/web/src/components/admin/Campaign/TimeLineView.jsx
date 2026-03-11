@@ -1,5 +1,6 @@
-import React from "react";
-import { ChevronDown, CornerDownRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Calendar, ChevronRight } from "lucide-react";
+import { campaignService } from "../../../services/campaignService";
 
 const TimeLineView = () => {
   // Danh sách các tháng hiển thị trên header
@@ -17,6 +18,20 @@ const TimeLineView = () => {
     "Nov 2026",
     "Dec 2026",
   ];
+
+  const [campaigns, setCampaigns] = useState([]);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      try {
+        const data = await campaignService.getCampaigns();
+        setCampaigns(data);
+      } catch (error) {
+        console.error("Failed to fetch campaigns:", error);
+      }
+    };
+    fetchCampaigns();
+  }, []);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-500">
@@ -49,11 +64,14 @@ const TimeLineView = () => {
         {/* Cột trái: Tên chiến dịch */}
         <div className="w-[300px] border-r border-slate-200 shrink-0 bg-white z-10">
           <div className="divide-y divide-slate-50">
-            <CampaignNameRow name="Chiến dịch Mùa Hè Xanh 2026" isParent />
-            <CampaignNameRow name="Mặt trận Xây cầu (Khoa XD)" isSub />
-            <CampaignNameRow name="Mặt trận Dạy học (Khoa CNTT)" isSub />
-            <CampaignNameRow name="Tháng Thanh Niên" isParent />
-            <CampaignNameRow name="Chào đón Tân Sinh viên K52" isParent />
+            {campaigns.map((camp) => (
+              <React.Fragment key={camp.id}>
+                <CampaignNameRow name={camp.name} isParent />
+                {camp.subActivities && camp.subActivities.map((sub) => (
+                  <CampaignNameRow key={sub.id} name={`${sub.name} (${sub.unit})`} isSub />
+                ))}
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
@@ -70,45 +88,28 @@ const TimeLineView = () => {
               ))}
             </div>
 
-            {/* Bars: Mùa hè xanh */}
-            <TimelineRow>
-              <TimelineBar
-                color="bg-blue-500"
-                start="52%"
-                width="30%"
-                label="Mùa Hè Xanh 2026 (01/06 - 15/08)"
-                hasMilestone
-              />
-            </TimelineRow>
-
-            <TimelineRow>
-              <TimelineBar color="bg-emerald-500" start="58%" width="15%" />
-            </TimelineRow>
-
-            <TimelineRow>
-              <TimelineBar color="bg-orange-500" start="52%" width="18%" />
-            </TimelineRow>
-
-            {/* Bars: Tháng thanh niên */}
-            <TimelineRow>
-              <TimelineBar
-                color="bg-blue-400"
-                start="18%"
-                width="10%"
-                label="Tháng Thanh Niên"
-                hasMilestone
-              />
-            </TimelineRow>
-
-            {/* Bars: Tân sinh viên */}
-            <TimelineRow>
-              <TimelineBar
-                color="bg-blue-300"
-                start="85%"
-                width="12%"
-                label="Chào Tân SV K52"
-              />
-            </TimelineRow>
+            {campaigns.map((camp, cIndex) => (
+              <React.Fragment key={camp.id}>
+                <TimelineRow>
+                  <TimelineBar
+                    color={cIndex % 2 === 0 ? "bg-blue-500" : "bg-emerald-500"}
+                    start={`${20 + cIndex * 10}%`}
+                    width={`${20 + cIndex * 5}%`}
+                    label={`${camp.name} (${camp.time})`}
+                    hasMilestone={camp.status === "RUNNING"}
+                  />
+                </TimelineRow>
+                {camp.subActivities && camp.subActivities.map((sub, sIndex) => (
+                  <TimelineRow key={sub.id}>
+                    <TimelineBar 
+                      color={sIndex % 2 === 0 ? "bg-orange-500" : "bg-emerald-400"} 
+                      start={`${25 + (cIndex + sIndex) * 5}%`} 
+                      width="15%" 
+                    />
+                  </TimelineRow>
+                ))}
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </div>

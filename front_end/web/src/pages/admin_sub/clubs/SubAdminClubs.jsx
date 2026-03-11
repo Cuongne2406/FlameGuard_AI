@@ -1,59 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { organizationService } from '../../../services/organizationService';
 
 const SubAdminClubs = () => {
     const [toast, setToast] = useState(null);
-    const [clubs, setClubs] = useState([
-        {
-            id: 'iac',
-            name: 'CLB Lập trình & AI (IAC)',
-            leader: 'Trần Văn Code',
-            members: '80/100',
-            nextEvent: 'Workshop ChatGPT',
-            activity: 95,
-            budget: 40,
-            status: 'active',
-            borderColor: 'blue',
-            statusText: 'Rất tích cực',
-            statusColor: 'emerald',
-            icon: 'precision_manufacturing',
-        },
-        {
-            id: 'vannghe',
-            name: 'Đội Văn nghệ Xung kích',
-            leader: 'Lê Thị Hát',
-            members: '40',
-            nextEvent: 'Gala Chào Tân SV',
-            activity: 80,
-            budget: 10,
-            status: 'stable',
-            borderColor: 'pink',
-            statusText: 'Ổn định',
-            statusColor: 'blue',
-            icon: 'music_note',
-        },
-        {
-            id: 'ctxh',
-            name: 'Đội Công tác Xã hội (CTXH)',
-            leader: '---',
-            members: '0',
-            nextEvent: null,
-            activity: 0,
-            budget: 0,
-            status: 'warning',
-            borderColor: 'amber',
-            statusText: 'Cần kích hoạt lại',
-            statusColor: 'amber',
-            icon: 'favorite',
-            warningMsg: 'Chưa kiện toàn Ban chủ nhiệm mới',
-            warningDeadline: 'Cần tổ chức đại hội trước 30/11',
-        },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [clubs, setClubs] = useState([]);
+
+    useEffect(() => {
+        const fetchClubs = async () => {
+            try {
+                const data = await organizationService.getOrganizations('CLUB');
+                setClubs(data);
+            } catch (err) {
+                console.error("Failed to fetch clubs:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchClubs();
+    }, []);
 
     const [proposals, setProposals] = useState([
         {

@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useContext } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import { Popover, Transition } from "@headlessui/react";
 import {
   Home,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 
 const UserSidebar = ({ isOpen, setIsOpen }) => {
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
   // Thêm props từ UserLayout truyền xuống
   const menuItems = [
     {
@@ -143,7 +146,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                 >
                   <div className="relative shrink-0">
                     <img
-                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                       alt="Avatar"
                       className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover bg-blue-100"
                     />
@@ -151,10 +154,10 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                   </div>
                   <div className="flex flex-col text-left min-w-0">
                     <span className="text-sm font-bold text-slate-800 truncate">
-                      Lê Trọng Phúc Hậu
+                      {user?.full_name || 'Sinh viên'}
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium">
-                      Sinh viên
+                      {"Sinh viên"}
                     </span>
                   </div>
                 </Popover.Button>
@@ -173,14 +176,14 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                       {/* Header Popover */}
                       <div className="p-4 border-b border-slate-50 flex items-center gap-4 bg-slate-50/30">
                         <img
-                          src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                           className="w-12 h-12 rounded-full border border-white shadow-sm"
                           alt="avatar"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <h4 className="text-[13px] font-black text-slate-800 truncate">
-                              Lê Trọng Phúc Hậu
+                              {user?.full_name || 'Sinh viên'}
                             </h4>
                             <CheckCircle2
                               size={14}
@@ -188,7 +191,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                             />
                           </div>
                           <p className="text-[10px] font-bold text-slate-400 uppercase">
-                            MSSV: 123000926
+                            MSSV: {user?.student_id || ''}
                           </p>
                         </div>
                       </div>
@@ -244,7 +247,13 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
 
                         {/* Logout */}
                         <div className="p-1 mt-1 bg-slate-50/50 rounded-xl">
-                          <button className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-red-500 transition-all group">
+                          <button 
+                            onClick={() => {
+                              logout();
+                              navigate('/login');
+                            }}
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-red-500 transition-all group"
+                          >
                             <LogOut size={16} />
                             <span className="text-[10px] font-black uppercase tracking-widest">
                               Đăng xuất

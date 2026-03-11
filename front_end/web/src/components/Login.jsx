@@ -1,53 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, Loader2, ShieldCheck } from "lucide-react";
-import { authService } from "../services/authService";
-import { userService } from "../services/userService";
+import { AuthContext } from "../context/AuthContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login: loginContext, roles } = useContext(AuthContext);
 
   // State quản lý dữ liệu nhập vào
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errorContext, setErrorContext] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Hàm xử lý khi bấm nút Đăng Nhập
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
+    setErrorContext("");
     setLoading(true);
 
     try {
-      // 1. Authenticate and get Token 
-      // Note: Backend uses OAuth2PasswordRequestForm which requires URL encoded form data
-      const response = await authService.login({ username, password });
+      const success = await loginContext(username, password);
       
-      if (response && response.access_token) {
-        localStorage.setItem('accessToken', response.access_token);
-        
-        // 2. Fetch User Profile to get Roles for routing
-        const profile = await userService.getMe();
-        
-        // Save user info locally if needed
-        localStorage.setItem('userProfile', JSON.stringify(profile));
-        
-        // 3. Check Role and Redirect
-        const isAdmin = profile.roles && profile.roles.find(r => 
-          r.name === 'FACULTY_ADMIN' || r.name === 'UNIVERSITY_ADMIN'
-        );
-        
-        if (isAdmin) {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/user/dashboard");
+      if (success) {
+        // Sau khi AuthContext update state, trigger check role (trong thực tế có thể check từ response hoặc chờ Context update)
+        // Để linh hoạt hơn ở đây mình lấy raw token từ localStorage ra decode (hoặc fetch profile)
+        // Lưu ý: Do state update bất đồng bộ, check roles ngay lúc này từ Context có thể rỗng, 
+        // nhưng Context checkUserLogged đã gọi ở AuthContext. Ta nên redirect về mặc định.
+        // Tốt nhất là fetch lại user locally để redirect chuẩn xác nhất:
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+           const { userService } = await import('../services/userService');
+           const profile = await userService.getMe();
+           const isAdmin = profile.roles && profile.roles.find(r => 
+               r.name === 'FACULTY_ADMIN' || r.name === 'UNIVERSITY_ADMIN'
+           );
+           if (isAdmin) {
+             navigate("/admin/dashboard");
+           } else {
+             navigate("/user/dashboard");
+           }
         }
       } else {
-        setError("Đăng nhập thất bại. Không nhận được Token.");
+        setErrorContext("Tên đăng nhập hoặc mật khẩu không chính xác!");
       }
     } catch (err) {
-      setError(err.message || "Tên đăng nhập hoặc mật khẩu không chính xác!");
+      setErrorContext(err.message || "Đã xảy ra lỗi hệ thống!");
     } finally {
       setLoading(false);
     }
@@ -74,10 +72,10 @@ const Login = () => {
         </div>
 
         {/* Error Alert */}
-        {error && (
+        {errorContext && (
           <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
             <span className="block text-xs font-black text-center uppercase tracking-wider">
-              {error}
+              {errorContext}
             </span>
           </div>
         )}

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import UserSidebar from "../components/user/UserSideBar";
 import { Bell, Info, ChevronRight, Check, Menu } from "lucide-react";
+import GlobalChatbot from "../components/common/GlobalChatbot";
 
 const UserLayout = () => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -133,6 +134,8 @@ const UserLayout = () => {
           </div>
         </main>
       </div>
+      {/* 5. Gắn AI Chatbot vào gốc của UserLayout để nó trôi nổi trên mọi sub-routes */}
+      <GlobalChatbot />
     </div>
   );
 };

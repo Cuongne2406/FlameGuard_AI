@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
 import CreateEvent from '../../../components/common/CreateEvent';
 import EditEvent from '../../../components/common/EditEvent';
 import EventManualCheckin from './EventManualCheckin';
+import { eventService } from '../../../services/eventService';
 
 const SubAdminEvents = () => {
     const navigate = useNavigate();
@@ -14,52 +15,45 @@ const SubAdminEvents = () => {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [showManualCheckinModal, setShowManualCheckinModal] = useState(false);
     const [selectedEventId, setSelectedEventId] = useState(null);
-    const [events, setEvents] = useState([
-        {
-            id: 'ITTD2026',
-            title: 'Ngày hội Công nghệ - IT Tech Day 2026',
-            time: '08:00 - 17:00, Hôm nay',
-            location: 'Hội trường A',
-            type: 'Sự kiện Cấp Khoa',
-            status: 'Đang diễn ra (Live)',
-            statusColor: 'blue',
-            progress: 90,
-            attendees: '450/500',
-            actions: [
-                { label: 'Điểm danh thủ công', icon: 'person_search', primary: true, showFor: ['live'] },
-                { label: 'Xem báo cáo', icon: 'analytics', primary: false, showFor: ['live', 'ended'] },
-                { label: 'Duyệt danh sách thi', icon: 'fact_check', primary: false, showFor: ['open'] },
-                { label: 'Chỉnh sửa', icon: 'edit', primary: false, showFor: ['upcoming', 'open'] },
-                { label: 'Xem tổng kết', icon: 'summarize', primary: false, showFor: ['ended'] }
-            ]
-        },
-        {
-            id: 'CW5',
-            title: 'Cuộc thi Lập trình - Code War Season 5',
-            time: '20/11/2026',
-            location: 'Phòng máy C.302',
-            type: 'Học thuật',
-            status: 'Đang mở đăng ký',
-            statusColor: 'orange',
-            count: 'Đã có 120 Đội đăng ký',
-            actions: [
-                { label: 'Duyệt danh sách thi', icon: 'fact_check', primary: false, showFor: ['open'] },
-                { label: 'Chỉnh sửa', icon: 'edit', primary: false, showFor: ['upcoming', 'open'] }
-            ]
-        },
-        {
-            id: 'SOCCER2025',
-            title: 'Giải Bóng đá Nam Khoa CNTT 2025',
-            time: 'Đã kết thúc (15/11/2025)',
-            location: 'Sân vận động trường',
-            type: 'Văn thể mỹ',
-            status: 'Đã kết thúc',
-            statusColor: 'emerald',
-            actions: [
-                { label: 'Xem tổng kết', icon: 'summarize', primary: false, showFor: ['ended'] }
-            ]
+    const [loading, setLoading] = useState(true);
+    const [events, setEvents] = useState([]);
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
+
+    const fetchEvents = async () => {
+        try {
+            setLoading(true);
+            const data = await eventService.getEvents();
+            // Map the backend event data to match the UI structure roughly
+            const mappedEvents = data.map(ev => ({
+                id: ev.id,
+                title: ev.name,
+                time: String(ev.start_time),
+                location: ev.location,
+                type: ev.event_type || 'Sự kiện Cáo Khoa',
+                status: ev.status === 'PUBLISHED' ? 'Đang mở đăng ký' : ev.status === 'DRAFT' ? 'Sắp tới' : ev.status === 'COMPLETED' ? 'Đã kết thúc' : 'Đang diễn ra (Live)',
+                statusColor: ev.status === 'PUBLISHED' ? 'orange' : ev.status === 'COMPLETED' ? 'emerald' : 'blue',
+                progress: null, // Dynamic features to be added later
+                attendees: `${ev.current_participants || 0}/${ev.max_participants || 100}`,
+                actions: ev.status === 'COMPLETED' 
+                    ? [{ label: 'Xem tổng kết', icon: 'summarize', primary: false, showFor: ['ended'] }]
+                    : [
+                        { label: 'Điểm danh thủ công', icon: 'person_search', primary: true, showFor: ['live'] },
+                        { label: 'Xem báo cáo', icon: 'analytics', primary: false, showFor: ['live', 'ended'] },
+                        { label: 'Duyệt danh sách thi', icon: 'fact_check', primary: false, showFor: ['open'] },
+                        { label: 'Chỉnh sửa', icon: 'edit', primary: false, showFor: ['upcoming', 'open'] }
+                    ]
+            }));
+            setEvents(mappedEvents);
+        } catch (err) {
+            console.error("Failed to fetch events:", err);
+            // Fallback to empty if fails
+        } finally {
+            setLoading(false);
         }
-    ]);
+    };
 
     const stats = [
         { label: 'Tổng sự kiện năm', val: '12', sub: '80% Target', icon: 'event_note', color: 'blue' },
@@ -97,10 +91,15 @@ const SubAdminEvents = () => {
         setToast({ message: 'Cập nhật sự kiện thành công!', type: 'success' });
     };
 
-    const handleDelete = (eventId) => {
+    const handleDelete = async (eventId) => {
         if (window.confirm('Bạn có chắc muốn xóa sự kiện này?')) {
-            setEvents(prev => prev.filter(e => e.id !== eventId));
-            setToast({ message: 'Đã xóa sự kiện!', type: 'success' });
+            try {
+                await eventService.deleteEvent(eventId);
+                setEvents(prev => prev.filter(e => e.id !== eventId));
+                setToast({ message: 'Đã xóa sự kiện!', type: 'success' });
+            } catch (err) {
+                 setToast({ message: 'Lỗi khi xóa sự kiện', type: 'error' });
+            }
         }
     };
 

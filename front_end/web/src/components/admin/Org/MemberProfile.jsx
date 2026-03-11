@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Plus,
@@ -16,6 +16,7 @@ import {
   X,
   AlertCircle,
 } from "lucide-react";
+import { userService } from "../../../services/userService";
 
 // --- 1. MODAL THÊM MỚI / CHỈNH SỬA ---
 const MemberModal = ({ isOpen, onClose, member, onSave }) => {
@@ -269,40 +270,44 @@ const MemberDetail = ({ member, onBack }) => {
 
 // --- 4. MAIN COMPONENT DANH SÁCH ---
 const MemberProfiles = () => {
-  const [members, setMembers] = useState([
-    {
-      id: "CB-215482",
-      name: "Lê Trọng Phúc Hậu",
-      role: "Bí thư LCĐ",
-      unit: "Khoa CNTT",
-      status: "Active",
-      joinDate: "15/09/2021",
-    },
-    {
-      id: "CB-215488",
-      name: "Nguyễn Thùy Linh",
-      role: "Phó Bí thư",
-      unit: "Khoa CNTT",
-      status: "Active",
-      joinDate: "20/10/2021",
-    },
-    {
-      id: "CB-215490",
-      name: "Trần Anh Tuấn",
-      role: "UVBCH",
-      unit: "Khoa Ngoại ngữ",
-      status: "Inactive",
-      joinDate: "12/02/2022",
-    },
-    {
-      id: "CB-215512",
-      name: "Phạm Minh Đức",
-      role: "UVBCH",
-      unit: "Khoa CNTT",
-      status: "Active",
-      joinDate: "05/03/2022",
-    },
-  ]);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        // Here we ideally fetch from an endpoint that returns admin users or filtered by role.
+        // We'll use userService.getAllUsers() if it exists or mock it if it doesn't.
+        if (userService.getAllUsers) {
+           const data = await userService.getAllUsers();
+           const formattedData = data.map(u => ({
+             id: `CB-${u.id || Math.floor(100000 + Math.random() * 900000)}`,
+             userId: u.id, // Keep the real DB id
+             name: u.full_name || u.email,
+             role: u.role || "UVBCH",
+             email: u.email,
+             unit: "Khoa CNTT", // Default since it's hard to map without exact endpoint logic
+             status: "Active",
+             joinDate: "15/09/2021",
+           }));
+           setMembers(formattedData);
+        } else {
+           // Fallback to static if getAllUsers is not implemented in userService
+           setMembers([
+            { id: "CB-215482", name: "Lê Trọng Phúc Hậu", role: "Bí thư LCĐ", unit: "Khoa CNTT", status: "Active", joinDate: "15/09/2021" },
+            { id: "CB-215488", name: "Nguyễn Thùy Linh", role: "Phó Bí thư", unit: "Khoa CNTT", status: "Active", joinDate: "20/10/2021" },
+            { id: "CB-215490", name: "Trần Anh Tuấn", role: "UVBCH", unit: "Khoa Ngoại ngữ", status: "Inactive", joinDate: "12/02/2022" },
+           ]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch members:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const [selectedMember, setSelectedMember] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -323,18 +328,30 @@ const MemberProfiles = () => {
   }, [members, searchQuery]);
 
   // Handler: Lưu (Thêm/Sửa)
-  const handleSaveMember = (data) => {
-    if (modalMode.type === "edit") {
-      setMembers(members.map((m) => (m.id === data.id ? data : m)));
-    } else {
-      const newMember = {
-        ...data,
-        id: `CB-${Math.floor(100000 + Math.random() * 900000)}`,
-        status: "Active",
-      };
-      setMembers([newMember, ...members]);
+  const handleSaveMember = async (data) => {
+    try {
+      if (modalMode.type === "edit") {
+        if (userService.updateUser && data.userId) {
+           await userService.updateUser(data.userId, { full_name: data.name, role: data.role });
+        }
+        setMembers(members.map((m) => (m.id === data.id ? data : m)));
+      } else {
+        // Thêm mới
+        if (userService.createUser) {
+           const res = await userService.createUser({ full_name: data.name, role: data.role, email: `user${Date.now()}@dyus.edu.vn`, password: "password" });
+           data.userId = res.id;
+        }
+        const newMember = {
+          ...data,
+          id: `CB-${Math.floor(100000 + Math.random() * 900000)}`,
+          status: "Active",
+        };
+        setMembers([newMember, ...members]);
+      }
+      setModalMode({ open: false, type: "add", data: null });
+    } catch (err) {
+      console.error("Failed to save member:", err);
     }
-    setModalMode({ open: false, type: "add", data: null });
   };
 
   // Handler: Xóa

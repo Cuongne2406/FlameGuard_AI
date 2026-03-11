@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Brain,
   Activity,
@@ -10,8 +10,29 @@ import {
   Clock,
   ChevronDown,
 } from "lucide-react";
+import { aiService } from "../../../services/aiService";
 
 const IntelligeanceAI = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        const result = await aiService.getAdminAnalysis();
+        setData(result);
+      } catch (error) {
+         console.error("Failed to fetch admin AI analysis:", error);
+      } finally {
+         setLoading(false);
+      }
+    };
+    fetchAdminData();
+  }, []);
+
+  if (loading) return <div className="p-8 text-center text-slate-500 font-bold min-h-screen">Loading AI engine...</div>;
+  if (!data) return <div className="p-8 text-center text-red-500 font-bold min-h-screen">Failed to load data.</div>;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* 1. TOP STATUS BAR */}
@@ -33,13 +54,13 @@ const IntelligeanceAI = () => {
         <div className="flex items-center gap-6">
           <StatusIndicator
             label="AI Engine"
-            status="Online"
+            status={data.overview.status}
             color="text-emerald-500"
           />
           <div className="w-px h-8 bg-slate-100"></div>
           <StatusIndicator
             label="Đang xử lý"
-            value="12,458"
+            value={data.overview.activeStreams}
             sub="luồng dữ liệu"
           />
           <div className="w-px h-8 bg-slate-100"></div>
@@ -73,27 +94,25 @@ const IntelligeanceAI = () => {
           {/* Simulated Chart Area */}
           <div className="h-48 flex items-end justify-between px-4 relative">
             <div className="absolute inset-0 flex items-center justify-center">
-              {/* Floating Warning Box like in the image */}
               <div className="bg-white/80 backdrop-blur-md border border-red-100 p-4 rounded-2xl shadow-2xl flex items-start gap-3 z-10 animate-bounce-subtle">
                 <div className="p-2 bg-red-50 text-red-500 rounded-full">
                   <AlertTriangle size={16} />
                 </div>
                 <div>
                   <h4 className="text-[10px] font-black text-red-600 uppercase">
-                    Cảnh báo Tiêu cực (Thứ 6)
+                    Cảnh báo Tiêu cực ({data.sentimentAlerts.date})
                   </h4>
                   <p className="text-[10px] text-slate-500 leading-tight">
-                    Phát hiện lượng lớn phản hồi tại <strong>Khu B</strong>
+                    Phát hiện lượng lớn phản hồi tại <strong>{data.sentimentAlerts.location}</strong>
                     <br />
                     liên quan đến từ khóa:
                   </p>
                   <div className="flex gap-1 mt-2">
-                    <span className="px-2 py-0.5 bg-red-50 text-red-500 text-[9px] font-bold rounded">
-                      #Giữ_xe
-                    </span>
-                    <span className="px-2 py-0.5 bg-red-50 text-red-500 text-[9px] font-bold rounded">
-                      #Kẹt_thang_máy
-                    </span>
+                    {data.sentimentAlerts.keywords.map(kw => (
+                       <span key={kw} className="px-2 py-0.5 bg-red-50 text-red-500 text-[9px] font-bold rounded">
+                         {kw}
+                       </span>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -131,24 +150,15 @@ const IntelligeanceAI = () => {
           </div>
 
           <div className="space-y-4 flex-1">
-            <AuditItem
-              status="Auto-Published"
-              time="09:41 AM"
-              text='"Hoạt động Mùa Hè Xanh năm nay tổ chức rất chuyên nghiệp!"'
-              color="text-emerald-500 bg-emerald-50"
-            />
-            <AuditItem
-              status="Auto-Hidden & Reported"
-              time="09:40 AM"
-              text='"ban tổ chức thiếu chuyên nghiệp trong khâu tác chuẩn bị..."'
-              color="text-red-500 bg-red-50"
-            />
-            <AuditItem
-              status="Flagged for Review"
-              time="09:38 AM"
-              text='"Nên xem lại cách bố trí bãi xe, sinh viên chờ quá lâu."'
-              color="text-amber-500 bg-amber-50"
-            />
+            {data.autoModeration.map(mod => (
+              <AuditItem
+                key={mod.id}
+                status={mod.status}
+                time={mod.time}
+                text={mod.text}
+                color={mod.color}
+              />
+            ))}
           </div>
         </div>
 
@@ -195,22 +205,19 @@ const IntelligeanceAI = () => {
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-800">
-                  2,500
+                  {data.eventForecast.predictedAttendance}
                 </span>
                 <span className="text-xs font-bold text-slate-400">người</span>
               </div>
               <p className="text-red-500 text-[11px] font-bold flex items-center gap-1">
-                <TrendingUp size={14} /> ~ 150% Công suất Hội trường A
+                <TrendingUp size={14} /> {data.eventForecast.capacityWarning}
               </p>
             </div>
             <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
               <div className="flex items-center gap-2 text-indigo-700 font-black text-[11px] mb-2">
                 <Zap size={14} /> AI Recommendation
               </div>
-              <p className="text-[10px] text-indigo-600/80 leading-relaxed font-medium mb-3">
-                Mở thêm <strong>Hội trường C</strong> để phân tải lưu lượng. Cần
-                15 TNV hỗ trợ điều phối.
-              </p>
+              <p className="text-[10px] text-indigo-600/80 leading-relaxed font-medium mb-3" dangerouslySetInnerHTML={{__html: data.eventForecast.recommendation.replace(/(Hội trường \w+)/g, '<strong>$1</strong>')}} />
               <button className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black shadow-lg shadow-indigo-100">
                 Phê duyệt đề xuất
               </button>
@@ -226,13 +233,13 @@ const IntelligeanceAI = () => {
           </h3>
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 text-center">
-              <div className="text-xl font-black text-emerald-700">1,500</div>
+              <div className="text-xl font-black text-emerald-700">{data.chatbotStats.answeredQuestions}</div>
               <div className="text-[8px] font-bold text-emerald-600 uppercase">
                 Câu hỏi đã trả lời
               </div>
             </div>
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center">
-              <div className="text-xl font-black text-blue-700">45h</div>
+              <div className="text-xl font-black text-blue-700">{data.chatbotStats.timeSaved}</div>
               <div className="text-[8px] font-bold text-blue-600 uppercase">
                 Thời gian tiết kiệm
               </div>
@@ -243,18 +250,15 @@ const IntelligeanceAI = () => {
               Chủ đề HOT (24h)
             </h4>
             <div className="space-y-3">
-              <HotTopic
-                label="1. Quy chế điểm rèn luyện"
-                count="450 q"
-                color="bg-emerald-400"
-                width="w-full"
-              />
-              <HotTopic
-                label="2. Lịch thi Học kỳ 1"
-                count="210 q"
-                color="bg-emerald-400"
-                width="w-[45%]"
-              />
+              {data.chatbotStats.hotTopics.map(topic => (
+                 <HotTopic
+                  key={topic.id}
+                  label={topic.label}
+                  count={topic.count}
+                  color={topic.color}
+                  width={topic.width}
+                />
+              ))}
             </div>
           </div>
         </div>

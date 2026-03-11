@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { systemService } from '../../../services/systemService';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import * as XLSX from 'xlsx';
@@ -8,6 +9,20 @@ import NotificationBell from '../../../components/common/NotificationBell';
 const SubAdminDashboard = () => {
   const [toast, setToast] = useState(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await systemService.getSystemDashboard();
+        setDashboardData(data);
+      } catch (err) {
+        console.error('Error fetching sub admin dashboard', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   // Dữ liệu giả lập (sau này fetch API)
   const [pendingApprovals, setPendingApprovals] = useState([
@@ -41,12 +56,12 @@ const SubAdminDashboard = () => {
     setToast({ message: '❌ Đã hủy yêu cầu!', type: 'error' });
   };
 
-  // Stats cards - chữ cân đối hơn
+  // Stats cards - lấy từ systemService nếu có
   const stats = [
-    { label: 'Tổng Chi Đoàn', val: '20 Lớp', sub: '100% đã có BCH', icon: 'groups', color: 'blue' },
-    { label: 'Tổng Sinh viên', val: '1,500', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
-    { label: 'Quỹ Khoa hiện tại', val: '50.000.000', unit: 'VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
-    { label: 'Chi tiêu năm', val: 'Đạt 85%', sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
+    { label: 'Tổng Chi Đoàn', val: dashboardData?.stats?.totalMembers?.split(',')[0] || '20', sub: '100% đã có BCH', icon: 'groups', color: 'blue', unit: 'Lớp' },
+    { label: 'Tổng Sinh viên', val: dashboardData?.stats?.totalMembers?.replace(',','') || '1500', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
+    { label: 'Quỹ Khoa hiện tại', val: dashboardData?.stats?.totalBudgetStr?.split(' ')[0] || '50', unit: 'Triệu VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
+    { label: 'Chi tiêu năm', val: `Đạt ${100 - (dashboardData?.stats?.budgetLeftPercent || 15)}%`, sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
   ];
 
   // Activities cho Monitoring
@@ -180,30 +195,19 @@ const SubAdminDashboard = () => {
             Tiến độ Sự kiện Chuyên môn & Phong trào
           </h3>
           <div className="space-y-6 md:space-y-8">
-            <div className="space-y-3 md:space-y-4">
-              <div className="flex justify-between items-end">
-                <p className="text-sm md:text-base font-bold text-slate-700">Hội thảo AI & Big Data</p>
-                <p className="text-xs md:text-sm font-bold text-blue-600">60%</p>
-              </div>
-              <div className="h-2 rounded-full bg-slate-50"><div className="h-full bg-blue-600 rounded-full" style={{ width: '60%' }}></div></div>
-              <p className="text-xs md:text-sm font-medium text-slate-400 leading-none">Đang trong giai đoạn chuẩn bị diễn giả</p>
-            </div>
-
-            <div className="p-4 md:p-5 rounded-xl md:rounded-2xl bg-slate-50/50 border border-slate-50 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm md:text-base font-bold text-slate-900">Giải bóng đá Khoa CNTT</p>
-                <p className="text-xs md:text-sm text-slate-400 font-medium">Khởi tranh: 15/11/2025</p>
-              </div>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-widest">Upcoming</span>
-            </div>
-
-            <div className="p-4 md:p-5 rounded-xl md:rounded-2xl bg-slate-50/50 border border-slate-50 flex items-center justify-between opacity-70">
-              <div className="space-y-1">
-                <p className="text-sm md:text-base font-bold text-slate-900">Tiếp sức mùa thi 2025</p>
-                <p className="text-xs md:text-sm text-slate-400 font-medium">Đã hoàn thành xuất sắc</p>
-              </div>
-              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs md:text-sm font-bold uppercase tracking-widest">Completed</span>
-            </div>
+            {dashboardData?.timelines?.length > 0 ? dashboardData.timelines.map((event, idx) => (
+               <div key={idx} className={`p-4 md:p-5 rounded-xl md:rounded-2xl border ${event.status === 'Hoàn thành' ? 'bg-emerald-50/50 border-emerald-100 text-emerald-900 opacity-70' : 'bg-blue-50/50 border-blue-100 text-blue-900'} flex items-center justify-between`}>
+                 <div className="space-y-1">
+                   <p className="text-sm md:text-base font-bold">{event.label}</p>
+                   <p className="text-xs md:text-sm font-medium opacity-80">{event.date}</p>
+                 </div>
+                 <span className={`px-3 py-1 rounded-lg text-xs md:text-sm font-bold uppercase tracking-widest ${event.status === 'Hoàn thành' ? 'bg-emerald-100/50 text-emerald-700' : 'bg-blue-100/50 text-blue-700'}`}>
+                   {event.status || 'Upcoming'}
+                 </span>
+               </div>
+            )) : (
+              <p className="text-slate-400 text-sm">Chưa có sự kiện nào trong hệ thống</p>
+            )}
           </div>
         </div>
 

@@ -1,9 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from "react-router-dom";
 import { Share2, MessageCircle, ChevronLeft } from "lucide-react";
+import { publicService } from "../../services/publicService";
 
 const NewsDetail = () => {
-  const { id } = useParams(); // Lấy ID từ URL
+  const { id } = useParams();
+  const [news, setNews] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        const data = await publicService.getNewsDetail(id);
+        setNews(data);
+      } catch (error) {
+        console.error("Failed to fetch news detail:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (id) fetchDetail();
+  }, [id]);
+
+  if (loading) return <div className="min-h-screen bg-white flex items-center justify-center font-bold text-slate-500">Đang tải...</div>;
+  if (!news) return <div className="min-h-screen bg-white flex items-center justify-center font-bold text-red-500">Không tìm thấy bài viết.</div>;
 
   return (
     <div className="bg-white min-h-screen pb-20">
@@ -24,49 +44,23 @@ const NewsDetail = () => {
       <article className="max-w-4xl mx-auto px-6">
         <header className="mb-8">
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight mb-4">
-            Chiến dịch Mùa hè xanh 2024: Khởi động hành trình tình nguyện tại xã
-            Đắk Nông
+            {news.title}
           </h1>
           <div className="flex items-center gap-4 text-sm text-gray-500">
             <img
-              src="https://i.pravatar.cc/40"
+              src={news.authorAvatar}
               className="w-10 h-10 rounded-full"
             />
             <div>
               <p className="font-bold text-gray-800">
-                Ban Thông tin - Truyền thông
+                {news.author}
               </p>
-              <p>24/05/2024 • 5 phút đọc</p>
+              <p>{news.date} • {news.readTime}</p>
             </div>
           </div>
         </header>
 
-        <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed space-y-6">
-          <p className="text-lg font-medium">
-            Hòa chung không khí sôi nổi của tuổi trẻ cả nước, Đoàn Khoa chính
-            thức khởi động...
-          </p>
-          <img
-            src="https://picsum.photos/900/500"
-            className="w-full rounded-2xl shadow-lg"
-          />
-          <p>
-            Năm nay, chiến dịch tập trung vào các công trình phần việc cụ thể
-            thực tế như xây dựng đường nông thôn, lắp đặt hệ thống đèn năng
-            lượng mặt trời...
-          </p>
-
-          <div className="bg-blue-50 p-6 rounded-xl border-l-4 border-blue-500">
-            <h3 className="font-bold text-blue-800 mb-2">
-              Mục tiêu trọng điểm:
-            </h3>
-            <ul className="list-disc ml-5 space-y-1">
-              <li>Hoàn thành 2km đường bê tông liên thôn.</li>
-              <li>Trao tặng 20 suất học bổng cho học sinh nghèo.</li>
-            </ul>
-          </div>
-        </div>
-
+        <div className="prose prose-blue max-w-none text-gray-700 leading-relaxed space-y-6" dangerouslySetInnerHTML={{ __html: news.content }} />
         {/* Bình luận & Chia sẻ */}
         <footer className="mt-12 pt-8 border-t">
           <div className="flex justify-between items-center mb-10">
@@ -76,7 +70,7 @@ const NewsDetail = () => {
               </button>
             </div>
             <div className="text-gray-400 flex items-center gap-2">
-              <MessageCircle size={18} /> 12 Bình luận
+              <MessageCircle size={18} /> {news.commentsCount} Bình luận
             </div>
           </div>
 

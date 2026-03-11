@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
+import { AuthContext } from "../../../context/AuthContext";
 import {
   Radar,
   RadarChart,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 
 const Profile = () => {
+  const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const skillData = [
@@ -63,7 +65,7 @@ const Profile = () => {
           <div className="px-5 md:px-8 pb-6 md:pb-8 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 -mt-10 md:-mt-12 relative z-10">
             <div className="relative group">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                 alt="Avatar"
                 className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-xl bg-slate-100 object-cover"
               />
@@ -75,10 +77,10 @@ const Profile = () => {
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row items-center gap-2 mb-2">
                 <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">
-                  Lê Trọng Phúc Hậu
+                  {user?.full_name || "Sinh viên"}
                 </h2>
                 <span className="text-[9px] md:text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 md:py-1 rounded-lg uppercase border border-blue-100">
-                  MSSV: 23CT112
+                  MSSV: {user?.student_id || "Chưa cập nhật"}
                 </span>
               </div>
               <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
@@ -182,14 +184,14 @@ const Profile = () => {
                 <div className="bg-white w-[595px] min-h-[842px] shadow-2xl p-10 origin-top scale-[0.45] sm:scale-[0.6] md:scale-[0.8] lg:scale-[0.9]">
                   <div className="border-b-4 border-blue-600 pb-4 mb-6">
                     <h1 className="text-3xl font-black text-slate-900 uppercase">
-                      Lê Trọng Phúc Hậu
+                      {user?.full_name || "Lê Trọng Phúc Hậu"}
                     </h1>
                     <p className="text-blue-600 font-bold text-xs uppercase tracking-widest mt-1">
                       Sinh viên 5 Tốt | LHU
                     </p>
                     <div className="flex gap-4 mt-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                       <span className="bg-slate-100 px-2 py-1 rounded">
-                        MSSV: 23CT112
+                        MSSV: {user?.student_id || "23CT112"}
                       </span>
                       <span>letrongphuchau@email.com</span>
                       <span>(+84) 909 123 456</span>

@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useContext, useState, useEffect } from "react";
+import { AuthContext } from "../../../context/AuthContext";
+import { systemService } from "../../../services/systemService";
 import {
   Search,
   Bell,
@@ -12,13 +14,26 @@ import {
 } from "lucide-react";
 
 const UserDashboard = () => {
+  const { user } = useContext(AuthContext);
+  const [dashboardData, setDashboardData] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+         const data = await systemService.getSystemDashboard();
+         setDashboardData(data);
+      } catch (err) { console.error('Error fetching user dashboard:', err); }
+    };
+    fetchDashboard();
+  }, []);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Header Chào mừng */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            Xin chào, Phúc Hậu! 👋
+            Xin chào, {user?.full_name?.split(" ").pop() || "Sinh viên"}! 👋
           </h1>
           <p className="text-slate-500 text-sm font-medium">
             Hôm nay là Thứ Hai, 10/03/2026
@@ -56,9 +71,9 @@ const UserDashboard = () => {
                 <Sparkles size={12} />
               </div>
             </div>
-            <h3 className="font-bold text-slate-800">Lê Trọng Phúc Hậu</h3>
+            <h3 className="font-bold text-slate-800">{user?.full_name || "Lê Trọng Phúc Hậu"}</h3>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              MSSV: 123000926
+              MSSV: {user?.student_id || "123000926"}
             </p>
             <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full uppercase">
               Lớp: 23CT112
@@ -75,11 +90,11 @@ const UserDashboard = () => {
             </div>
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 font-black text-2xl shadow-inner border border-amber-100/50">
-                5
+                {user?.level || 5}
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-black text-slate-800">95</span>
+                  <span className="text-lg font-black text-slate-800">{user?.training_score || 95}</span>
                   <span className="text-slate-400 text-xs font-bold">/100</span>
                 </div>
                 <p className="text-[10px] font-bold text-emerald-500 uppercase">
@@ -200,42 +215,34 @@ const UserDashboard = () => {
               </button>
             </div>
 
-            <div className="flex gap-6 items-center">
-              {/* Date Card */}
-              <div className="flex flex-col items-center justify-center w-20 h-24 rounded-3xl bg-slate-50 border border-slate-100 shadow-inner">
-                <span className="text-[10px] font-black text-red-500 uppercase">
-                  Tháng 3
-                </span>
-                <span className="text-3xl font-black text-slate-800">12</span>
-                <span className="text-[10px] font-bold text-slate-400">
-                  Thứ Tư
-                </span>
-              </div>
-              {/* Event Info */}
-              <div className="flex-1 space-y-3">
-                <h4 className="text-base font-black text-slate-800 leading-tight">
-                  Hội thảo AI & Big Data
-                </h4>
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Calendar size={12} />
-                    <span className="text-[11px] font-bold">08:00 - 11:30</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Zap size={12} />
-                    <span className="text-[11px] font-bold">
-                      Hội trường A - Khu I
+            <div className="flex gap-6 items-center overflow-x-auto pb-4 custom-scrollbar">
+              {dashboardData?.timelines?.length > 0 ? dashboardData.timelines.map((event, idx) => (
+                <div key={event.id || idx} className="flex gap-6 items-center min-w-[300px] shrink-0">
+                  {/* Date Card */}
+                  <div className="flex flex-col items-center justify-center w-20 h-24 rounded-3xl bg-slate-50 border border-slate-100 shadow-inner">
+                    <span className="text-[10px] font-black text-red-500 uppercase">
+                      Bắt đầu
+                    </span>
+                    <span className="text-lg font-black text-slate-800 truncate px-2 w-full text-center">
+                      {event.date?.split(' ')[0] || '12/03'}
                     </span>
                   </div>
+                  {/* Event Info */}
+                  <div className="flex-1 space-y-3">
+                    <h4 className="text-base font-black text-slate-800 leading-tight">
+                      {event.label}
+                    </h4>
+                    <div className="flex flex-wrap gap-4">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Calendar size={12} />
+                        <span className="text-[11px] font-bold">{event.status || 'Sắp diễn ra'}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              {/* QR Shortcut */}
-              <button className="p-4 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-all flex flex-col items-center gap-2">
-                <Zap size={20} />
-                <span className="text-[8px] font-black uppercase whitespace-nowrap">
-                  Hiện mã QR Check-in
-                </span>
-              </button>
+              )) : (
+                <div className="text-sm text-slate-400 p-4">Không có sự kiện sắp tới</div>
+              )}
             </div>
           </div>
         </div>

@@ -1,20 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
+import { eventService } from '../../../services/eventService';
 
 const EventManualCheckin = ({ eventId, onClose }) => {
     const navigate = useNavigate();
     const [toast, setToast] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
-    const [attendees] = useState([
-        { id: '23CT112-001', name: 'Nguyễn Văn An', class: '23CT112', time: '08:15', status: 'Checked-in' },
-        { id: '23CT112-045', name: 'Trần Thị Bình', class: '23CT112', time: '--:--', status: 'Pending' },
-        { id: '22CT111-012', name: 'Lê Hoàng Long', class: '22CT111', time: '08:20', status: 'Checked-in' },
-    ]);
+    const [attendees, setAttendees] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const handleCheckin = (id) => {
-        setToast({ message: `Đã điểm danh thành công cho SV: ${id}`, type: 'success' });
-        // Có thể cập nhật danh sách ở đây
+    useEffect(() => {
+        if (eventId) {
+            fetchAttendees();
+        }
+    }, [eventId]);
+
+    const fetchAttendees = async () => {
+        try {
+            setLoading(true);
+            const data = await eventService.getEventRegistrations(eventId);
+            // Map the registrations to the attendee format
+            const mappedAttendees = data.map((reg, index) => ({
+                id: reg.id || `ATT-${index}`,
+                name: reg.user_id ? `User ${reg.user_id}` : 'Khách mời',
+                class: reg.user_id ? 'N/A' : '',
+                time: reg.status === 'ATTENDED' ? new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '--:--',
+                status: reg.status === 'ATTENDED' ? 'Checked-in' : 'Pending',
+                originalData: reg,
+            }));
+            setAttendees(mappedAttendees);
+        } catch (error) {
+            console.error('Failed to fetch attendees:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCheckin = async (id) => {
+        try {
+            await eventService.updateRegistration(eventId, id, { status: 'ATTENDED' });
+            setToast({ message: `Đã điểm danh thành công!`, type: 'success' });
+            // Cập nhật state trực tiếp để đổi UI ngay lập tức
+            setAttendees(prev => prev.map(a => a.id === id ? { ...a, status: 'Checked-in', time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) } : a));
+        } catch (error) {
+            setToast({ message: 'Lỗi khi điểm danh', type: 'error' });
+        }
     };
 
     const filteredAttendees = attendees.filter(sv => 
@@ -42,7 +73,9 @@ const EventManualCheckin = ({ eventId, onClose }) => {
                         <div className="flex items-center gap-3">
                             <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 flex items-center gap-2">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Live Check-in: 124 / 450</span>
+                                <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">
+                                    Live Check-in: {attendees.filter(a => a.status === 'Checked-in').length} / {attendees.length}
+                                </span>
                             </div>
                             <button onClick={onClose} className="h-10 w-10 flex items-center justify-center text-slate-300 hover:text-rose-500">
                                 <span className="material-symbols-outlined text-2xl">close</span>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   ChevronDown,
@@ -9,6 +9,7 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
+import { campaignService } from "../../../services/campaignService";
 
 const ListView = () => {
   // 1. State quản lý hiển thị Modal
@@ -18,47 +19,23 @@ const ListView = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   // 3. Dữ liệu mẫu (Data Source)
-  const [activities] = useState([
-    {
-      id: 1,
-      name: "Chiến dịch Mùa Hè Xanh 2026",
-      unit: "Toàn trường",
-      time: "01/06 - 15/08",
-      budget: "500tr / 200tr",
-      progress: 40,
-      status: "RUNNING",
-      subActivities: [
-        {
-          id: 11,
-          name: "Mặt trận Xây cầu",
-          unit: "Khoa Xây dựng",
-          time: "05/06 - 20/06",
-          budget: "50tr / 45tr",
-          progress: 100,
-          status: "COMPLETED",
-        },
-        {
-          id: 12,
-          name: "Mặt trận Dạy học",
-          unit: "Khoa CNTT",
-          time: "10/06 - 30/07",
-          budget: "30tr / 10tr",
-          progress: 30,
-          status: "RUNNING",
-        },
-      ],
-    },
-    {
-      id: 2,
-      name: "Tháng Thanh Niên 2026",
-      unit: "Toàn trường",
-      time: "01/03 - 31/03",
-      budget: "200tr / 180tr",
-      progress: 100,
-      status: "PENDING",
-      subActivities: [],
-    },
-  ]);
+  const [activities, setActivities] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      setLoading(true);
+      try {
+        const data = await campaignService.getCampaigns();
+        setActivities(data);
+      } catch (error) {
+        console.error("Failed to fetch campaigns:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCampaigns();
+  }, []);
 
   // 4. Logic lọc dữ liệu
   const filteredActivities = useMemo(() => {
