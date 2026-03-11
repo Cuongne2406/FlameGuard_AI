@@ -16,6 +16,10 @@ class OrgType(enum.Enum):
     CLUB = "CLUB"
     CLASS = "CLASS"
 
+class AuthProvider(enum.Enum):
+    LOCAL = "LOCAL"
+    S4H = "S4H"
+
 class OrgStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE = "INACTIVE"
@@ -42,7 +46,8 @@ class User(Base):
     student_id = Column(String, unique=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String)
+    password_hash = Column(String, nullable=True) # Tương thích S4H (có thể Null)
+    auth_provider = Column(Enum(AuthProvider), default=AuthProvider.LOCAL, nullable=False)
     phone_number = Column(String)
     status = Column(Enum(UserStatus), default=UserStatus.ACTIVE)
     avatar_url = Column(String)

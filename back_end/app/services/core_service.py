@@ -9,8 +9,7 @@ from app.schemas.core_schemas import (
     OrganizationCreate, OrganizationUpdate,
     AcademicTermCreate, AcademicTermUpdate
 )
-# Note: In a real prod environment we'd use passlib for password hashing.
-# For demo purposes, assuming plaintext or pre-hashed password string.
+from app.core.security import get_password_hash
 
 # ==========================================
 # Permission Services
@@ -181,7 +180,7 @@ def create_user(db: Session, user_in: UserCreate):
         phone_number=user_in.phone_number,
         status=user_in.status,
         avatar_url=user_in.avatar_url,
-        password_hash=user_in.password # Should be hashed!
+        password_hash=get_password_hash(user_in.password) if user_in.password else None
     )
     
     if user_in.role_ids:
@@ -208,7 +207,7 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
         db_user.roles = roles
         
     if "password" in update_data:
-        db_user.password_hash = update_data.pop("password")
+        db_user.password_hash = get_password_hash(update_data.pop("password"))
 
     for key, value in update_data.items():
         setattr(db_user, key, value)

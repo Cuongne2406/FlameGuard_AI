@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://api-auth.s4h.edu.vn';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 /**
  * Generic API client handling JSON parsing and Authentication tokens.
@@ -25,9 +25,17 @@ export const apiClient = async (endpoint, options = {}) => {
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
 
+    if (response.status === 401) {
+      // Clear token and redirect to login if unauthorized
+      localStorage.removeItem('accessToken');
+      window.location.href = '/'; 
+      throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+    }
+
     if (!response.ok) {
       // Handle HTTP errors
-      throw new Error(data.message || 'API Error');
+      const errorMessage = data.detail || data.message || 'API Error';
+      throw new Error(errorMessage);
     }
 
     return data;

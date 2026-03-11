@@ -1,0 +1,12 @@
+{
+  "source_directories": [
+    "back_end"
+  ],
+  "search_path": [
+    "back_end/venv/Lib/site-packages",
+    "back_end"
+  ],
+  "exclude": [
+    ".*/venv/.*"
+  ]
+}

@@ -153,3 +153,13 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+
+# ==========================================
+# Auth Schemas
+# ==========================================
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenPayload(BaseModel):
+    sub: Optional[str] = None

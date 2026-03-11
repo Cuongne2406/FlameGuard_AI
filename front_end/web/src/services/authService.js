@@ -1,7 +1,16 @@
 import { apiClient } from './apiClient';
 
 export const authService = {
-  login: (data) => apiClient('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data) => {
+    const formData = new URLSearchParams();
+    formData.append('username', data.username);
+    formData.append('password', data.password);
+    return apiClient('/auth/login', { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString() 
+    });
+  },
   register: (data) => apiClient('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   refresh: (data) => apiClient('/auth/refresh', { method: 'POST', body: JSON.stringify(data) }),
   logout: () => apiClient('/auth/logout', { method: 'POST' }),

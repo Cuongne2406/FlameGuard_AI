@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lock, User, Loader2, ShieldCheck } from "lucide-react";
+import { authService } from "../services/authService";
+import { userService } from "../services/userService";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,22 +19,38 @@ const Login = () => {
     setError("");
     setLoading(true);
 
-    // Giả lập logic xác thực
-    setTimeout(() => {
-      if (username === "admin" && password === "123456") {
-        setLoading(false);
-        navigate("/admin/dashboard"); // Vào trang admin Liên Chi Đoàn / Đoàn Trường
-      } else if (username === "subadmin" && password === "123456") {
-        setLoading(false);
-        navigate("/admin-sub/dashboard"); // Vào trang admin_sub (Khoa)
-      } else if (username === "user" && password === "123456") {
-        setLoading(false);
-        navigate("/user/dashboard"); // Vào trang User (Sinh viên)
+    try {
+      // 1. Authenticate and get Token 
+      // Note: Backend uses OAuth2PasswordRequestForm which requires URL encoded form data
+      const response = await authService.login({ username, password });
+      
+      if (response && response.access_token) {
+        localStorage.setItem('accessToken', response.access_token);
+        
+        // 2. Fetch User Profile to get Roles for routing
+        const profile = await userService.getMe();
+        
+        // Save user info locally if needed
+        localStorage.setItem('userProfile', JSON.stringify(profile));
+        
+        // 3. Check Role and Redirect
+        const isAdmin = profile.roles && profile.roles.find(r => 
+          r.name === 'FACULTY_ADMIN' || r.name === 'UNIVERSITY_ADMIN'
+        );
+        
+        if (isAdmin) {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/user/dashboard");
+        }
       } else {
-        setLoading(false);
-        setError("Tên đăng nhập hoặc mật khẩu không chính xác!");
+        setError("Đăng nhập thất bại. Không nhận được Token.");
       }
-    }, 1500);
+    } catch (err) {
+      setError(err.message || "Tên đăng nhập hoặc mật khẩu không chính xác!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Lệnh return phải nằm ở đây (ngoài handleLogin)
