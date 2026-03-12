@@ -36,7 +36,7 @@ const UserDashboard = () => {
             Xin chào, {user?.full_name?.split(" ").pop() || "Sinh viên"}! 👋
           </h1>
           <p className="text-slate-500 text-sm font-medium">
-            Hôm nay là Thứ Hai, 10/03/2026
+            Hôm nay là {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' })}
           </p>
         </div>
 
@@ -171,22 +171,24 @@ const UserDashboard = () => {
             </div>
 
             {/* Gợi ý sự kiện của AI */}
-            <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm mb-4">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 font-bold">
-                🏃
+            {dashboardData?.suggestedEvent && (
+              <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm mb-4">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 font-bold">
+                  💡
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h5 className="text-[11px] font-black text-slate-800 truncate uppercase">
+                    {dashboardData.suggestedEvent.name}
+                  </h5>
+                  <p className="text-[10px] text-slate-400 font-bold">
+                    {dashboardData.suggestedEvent.date} • {dashboardData.suggestedEvent.location}
+                  </p>
+                </div>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black transition-transform hover:scale-105">
+                  Đăng ký
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <h5 className="text-[11px] font-black text-slate-800 truncate uppercase">
-                  DYUS Marathon 2026
-                </h5>
-                <p className="text-[10px] text-slate-400 font-bold">
-                  15/03/2026 • Công viên 30/4
-                </p>
-              </div>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black transition-transform hover:scale-105">
-                Đăng ký
-              </button>
-            </div>
+            )}
 
             {/* Input AI */}
             <div className="relative">

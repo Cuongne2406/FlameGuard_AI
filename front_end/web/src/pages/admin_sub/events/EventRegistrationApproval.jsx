@@ -43,11 +43,12 @@ const EventRegistrationApproval = () => {
         fetchRegistrations();
     }, [id]);
 
+    // Dynamic stats derived from teams
     const stats = [
-        { label: 'Tổng số đội', val: '120', icon: 'groups', color: 'blue' },
-        { label: 'Đã duyệt', val: '80', icon: 'check_circle', color: 'emerald' },
-        { label: 'Chờ duyệt', val: '35', icon: 'hourglass_empty', color: 'orange' },
-        { label: 'Bị từ chối', val: '05', icon: 'cancel', color: 'rose' },
+        { label: 'Tổng số đội', val: teams.length.toString(), icon: 'groups', color: 'blue' },
+        { label: 'Đã duyệt', val: teams.filter(t => t.status === 'Đã duyệt').length.toString(), icon: 'check_circle', color: 'emerald' },
+        { label: 'Chờ duyệt', val: teams.filter(t => t.status === 'Chờ duyệt').length.toString(), icon: 'hourglass_empty', color: 'orange' },
+        { label: 'Bị từ chối', val: teams.filter(t => t.status === 'Từ chối').length.toString(), icon: 'cancel', color: 'rose' },
     ];
 
     const filteredTeams = teams.filter(team =>

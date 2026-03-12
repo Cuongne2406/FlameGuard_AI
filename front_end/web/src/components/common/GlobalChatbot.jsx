@@ -4,9 +4,7 @@ import { chatbotService } from "../../services/chatbotService";
 
 const GlobalChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { text: "Chào bạn, mình là AI Assistant của Đoàn Thanh niên. Bạn cần hỗ trợ gì?", isBot: true }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -18,6 +16,23 @@ const GlobalChatbot = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      setIsTyping(true);
+      try {
+        const history = await chatbotService.getHistory();
+        if (history.length > 0) {
+            setMessages(history);
+        }
+      } finally {
+        setIsTyping(false);
+      }
+    };
+    if (isOpen && messages.length === 0) {
+      fetchHistory();
+    }
+  }, [isOpen]);
 
   const handleSend = async () => {
     if (!input.trim()) return;

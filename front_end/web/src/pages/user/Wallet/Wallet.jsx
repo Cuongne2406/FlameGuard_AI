@@ -40,10 +40,13 @@ const WalletPage = () => {
     fetchWallet();
   }, []);
 
-  const studentClass = user?.student_id ? '23CT112' : '23CT112'; // Placeholder
-  const nameParts = user?.full_name ? user.full_name.split(" ") : ["HAU"];
+  const studentClass = user?.class_name || 'Đoàn Nhóm';
+  const nameParts = user?.full_name ? user.full_name.split(" ") : ["SV"];
   const firstName = nameParts[nameParts.length - 1].toUpperCase();
   const topUpCode = `NAP QUY ${firstName} ${studentClass}`;
+  
+  const balance = transactions.reduce((acc, t) => acc + (t.type === 'Thu' ? Number(t.amount.replace(/[^0-9.-]+/g,"")) : -Number(t.amount.replace(/[^0-9.-]+/g,""))), 0);
+  const totalExpense = transactions.reduce((acc, t) => acc + (t.type === 'Chi' ? Number(t.amount.replace(/[^0-9.-]+/g,"")) : 0), 0);
 
   // Component Modal dùng chung để đồng bộ giao diện
   const Modal = ({ title, onClose, children }) => (
@@ -96,7 +99,7 @@ const WalletPage = () => {
             </div>
 
             <h1 className="text-5xl font-black tracking-tight mb-2">
-              250.000{" "}
+              {balance.toLocaleString("vi-VN")}{" "}
               <span className="text-2xl font-medium opacity-80">VNĐ</span>
             </h1>
             <p className="text-sm font-bold opacity-70 uppercase tracking-widest">
@@ -276,7 +279,7 @@ const WalletPage = () => {
                     Tổng chi
                   </span>
                   <span className="text-lg font-black text-slate-800 tracking-tighter">
-                    12.5tr
+                    {totalExpense > 0 ? `${(totalExpense / 1000000).toFixed(1)}tr` : '0đ'}
                   </span>
                 </div>
               </div>

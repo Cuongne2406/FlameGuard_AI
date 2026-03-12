@@ -39,7 +39,7 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
         <div className="overflow-y-auto flex-1">
           <div className="h-64 bg-slate-900 relative">
             <img
-              src="https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80"
+              src={isOpen?.banner_url || "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80"}
               className="w-full h-full object-cover opacity-40"
               alt="banner"
             />
@@ -53,8 +53,7 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
                 </span>
               </div>
               <h2 className="text-4xl font-black text-white flex items-center gap-3">
-                <Trophy className="text-yellow-400" size={36} /> Code War Season
-                5
+                <Trophy className="text-yellow-400" size={36} /> {isOpen?.name || "Chi tiết Sự kiện"}
               </h2>
             </div>
           </div>
@@ -68,7 +67,7 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   Thời gian
                 </p>
-                <p className="text-xs font-black text-slate-800">20/11/2026</p>
+                <p className="text-xs font-black text-slate-800">{isOpen?.start_time ? new Date(isOpen.start_time).toLocaleDateString() : "Chưa xác định"}</p>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                 <MapPin className="mx-auto text-purple-600 mb-2" size={20} />
@@ -76,16 +75,16 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
                   Địa điểm
                 </p>
                 <p className="text-xs font-black text-slate-800">
-                  Phòng Lab C.302
+                  {isOpen?.location || "Chưa xác định"}
                 </p>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
                 <Users className="mx-auto text-emerald-600 mb-2" size={20} />
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  Hình thức
+                  Sức chứa
                 </p>
                 <p className="text-xs font-black text-slate-800">
-                  Đội nhóm (3)
+                  {isOpen?.capacity || "Chưa xác định"}
                 </p>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
@@ -93,15 +92,14 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                   Quyền lợi
                 </p>
-                <p className="text-xs font-black text-slate-800">+5 Điểm RL</p>
+                <p className="text-xs font-black text-slate-800">+ Điểm RL</p>
               </div>
             </div>
             <h4 className="font-black text-slate-800 flex items-center gap-2 mb-3">
               <Layout size={18} className="text-blue-600" /> Giới thiệu chung
             </h4>
-            <p className="text-sm text-slate-500 leading-relaxed font-medium italic">
-              Sân chơi thuật toán đỉnh cao dành cho sinh viên IT toàn thành phố,
-              nơi khẳng định bản lĩnh lập trình viên thế hệ mới.
+            <p className="text-sm text-slate-500 leading-relaxed font-medium italic mb-6">
+              {isOpen?.description || "Chưa có thông tin mô tả."}
             </p>
           </div>
         </div>
@@ -110,7 +108,7 @@ const EventDetailModal = ({ isOpen, onClose, onRegisterClick }) => {
             <Share2 size={16} /> Chia sẻ
           </button>
           <button
-            onClick={onRegisterClick}
+            onClick={() => onRegisterClick(isOpen)}
             className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm shadow-xl shadow-blue-200 hover:scale-105 transition-all flex items-center gap-2"
           >
             Tạo Đội & Đăng ký ngay
@@ -136,7 +134,7 @@ const RegistrationModal = ({ isOpen, onClose, onSuccess }) => {
             <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
               Xác nhận đăng ký
             </p>
-            <h3 className="text-lg font-black">Code War Season 5</h3>
+            <h3 className="text-lg font-black">{isOpen?.event?.name || 'Đăng ký tham gia'}</h3>
           </div>
           <button
             onClick={onClose}
@@ -253,7 +251,7 @@ const CertificateModal = ({ isOpen, onClose, studentName }) => {
             <p className="text-slate-500 font-medium mt-2">
               Bạn đã hoàn thành xuất sắc{" "}
               <span className="font-bold text-slate-700">
-                Giải bóng đá Nam Khoa CNTT 2025
+                {isOpen?.name || 'Sự kiện'}
               </span>
             </p>
           </div>
@@ -457,21 +455,36 @@ const Event = () => {
   const [successOpen, setSuccessOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [events, setEvents] = useState([]);
+  const [myEvents, setMyEvents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       try {
-        const data = await eventService.getEvents();
-        // Fallback to empty array if no data
-        setEvents(data || []);
+        const [allEventsList, myEventsList] = await Promise.all([
+          eventService.getEvents(),
+          eventService.getUserEvents()
+        ]);
+        setEvents(allEventsList || []);
+        
+        // Transform myEvents to match UI requirements
+        const formattedMyEvents = (myEventsList || []).map(evt => {
+           const d = new Date(evt.start_time);
+           return {
+              id: evt.id,
+              title: evt.name,
+              date: evt.start_time ? d.getDate() : '-',
+              time: evt.start_time ? d.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : 'Tuỳ chọn'
+           };
+        });
+        setMyEvents(formattedMyEvents);
       } catch (err) {
         console.error("Failed to load events", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchEvents();
+    fetchData();
   }, []);
 
   const handleRegisterConfirmed = async (event) => {
@@ -492,7 +505,6 @@ const Event = () => {
     "Tình nguyện ❤️",
     "Sắp diễn ra",
   ];
-  const myEvents = [];
 
   const studentInfo = {
     name: user?.full_name || "Lê Trọng Phúc Hậu",
@@ -506,9 +518,9 @@ const Event = () => {
       <EventDetailModal
         isOpen={detailOpen}
         onClose={() => setDetailOpen(false)}
-        onRegisterClick={() => {
+        onRegisterClick={(evt) => {
           setDetailOpen(false);
-          setRegOpen(true);
+          setRegOpen({ event: evt, user });
         }}
       />
       <RegistrationModal
@@ -659,8 +671,7 @@ const Event = () => {
                         <button
                           onClick={() => {
                              // This should ideally fetch event details and pass to DetailModal, but for simplicity we directly open reg Open.
-                             // setDetailOpen(true);
-                             setRegOpen({ event, user }); 
+                           setDetailOpen(event);
                           }}
                           className="w-full py-4 bg-slate-50 text-slate-800 rounded-2xl text-[11px] font-black hover:bg-blue-600 hover:text-white transition-all shadow-sm"
                         >
@@ -676,7 +687,7 @@ const Event = () => {
                      </button>
                   ) : (
                      <button
-                        onClick={() => setIsCertOpen(true)}
+                        onClick={() => setIsCertOpen(event)}
                         className="w-full py-4 bg-emerald-50 text-emerald-600 rounded-2xl text-[11px] font-black border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all"
                      >
                         Nhận chứng nhận & Điểm RL

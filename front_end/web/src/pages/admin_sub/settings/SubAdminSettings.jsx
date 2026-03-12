@@ -27,10 +27,7 @@ const SubAdminSettings = () => {
     dailyDigest: false,
   });
 
-  const [devices, setDevices] = useState([
-    { id: 1, name: 'MacBook Pro', location: 'Ho Chi Minh City', browser: 'Chrome', ip: '192.168.1.1', status: 'Current', icon: 'laptop_mac' },
-    { id: 2, name: 'iPhone 15', location: 'Dong Nai', browser: 'Safari Mobile', time: '2 hours ago', icon: 'smartphone', status: '' },
-  ]);
+  const [devices, setDevices] = useState([]);
 
   // Signature
   const [signature, setSignature] = useState(null);
@@ -48,20 +45,15 @@ const SubAdminSettings = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Permissions
-  const [team, setTeam] = useState([
-    { id: 1, name: 'Nguyễn Văn A', role: 'Phó Bí thư', permissions: { events: true, finance: false, posts: true }, initial: 'VA' },
-  ]);
+  const [team, setTeam] = useState([]);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [newMember, setNewMember] = useState({ name: '', mssv: '', role: '' });
 
-  // Mock search results
-  const searchResults = [
-    { id: 'TB', name: 'Trần Thị B', mssv: '23CT113', role: 'Phó Bí thư Đoàn Khoa', initial: 'TB', color: 'rose' },
-    { id: 'LC', name: 'Lê Văn C', mssv: '22CT111', role: 'Ủy viên BTV', initial: 'LC', color: 'blue' },
-  ];
+  // Real search results should be fetched from an API
+  const searchResults = [];
 
   const filteredResults = searchResults.filter(r =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

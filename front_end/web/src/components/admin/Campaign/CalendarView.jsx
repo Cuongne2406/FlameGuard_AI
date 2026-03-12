@@ -25,25 +25,8 @@ const CalendarView = ({ onSelectCampaign }) => {
     fetchCampaigns();
   }, []);
 
-  // Dữ liệu giả lập các sự kiện trên lịch (có thể tính toán từ campaigns data sau này)
-  const events = [
-    { day: 1, title: "Lễ Ra quân", color: "bg-blue-600", type: "start" },
-    {
-      day: 5,
-      title: "Mặt trận Xây dựng",
-      color: "bg-emerald-500",
-      type: "span",
-      duration: 3,
-    },
-    {
-      day: 10,
-      title: "Lớp học Tình thương",
-      color: "bg-orange-500",
-      type: "span",
-      duration: 5,
-    },
-    { day: 20, title: "Kết thúc", color: "bg-emerald-500", type: "end" },
-  ];
+  // Sự kiện lịch động
+  const [events, setEvents] = useState([]);
 
   return (
     <div className="flex gap-6 h-full animate-in fade-in duration-500">
@@ -118,28 +101,15 @@ const CalendarView = ({ onSelectCampaign }) => {
                           {dayNum > 0 && dayNum <= 30 ? dayNum : ""}
                         </span>
 
-                        {/* Render sự kiện (ví dụ mẫu) */}
-                        {dayNum === 1 && (
-                          <EventTag
-                            color="bg-blue-600"
-                            title="Lễ Ra quân"
-                            icon={<Flag size={10} fill="white" />}
-                          />
-                        )}
-                        {dayNum === 5 && (
-                          <EventBar
-                            color="bg-emerald-100 text-emerald-700"
-                            title="Mặt trận Xây dựng"
-                            width="w-[300%]"
-                          />
-                        )}
-                        {dayNum === 10 && (
-                          <EventBar
-                            color="bg-orange-100 text-orange-700"
-                            title="Lớp học Tình thương"
-                            width="w-[150%]"
-                          />
-                        )}
+                        {/* Render sự kiện động từ API */}
+                        {events.filter(e => e.day === dayNum).map((evt, i) => (
+                           <EventTag
+                             key={i}
+                             color={evt.color || "bg-blue-600"}
+                             title={evt.title}
+                             icon={<Flag size={10} fill="white" />}
+                           />
+                        ))}
                       </td>
                     );
                   })}
@@ -184,12 +154,9 @@ const CalendarView = ({ onSelectCampaign }) => {
             SẮP DIỄN RA
           </h4>
           <div className="space-y-5">
-            <UpcomingEvent
-              date="01"
-              month="THG 6"
-              title="Lễ Ra quân Mùa Hè Xanh"
-              time="07:00 - 11:00 • Sân A"
-            />
+            {campaigns.length === 0 && (
+               <div className="text-[11px] text-slate-400 italic">Chưa có sự kiện nào.</div>
+            )}
             {campaigns.slice(0, 2).map((camp, idx) => (
                <UpcomingEvent
                  key={`camp-${camp.id}`}

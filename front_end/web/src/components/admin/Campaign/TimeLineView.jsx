@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, ChevronRight } from "lucide-react";
+import { Calendar, ChevronRight, ChevronDown, CornerDownRight } from "lucide-react";
 import { campaignService } from "../../../services/campaignService";
 
 const TimeLineView = () => {

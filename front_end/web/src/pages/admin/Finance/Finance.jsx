@@ -10,6 +10,7 @@ import {
   Bell,
   X, // Thêm icon đóng modal
 } from "lucide-react";
+import { financeService } from "../../../services/financeService";
 
 const Finance = () => {
   // 1. STATE CHO TÌM KIẾM
@@ -18,36 +19,39 @@ const Finance = () => {
   // 2. STATE CHO MODAL NHẬP KHO
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Dữ liệu mẫu ban đầu của kho tài sản
-  const initialAssets = [
-    {
-      id: 1,
-      title: "Dàn Âm thanh Hội trường A",
-      desc: "Loa JBL PRX415M x4, Amply Crown XLi 2500",
-      status: "Đang sử dụng",
-      statusColor: "bg-red-50 text-red-600",
-      footer: "Mượn bởi: Khoa Kinh Tế",
-    },
-    {
-      id: 2,
-      title: "50 Lều trại dã chiến",
-      desc: "Lều chữ A tiêu chuẩn, cọc thép không rỉ",
-      status: "Sẵn sàng",
-      statusColor: "bg-emerald-50 text-emerald-600",
-      footer: "Kho: Hầm B2",
-    },
-    {
-      id: 3,
-      title: "Bộ cờ Đoàn - Hội",
-      desc: "Cờ vải phi bóng, cán inox 2m",
-      status: "Cần bảo trì",
-      statusColor: "bg-amber-50 text-amber-600",
-      footer: "Ghi chú: Cần thay mới 5 cán cờ bị gãy chốt.",
-    },
-  ];
+  // 2. STATE DỮ LIỆU TỪ API
+  const [assets, setAssets] = useState([]);
+  const [budgetRows, setBudgetRows] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [stats, setStats] = useState({ total: "0", used: "0", remaining: "0", assetsCount: "0", usedPercent: 0 });
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const fetchedAssets = await financeService.getAssets();
+        // Giả sử API trả về danh sách, ánh xạ sang model UI
+        const mappedAssets = fetchedAssets.map(a => ({
+          id: a.id,
+          title: a.name || 'Tài sản',
+          desc: a.description || '',
+          status: a.status === 'AVAILABLE' ? "Sẵn sàng" : "Đang sử dụng",
+          statusColor: a.status === 'AVAILABLE' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600",
+          footer: `Vị trí: ${a.storage_location || 'Kho'}`
+        }));
+        setAssets(mappedAssets);
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu tài chính:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   // 3. LOGIC LỌC TÀI SẢN
-  const filteredAssets = initialAssets.filter(
+  const filteredAssets = assets.filter(
     (asset) =>
       asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.desc.toLowerCase().includes(searchTerm.toLowerCase()),
@@ -74,11 +78,11 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* 2. STATS CARDS (Giữ nguyên như cũ) */}
+      {/* 2. STATS CARDS (API) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <StatCard
           title="Tổng Ngân sách"
-          value="2.500"
+          value={stats.total}
           unit="Tr. VNĐ"
           sub="Đã duyệt cấp"
           subColor="text-emerald-500"
@@ -86,22 +90,22 @@ const Finance = () => {
         />
         <StatCard
           title="Đã giải ngân"
-          value="1.200"
+          value={stats.used}
           unit="Tr. VNĐ"
-          progress={48}
-          sub="48% kế hoạch"
+          progress={stats.usedPercent}
+          sub={`${stats.usedPercent}% kế hoạch`}
           icon={<Coins className="text-blue-400" />}
         />
         <StatCard
           title="Quỹ tồn"
-          value="1.300"
+          value={stats.remaining}
           unit="Tr. VNĐ"
           sub="Khả dụng"
           icon={<PiggyBank className="text-emerald-400" />}
         />
         <StatCard
           title="Tài sản mượn"
-          value="15"
+          value={stats.assetsCount}
           unit="thiết bị"
           sub="Cần kiểm kê"
           subColor="text-red-500"
@@ -137,20 +141,13 @@ const Finance = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              <BudgetRow
-                name="Hội Trại 26/3"
-                actual="520tr"
-                estimate="500tr"
-                diff="-20tr"
-                status="danger"
-              />
-              <BudgetRow
-                name="Giải Bóng đá Nam"
-                actual="45tr"
-                estimate="50tr"
-                diff="+5tr"
-                status="success"
-              />
+              {budgetRows.length > 0 ? (
+                budgetRows.map((row, i) => <BudgetRow key={i} {...row} />)
+              ) : (
+                <tr>
+                  <td colSpan={4} className="text-center py-8 text-xs text-slate-400">Không có dữ liệu đối soát ngân sách.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -158,12 +155,19 @@ const Finance = () => {
           <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
             <Bell size={16} className="text-red-500" /> Yêu cầu cấp kinh phí
           </h3>
-          <RequestCard
-            dept="Khoa CNTT"
-            time="2h trước"
-            desc="Xin 5tr tổ chức Workshop AI..."
-            type="primary"
-          />
+          {requests.length > 0 ? (
+            requests.map((req, i) => (
+              <RequestCard
+                key={i}
+                dept={req.dept}
+                time={req.time}
+                desc={req.desc}
+                type="primary"
+              />
+            ))
+          ) : (
+             <div className="text-center py-8 text-xs text-slate-400">Không có yêu cầu nào.</div>
+          )}
         </div>
       </div>
 

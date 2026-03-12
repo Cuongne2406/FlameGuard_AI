@@ -21,7 +21,8 @@ from app.api.v1.endpoints import (
     documents,
     notifications,
     settings,
-    system
+    system,
+    public
 )
 
 api_router = APIRouter()
@@ -57,5 +58,6 @@ api_router.include_router(audit_logs.router, prefix="/audit-logs", tags=["System
 api_router.include_router(awards.router, prefix="/awards", tags=["Awards"])
 api_router.include_router(documents.router, prefix="/digital-documents", tags=["Digital Documents"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
-api_router.include_router(settings.router, prefix="/settings", tags=["System Settings"])
-api_router.include_router(system.router, prefix="/system", tags=["System Dashboard"])
+api_router.include_router(settings.router, prefix="/settings", tags=["Settings"])
+api_router.include_router(system.router, prefix="/system", tags=["System"])
+api_router.include_router(public.router, prefix="/public", tags=["Public Data"])

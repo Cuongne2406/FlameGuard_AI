@@ -26,32 +26,7 @@ const SubAdminClubs = () => {
         fetchClubs();
     }, []);
 
-    const [proposals, setProposals] = useState([
-        {
-            id: 'p1',
-            title: 'CLB AI: Xin bảo trợ chuyên môn cho cuộc thi Hackathon',
-            user: 'Trần Văn Code',
-            time: '2 giờ trước',
-            icon: 'smart_toy',
-            status: 'pending',
-        },
-        {
-            id: 'p2',
-            title: 'Đội Văn nghệ: Xin hỗ trợ 2.000.000đ thuê âm thanh',
-            user: 'Lê Thị Hát',
-            time: '1 ngày trước',
-            icon: 'music_note',
-            status: 'pending',
-        },
-        {
-            id: 'p3',
-            title: 'CLB AI: Đề xuất tổ chức buổi offline tháng 12',
-            user: 'Trần Văn Code',
-            time: '3 ngày trước',
-            icon: 'smart_toy',
-            status: 'approved',
-        },
-    ]);
+    const [proposals, setProposals] = useState([]);
 
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showManageModal, setShowManageModal] = useState(false);

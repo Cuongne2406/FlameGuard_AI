@@ -14,30 +14,37 @@ import {
   Award,
   X, // Thêm icon đóng modal
 } from "lucide-react";
+import { awardService } from "../../../services/awardService";
 
 const Awards = () => {
   // --- BỔ SUNG STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [criteria, setCriteria] = useState([
-    {
-      label: "Chiến dịch Mùa Hè Xanh",
-      points: "+20 đ",
-      color: "bg-emerald-50 text-emerald-600",
-      icon: <Plus size={14} />,
-    },
-    {
-      label: "Hiến máu tình nguyện",
-      points: "+15 đ",
-      color: "bg-blue-50 text-blue-600",
-      icon: <Plus size={14} />,
-    },
-    {
-      label: "Trễ họp Giao ban",
-      points: "-5 đ",
-      color: "bg-red-50 text-red-600",
-      icon: <Minus size={14} />,
-    },
-  ]);
+  const [criteria, setCriteria] = useState([]);
+  const [rankings, setRankings] = useState([]);
+  const [candidates, setCandidates] = useState([]);
+  const [stats, setStats] = useState({ remainingDays: '0', submitted: '0', approved: '0', passRate: '0%' });
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const awardsData = await awardService.getAwardsList();
+        const statsData = await awardService.getAwardStats('all');
+        
+        // Cập nhật bằng dữ liệu API khi có backend thực tế
+        setCandidates(awardsData || []);
+        setRankings(statsData?.rankings || []);
+        // Nếu API trả về stats chi tiết:
+        // setStats(statsData?.stats || { remainingDays: '0', submitted: '0', ... })
+      } catch (err) {
+        console.error("Lỗi khi tải dữ liệu khen thưởng:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 relative">
@@ -78,13 +85,13 @@ const Awards = () => {
           </div>
 
           <div className="flex items-center gap-10">
-            <SummaryItem label="Ngày còn lại" value="03" />
+            <SummaryItem label="Ngày còn lại" value={stats.remainingDays} />
             <div className="w-px h-12 bg-white/20"></div>
-            <SummaryItem label="Hồ sơ đã nộp" value="1,200" />
+            <SummaryItem label="Hồ sơ đã nộp" value={stats.submitted} />
             <div className="w-px h-12 bg-white/20"></div>
-            <SummaryItem label="Đã duyệt" value="850" />
+            <SummaryItem label="Đã duyệt" value={stats.approved} />
             <div className="w-px h-12 bg-white/20"></div>
-            <SummaryItem label="Tỷ lệ đạt" value="70%" />
+            <SummaryItem label="Tỷ lệ đạt" value={stats.passRate} />
           </div>
         </div>
       </div>
@@ -112,30 +119,13 @@ const Awards = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                <RankRow
-                  rank={1}
-                  name="Khoa CNTT"
-                  score="15,400"
-                  trend="+12%"
-                  trendIcon={<TrendingUp size={12} />}
-                  trendColor="text-emerald-500 bg-emerald-50"
-                />
-                <RankRow
-                  rank={2}
-                  name="Khoa Kinh Tế"
-                  score="14,200"
-                  trend="Stable"
-                  trendIcon={<Minus size={12} />}
-                  trendColor="text-slate-400 bg-slate-50"
-                />
-                <RankRow
-                  rank={3}
-                  name="Khoa Ngôn Ngữ"
-                  score="13,800"
-                  trend="-5%"
-                  trendIcon={<TrendingDown size={12} />}
-                  trendColor="text-red-500 bg-red-50"
-                />
+                {rankings.length > 0 ? (
+                  rankings.map((r, i) => <RankRow key={i} {...r} />)
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="text-center py-6 text-xs text-slate-400">Không có dữ liệu thi đua.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -176,20 +166,11 @@ const Awards = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <CandidateCard
-            name="Nguyễn Văn A"
-            id="MSSV: 20110392"
-            unit="Khoa CNTT"
-            status="Chờ bổ sung"
-            statusColor="bg-amber-50 text-amber-600"
-          />
-          <CandidateCard
-            name="Trần Thị B"
-            id="MSSV: 20139012"
-            unit="Khoa Kinh Tế"
-            status="Đủ điều kiện"
-            statusColor="bg-emerald-50 text-emerald-600"
-          />
+          {candidates.length > 0 ? (
+            candidates.map((c, i) => <CandidateCard key={i} {...c} />)
+          ) : (
+            <div className="col-span-2 text-center py-6 text-xs text-slate-400">Không có ứng viên nào đang chờ duyệt.</div>
+          )}
         </div>
       </div>
 

@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import { Calendar, MapPin, Users } from "lucide-react";
 import { publicService } from "../../services/publicService";
 
-const ActivityCard = ({ title, date, location, status, participants }) => (
+const ActivityCard = ({ title, date, location, status, participants, image_url }) => (
   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
     <div className="h-40 bg-slate-200 relative">
       <img
-        src={`https://picsum.photos/seed/${title}/500/300`}
+        src={image_url || "https://images.unsplash.com/photo-1540317580384-e5d43867caa6?auto=format&fit=crop&q=80"}
         className="w-full h-full object-cover"
+        alt={title}
       />
       <span
         className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold text-white ${status === "Sắp diễn ra" ? "bg-green-500" : "bg-blue-500"}`}
@@ -77,6 +78,7 @@ const Activities = () => {
                 location={activity.location}
                 status={activity.status}
                 participants={activity.participants}
+                image_url={activity.image_url}
               />
             ))
           ) : (

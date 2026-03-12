@@ -8,46 +8,14 @@ const EventFeedbackAnalysis = () => {
     const [toast, setToast] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
 
-    const stats = [
-        { label: 'Mức độ hài lòng', val: '4.8', total: '/ 5.0', sub: 'Dựa trên 350 lượt đánh giá', icon: 'star', color: 'orange' },
-    ];
+    const [stats, setStats] = useState([]);
+    const [sentiment, setSentiment] = useState([]);
+    const [keywords, setKeywords] = useState([]);
+    const [feedbacks, setFeedbacks] = useState([]);
 
-    const sentiment = [
-        { label: 'Tích cực', value: '85%', color: 'emerald', count: 300 },
-        { label: 'Trung lập', value: '10%', color: 'orange', count: 35 },
-        { label: 'Tiêu cực', value: '5%', color: 'rose', count: 15 },
-    ];
-
-    const keywords = [
-        { text: 'Diễn giả hay', color: 'emerald', size: 'text-2xl font-bold' },
-        { text: 'Quà tặng xịn', color: 'emerald', size: 'text-xl font-bold' },
-        { text: 'Kiến thức thực tế', color: 'emerald', size: 'text-lg font-bold' },
-        { text: 'MC Vui tính', color: 'emerald', size: 'text-base font-bold' },
-        { text: 'Đồ ăn ngon', color: 'emerald', size: 'text-sm font-bold' },
-        { text: 'Wifi yếu', color: 'rose', size: 'text-xl font-bold' },
-        { text: 'Hội trường nóng', color: 'rose', size: 'text-lg font-bold' },
-        { text: 'Check-in lâu', color: 'rose', size: 'text-base font-bold' },
-        { text: 'Âm thanh rè', color: 'rose', size: 'text-sm font-bold' },
-    ];
-
-    const feedbacks = [
-        {
-            user: '[Ẩn danh] (Khóa 23)',
-            avatar: '👤',
-            time: '2 giờ trước',
-            content: 'Đăng ký trên App rất nhanh nhưng khi đến hội trường Wifi lại không load được mã QR để điểm danh. Mong Khoa hỗ trợ thêm thiết bị phát.',
-            tags: ['#HạTầng', '#Wifi'],
-            type: 'negative'
-        },
-        {
-            user: 'Nguyễn Văn A',
-            avatar: 'NA',
-            time: '1 ngày trước',
-            content: 'Nội dung hội thảo rất hay, đặc biệt phần về AI ứng dụng.',
-            tags: ['#NộiDung', '#AI'],
-            type: 'positive'
-        }
-    ];
+    useEffect(() => {
+        // Placeholder for fetching feedback analysis from API
+    }, [id]);
 
     const filteredFeedbacks = activeTab === 'all' ? feedbacks :
                               activeTab === 'positive' ? feedbacks.filter(f => f.type === 'positive') :
@@ -100,7 +68,7 @@ const EventFeedbackAnalysis = () => {
                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">PHÂN TÍCH CẢM XÚC</p>
                         <div className="flex items-center justify-between gap-6">
                             <div className="space-y-4 flex-1">
-                                {sentiment.map(s => (
+                                {sentiment.length > 0 ? sentiment.map(s => (
                                     <div key={s.label} className="flex items-center justify-between group">
                                         <div className="flex items-center gap-3">
                                             <div className={`h-2 w-2 rounded-full bg-${s.color}-500`}></div>
@@ -108,7 +76,7 @@ const EventFeedbackAnalysis = () => {
                                         </div>
                                         <p className="text-xs font-bold text-slate-900 tracking-tighter">{s.value}</p>
                                     </div>
-                                ))}
+                                )) : <p className="text-sm text-slate-400 italic">Chưa có dữ liệu cảm xúc.</p>}
                             </div>
                             <div className="relative h-40 w-40 flex items-center justify-center">
                                 {/* Mock Donut Chart */}
@@ -119,7 +87,7 @@ const EventFeedbackAnalysis = () => {
                                 </svg>
                                 <div className="absolute flex flex-col items-center">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</p>
-                                    <p className="text-xl font-bold text-slate-900">350</p>
+                                    <p className="text-xl font-bold text-slate-900">0</p>
                                 </div>
                             </div>
                         </div>
@@ -139,7 +107,7 @@ const EventFeedbackAnalysis = () => {
                             <p className="text-xs font-bold uppercase tracking-widest">AI STRATEGIC SUMMARY</p>
                         </div>
                         <p className="text-xl font-bold leading-relaxed">
-                            "Dựa trên 350 phản hồi, sinh viên cực kỳ hứng thú với các cuộc thi học thuật có giải thưởng (+45%). Tuy nhiên, cần cải thiện hạ tầng Wifi tại Hội trường A để nâng cao trải nghiệm thực tế."
+                            "Chưa có tóm tắt đánh giá từ AI do chưa có dữ liệu đầu vào."
                         </p>
                         <div className="mt-auto space-y-4">
                             <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/10">

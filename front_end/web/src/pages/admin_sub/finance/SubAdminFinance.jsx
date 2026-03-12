@@ -21,6 +21,7 @@ const SubAdminFinance = () => {
 
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [statsData, setStatsData] = useState({ totalFund: 0, totalIncome: 0, totalExpense: 0 });
 
     useEffect(() => {
         const fetchTransactions = async () => {
@@ -36,10 +37,6 @@ const SubAdminFinance = () => {
         };
         fetchTransactions();
     }, []);
-
-    const totalFund = 50500000;
-    const totalIncome = 2500000;
-    const totalExpense = 1500000;
 
     const filteredTransactions = transactions.filter(t => {
         if (activeTab === 'Tất cả') return true;
@@ -134,7 +131,7 @@ const SubAdminFinance = () => {
                     <div className="flex justify-between items-start">
                         <div className="space-y-2 lg:space-y-4">
                             <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">TỔNG QUỸ HIỆN CÓ</p>
-                            <p className="text-2xl lg:text-4xl font-bold text-emerald-600 tracking-tighter">{totalFund.toLocaleString()}</p>
+                            <p className="text-2xl lg:text-4xl font-bold text-emerald-600 tracking-tighter">{statsData.totalFund.toLocaleString()}</p>
                             <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">VNĐ</p>
                         </div>
                         <div className="h-8 w-8 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -144,11 +141,11 @@ const SubAdminFinance = () => {
                     <div className="grid grid-cols-2 gap-2 lg:gap-4 pt-3 lg:pt-6 border-t border-slate-50">
                         <div>
                             <p className="text-[8px] lg:text-xs font-bold text-slate-300 uppercase">Thu</p>
-                            <p className="text-xs lg:text-sm font-bold text-slate-900 mt-1">+{totalIncome.toLocaleString()}</p>
+                            <p className="text-xs lg:text-sm font-bold text-slate-900 mt-1">+{statsData.totalIncome.toLocaleString()}</p>
                         </div>
                         <div className="text-right">
                             <p className="text-[8px] lg:text-xs font-bold text-slate-300 uppercase">Chi</p>
-                            <p className="text-xs lg:text-sm font-bold text-slate-900 mt-1">-{totalExpense.toLocaleString()}</p>
+                            <p className="text-xs lg:text-sm font-bold text-slate-900 mt-1">-{statsData.totalExpense.toLocaleString()}</p>
                         </div>
                     </div>
                 </div>

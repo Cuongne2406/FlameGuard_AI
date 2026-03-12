@@ -12,6 +12,20 @@ from app.services import event_service
 
 router = APIRouter()
 
+@router.get("/stats")
+def get_event_stats(db: Session = Depends(get_db)):
+    # Mock stats data to unblock frontend
+    return {
+        "totalEvents": 45,
+        "upcomingEvents": 12,
+        "liveEvents": 3,
+        "endedEvents": 30,
+        "totalParticipants": 1500,
+        "participantTarget": 2000,
+        "totalFeedback": 450,
+        "avgRating": 4.8
+    }
+
 # ==========================================
 # Event Endpoints
 # ==========================================

@@ -14,16 +14,24 @@ const SubAdminClasses = () => {
     const [showAddModal, setShowAddModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [classes, setClasses] = useState([]);
+    const [statsData, setStatsData] = useState({ totalClasses: '0', alertClasses: '0', feePercent: '0', totalStudents: '0' });
 
     useEffect(() => {
         const fetchClasses = async () => {
             try {
-                const data = await organizationService.getOrganizations('CLASS');
-                // The mock data format from service has UI-specific fields. 
-                // We'll trust the service fallback gives us nicely formatted objects for now.
-                // In a mature integration we would map standard Organization fields to UI ones:
-                // e.g., name -> data.name, leader -> data.leader_name or similar.
+                const [data, statsRes] = await Promise.all([
+                    organizationService.getOrganizations('CLASS'),
+                    organizationService.getOrgStats()
+                ]);
                 setClasses(data);
+                if (statsRes) {
+                    setStatsData({
+                        totalClasses: statsRes.totalClasses || '0',
+                        alertClasses: statsRes.alertClasses || '0',
+                        feePercent: statsRes.feePercent || '0',
+                        totalStudents: statsRes.totalStudents || '0'
+                    });
+                }
             } catch (err) {
                 console.error("Failed to fetch classes:", err);
             } finally {
@@ -54,10 +62,10 @@ const SubAdminClasses = () => {
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
     const stats = [
-        { label: 'Tổng Chi đoàn', val: '20', sub: '100% đã có BCH', icon: 'corporate_fare', color: 'blue' },
-        { label: 'Cảnh báo Rủi ro', val: '02 Lớp', sub: 'Cần theo dõi sát sao', icon: 'warning', color: 'rose' },
-        { label: 'Thu Đoàn phí', val: '92%', sub: 'Còn 3.5tr chưa thu', icon: 'payments', color: 'emerald' },
-        { label: 'Tổng Sinh viên', val: '1,500', sub: 'Active App 98%', icon: 'groups', color: 'blue', isBadge: true },
+        { label: 'Tổng Chi đoàn', val: statsData.totalClasses, sub: '', icon: 'corporate_fare', color: 'blue' },
+        { label: 'Cảnh báo Rủi ro', val: `${statsData.alertClasses} Lớp`, sub: '', icon: 'warning', color: 'rose' },
+        { label: 'Thu Đoàn phí', val: `${statsData.feePercent}%`, sub: '', icon: 'payments', color: 'emerald' },
+        { label: 'Tổng Sinh viên', val: statsData.totalStudents, sub: '', icon: 'groups', color: 'blue', isBadge: true },
     ];
 
     // Lọc dữ liệu

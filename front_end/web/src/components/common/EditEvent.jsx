@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
+import { eventService } from '../../services/eventService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Toggle from '../ui/Toggle';
@@ -39,18 +40,26 @@ const EditEvent = ({ isOpen, onClose, event, onSuccess }) => {
     const [previewUrl, setPreviewUrl] = useState('');
     const [additionalFieldInput, setAdditionalFieldInput] = useState('');
     const [showAdditionalFields, setShowAdditionalFields] = useState(false);
-    const [availableLocations] = useState([
-        { id: 'hall_a', name: 'Hội trường A', capacity: 500, schedule: 'free' },
-        { id: 'hall_b', name: 'Hội trường B', capacity: 300, schedule: 'busy' },
-        { id: 'room_c302', name: 'Phòng C.302', capacity: 80, schedule: 'free' },
-        { id: 'room_c303', name: 'Phòng C.303', capacity: 60, schedule: 'free' },
-    ]);
+    const [availableLocations, setAvailableLocations] = useState([]);
     const [locationCheck, setLocationCheck] = useState(null);
-    const [certificateTemplates] = useState([
-        { id: 'blue', name: 'Học thuật - Blue Theme', color: 'blue', image: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=200&q=80' },
-        { id: 'red', name: 'Văn thể - Red Theme', color: 'rose', image: 'https://images.unsplash.com/photo-1557683311-eac922347aa1?w=200&q=80' },
-        { id: 'green', name: 'Tình nguyện - Green Theme', color: 'emerald', image: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=200&q=80' },
-    ]);
+    const [certificateTemplates, setCertificateTemplates] = useState([]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const fetchFormData = async () => {
+            try {
+                const [locs, temps] = await Promise.all([
+                    eventService.getLocations(),
+                    eventService.getTemplates()
+                ]);
+                setAvailableLocations(locs?.data || locs || []);
+                setCertificateTemplates(temps?.data || temps || []);
+            } catch (err) {
+                console.error("Failed to fetch event form data:", err);
+            }
+        };
+        fetchFormData();
+    }, [isOpen]);
 
     // Load dữ liệu sự kiện vào form khi mở modal
     useEffect(() => {

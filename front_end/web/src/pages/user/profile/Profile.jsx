@@ -24,17 +24,32 @@ import {
   Clock,
 } from "lucide-react";
 
+import { userService } from "../../../services/userService";
+
 const Profile = () => {
   const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const [skillData, setSkillData] = useState([]);
+  const [recentCertificates, setRecentCertificates] = useState([]);
+  const [experiences, setExperiences] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const skillData = [
-    { subject: "Tình nguyện", A: 100, fullMark: 100 },
-    { subject: "Hội nhập", A: 75, fullMark: 100 },
-    { subject: "Học tập", A: 85, fullMark: 100 },
-    { subject: "Thể lực", A: 40, fullMark: 100 },
-    { subject: "Đạo đức", A: 90, fullMark: 100 },
-  ];
+  useEffect(() => {
+    const fetchProfileStats = async () => {
+      try {
+        const data = await userService.getProfileStats();
+        setSkillData(data.skills || []);
+        setRecentCertificates(data.recent_certificates || []);
+        setExperiences(data.experiences || []);
+      } catch (err) {
+        console.error("Failed to fetch profile stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfileStats();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50/50 p-3 md:p-8 font-sans relative">
@@ -131,18 +146,18 @@ const Profile = () => {
               Chứng nhận mới
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <h5 className="font-black text-xs uppercase">
-                  Giải Nhất Hackathon 2026
-                </h5>
-                <p className="text-[10px] text-slate-500">Tháng 02/2026</p>
-              </div>
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <h5 className="font-black text-xs uppercase">
-                  Cán bộ Đoàn tiêu biểu
-                </h5>
-                <p className="text-[10px] text-slate-500">2024 - 2025</p>
-              </div>
+              {recentCertificates.length > 0 ? (
+                 recentCertificates.map(cert => (
+                    <div key={cert.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <h5 className="font-black text-xs uppercase">
+                        {cert.title}
+                      </h5>
+                      <p className="text-[10px] text-slate-500">{cert.time}</p>
+                    </div>
+                 ))
+              ) : (
+                 <div className="col-span-full text-[10px] text-slate-400 font-bold">Chưa có chứng nhận nào.</div>
+              )}
             </div>
           </div>
         </div>
@@ -216,26 +231,30 @@ const Profile = () => {
                       Kinh nghiệm & Hoạt động
                     </h4>
                     <div className="space-y-4">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h5 className="font-bold text-xs uppercase">
-                            Trưởng BTC IT Tech Day
-                          </h5>
-                          <span className="text-[10px] text-slate-400">
-                            03/2026 - Hiện tại
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-500 italic">
-                          Đại học Lạc Hồng, Đồng Nai
-                        </p>
-                        <ul className="list-disc ml-4 mt-1 text-[10px] text-slate-600 space-y-1">
-                          <li>Lãnh đạo nhóm 20 thành viên nòng cốt.</li>
-                          <li>
-                            Tổ chức thành công sự kiện công nghệ quy mô 500 sinh
-                            viên tham gia.
-                          </li>
-                        </ul>
-                      </div>
+                      {experiences.length > 0 ? (
+                         experiences.map(exp => (
+                            <div key={exp.id}>
+                              <div className="flex justify-between items-start">
+                                <h5 className="font-bold text-xs uppercase">
+                                  {exp.role}
+                                </h5>
+                                <span className="text-[10px] text-slate-400">
+                                  {exp.period}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 italic">
+                                {exp.location}
+                              </p>
+                              <ul className="list-disc ml-4 mt-1 text-[10px] text-slate-600 space-y-1">
+                                {exp.bullets?.map((bull, i) => (
+                                   <li key={i}>{bull}</li>
+                                ))}
+                              </ul>
+                            </div>
+                         ))
+                      ) : (
+                         <div className="text-[10px] text-slate-400">Chưa có kinh nghiệm hoạt động nổi bật.</div>
+                      )}
                     </div>
                   </div>
                   {/* Awards */}
@@ -243,18 +262,26 @@ const Profile = () => {
                     <h4 className="text-blue-600 font-black text-xs uppercase mb-3">
                       Thành tích nổi bật
                     </h4>
-                    <div className="flex justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                      <div>
-                        <h5 className="font-bold text-[11px]">
-                          Giải Nhất Hackathon 2026
-                        </h5>
-                        <p className="text-[10px] text-slate-500">
-                          Cấp Trường - Tháng 02/2026
-                        </p>
-                      </div>
-                      <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
-                        <Globe size={14} className="text-slate-300" />
-                      </div>
+                    <div className="space-y-3">
+                      {recentCertificates.length > 0 ? (
+                         recentCertificates.map(cert => (
+                            <div key={`cv-cert-${cert.id}`} className="flex justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                              <div>
+                                <h5 className="font-bold text-[11px]">
+                                  {cert.title}
+                                </h5>
+                                <p className="text-[10px] text-slate-500">
+                                  {cert.time}
+                                </p>
+                              </div>
+                              <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
+                                <Globe size={14} className="text-slate-300" />
+                              </div>
+                            </div>
+                         ))
+                      ) : (
+                         <div className="text-[10px] text-slate-400">Chưa có thành tích nổi bật.</div>
+                      )}
                     </div>
                   </div>
                 </div>

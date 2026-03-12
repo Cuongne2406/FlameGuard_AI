@@ -1,9 +1,16 @@
 import { apiClient } from './apiClient';
 
 export const financeService = {
+  getAssets: async () => {
+    try {
+      const res = await apiClient('/assets');
+      return Array.isArray(res) ? res : [];
+    } catch { return []; }
+  },
+
   getTransactions: async () => {
     try {
-      const res = await apiClient('/fund-requests');
+      const res = await apiClient('/users/me/wallet_transactions');
       return Array.isArray(res) ? res : [];
     } catch { return []; }
   },

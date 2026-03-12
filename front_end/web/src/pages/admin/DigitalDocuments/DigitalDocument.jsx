@@ -16,16 +16,20 @@ import {
 } from "lucide-react";
 
 const DigitalDocument = () => {
-  // --- PHẦN BỔ SUNG: STATE QUẢN LÝ MODAL ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [docs, setDocs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({ incoming: '0', outgoing: '0', pending: '0' });
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   useEffect(() => {
     const fetchDocs = async () => {
        try {
          const data = await documentService.getDocuments();
+         const statsData = await documentService.getStats();
          setDocs(data || []);
+         if (data && data.length > 0) setSelectedDoc(data[0]);
+         if (statsData) setStats(statsData);
        } catch (err) {
          console.error('Failed to fetch admin docs:', err);
        }
@@ -68,20 +72,20 @@ const DigitalDocument = () => {
         <div className="grid grid-cols-3 gap-4">
           <StatBox
             label="CÔNG VĂN ĐẾN"
-            count="15"
-            unread="3 unread"
+            count={stats.incoming || "0"}
+            unread=""
             color="text-blue-600"
             icon={<FileText size={16} />}
           />
           <StatBox
             label="CÔNG VĂN ĐI"
-            count="120"
+            count={stats.outgoing || "0"}
             color="text-emerald-500"
             icon={<Send size={16} />}
           />
           <StatBox
             label="CHỜ KÝ DUYỆT"
-            count="5"
+            count={stats.pending || "0"}
             color="text-orange-500"
             icon={<Clock size={16} />}
           />
@@ -133,9 +137,10 @@ const DigitalDocument = () => {
                       key={doc.id || idx}
                       id={doc.code || `DOC-${doc.id}`}
                       date={new Date(doc.created_at || Date.now()).toLocaleDateString()}
-                      title={doc.title || doc.name}
+                      title={doc.title || doc.name || 'Văn bản không tên'}
                       target={doc.target || 'Toàn trường'}
-                      active={idx === 0}
+                      active={selectedDoc?.id === doc.id}
+                      onClick={() => setSelectedDoc(doc)}
                     />
                 )) : (
                   <tr><td colSpan="5" className="text-center p-8 text-slate-400">Không có văn bản nào</td></tr>
@@ -146,96 +151,91 @@ const DigitalDocument = () => {
         </div>
       </div>
 
-      {/* CỘT PHẢI: XEM TRƯỚC VĂN BẢN (35%) - Giữ nguyên logic của bạn */}
+      {/* CỘT PHẢI: XEM TRƯỚC VĂN BẢN (35%) */}
       <div className="w-[35%] bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <div className="bg-red-50 text-red-600 p-1.5 rounded-lg shrink-0">
-              <FileText size={14} />
+        {selectedDoc ? (
+          <>
+            {/* Thanh công cụ xem trước */}
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="bg-red-50 text-red-600 p-1.5 rounded-lg shrink-0">
+                  <FileText size={14} />
+                </div>
+                <span className="text-[11px] font-bold text-slate-700 truncate min-w-[50px]">
+                  {selectedDoc.code || `DOC-${selectedDoc.id}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                  <Download size={14} />
+                </button>
+                <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
+                  <Printer size={14} />
+                </button>
+                <button className="p-2 hover:bg-red-50 rounded-lg text-red-400" onClick={() => setSelectedDoc(null)}>
+                  <X size={14} />
+                </button>
+              </div>
             </div>
-            <span className="text-[11px] font-bold text-slate-700 truncate">
-              KH-102-DTN_KeHoachHoi...
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-              <Download size={14} />
-            </button>
-            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-              <Printer size={14} />
-            </button>
-            <button className="p-2 hover:bg-red-50 rounded-lg text-red-400">
-              <X size={14} />
-            </button>
-          </div>
-        </div>
 
-        {/* Status Tracker */}
-        <div className="absolute top-16 right-4 left-4 z-20 bg-white/95 backdrop-blur-sm border border-slate-200 p-4 rounded-xl shadow-xl space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">
-              Trạng thái theo dõi
-            </span>
-            <span className="text-[10px] font-black text-blue-600">
-              8/10 Khoa đã xem
-            </span>
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-blue-600 h-full w-[80%]"></div>
-          </div>
-          <div className="flex items-center gap-2 text-[10px] text-red-500 font-bold bg-red-50 p-2 rounded-lg">
-            <AlertCircle size={12} /> Khoa Xây Dựng chưa xem văn bản này
-          </div>
-        </div>
+            {/* Status Tracker */}
+            <div className="absolute top-16 right-4 left-4 z-20 bg-white/95 backdrop-blur-sm border border-slate-200 p-4 rounded-xl shadow-xl space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                  Trạng thái theo dõi
+                </span>
+                <span className="text-[10px] font-black text-blue-600">
+                  0/10 Khoa đã xem
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full w-[0%]"></div>
+              </div>
+            </div>
 
-        <div className="flex-1 overflow-auto p-8 bg-slate-200/50">
-          <div className="bg-white w-full min-h-[800px] shadow-lg p-10 flex flex-col gap-6 relative">
-            <div className="flex justify-between items-start text-[10px] font-bold text-slate-800">
-              <div className="text-center">
-                ĐOÀN TNCS HỒ CHÍ MINH
-                <br />
-                TRƯỜNG ĐH KỸ THUẬT
-                <br />
-                ***
-              </div>
-              <div className="text-center underline">
-                CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-                <br />
-                Độc lập - Tự do - Hạnh phúc
+            <div className="flex-1 overflow-auto p-8 bg-slate-200/50 pt-24">
+              <div className="bg-white w-full min-h-[800px] shadow-lg p-10 flex flex-col gap-6 relative">
+                <div className="flex justify-between items-start text-[10px] font-bold text-slate-800">
+                  <div className="text-center">
+                    ĐOÀN TNCS HỒ CHÍ MINH
+                    <br />
+                    TRƯỜNG ĐH KỸ THUẬT
+                    <br />
+                    ***
+                  </div>
+                  <div className="text-center underline">
+                    CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                    <br />
+                    Độc lập - Tự do - Hạnh phúc
+                  </div>
+                </div>
+                <div className="text-center mt-10">
+                  <h3 className="text-sm font-black text-slate-900">{selectedDoc.document_type || "VĂN BẢN"}</h3>
+                  <p className="text-[11px] font-bold text-slate-700 uppercase">
+                    {selectedDoc.title || selectedDoc.name || 'Không có tiêu đề'}
+                  </p>
+                </div>
+                <div className="space-y-4 text-[11px] leading-relaxed text-slate-600">
+                  <p>{selectedDoc.content || "Chưa có nội dung chi tiết."}</p>
+                </div>
+                <div className="absolute bottom-20 right-10 rotate-[-10deg] opacity-80 border-4 border-red-500 p-2 rounded-xl text-center select-none pointer-events-none">
+                  <div className="text-red-500 font-black text-[10px] uppercase">
+                    Ký bởi: LÊ TRỌNG PHÚC HẬU
+                  </div>
+                  <div className="text-red-500 font-bold text-[8px]">
+                    Ngày: 24/03/2026 08:30:15
+                  </div>
+                  <CheckCircle className="mx-auto mt-1 text-red-500" size={16} />
+                </div>
               </div>
             </div>
-            <div className="text-center mt-10">
-              <h3 className="text-sm font-black text-slate-900">KẾ HOẠCH</h3>
-              <p className="text-[11px] font-bold text-slate-700 uppercase">
-                Tổ chức Hội trại Truyền thống 26/3
-              </p>
-            </div>
-            <div className="space-y-4 text-[11px] leading-relaxed text-slate-600">
-              <p>
-                Căn cứ Chương trình công tác Đoàn và phong trào thanh niên năm
-                học 2025 - 2026...
-              </p>
-              <p>
-                Thiết thực chào mừng kỷ niệm 95 năm ngày thành lập Đoàn TNCS Hồ
-                Chí Minh (26/3/1931 - 26/3/2026)...
-              </p>
-              <p>
-                <strong>I. MỤC ĐÍCH - YÊU CẦU:</strong>
-                <br />
-                1. Tạo sân chơi lành mạnh, bổ ích cho đoàn viên, thanh niên...
-              </p>
-            </div>
-            <div className="absolute bottom-20 right-10 rotate-[-10deg] opacity-80 border-4 border-red-500 p-2 rounded-xl text-center select-none pointer-events-none">
-              <div className="text-red-500 font-black text-[10px] uppercase">
-                Ký bởi: LÊ TRỌNG PHÚC HẬU
-              </div>
-              <div className="text-red-500 font-bold text-[8px]">
-                Ngày: 24/03/2026 08:30:15
-              </div>
-              <CheckCircle className="mx-auto mt-1 text-red-500" size={16} />
-            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center flex-col gap-4 text-slate-400 p-6 text-center bg-slate-50/50">
+            <FileText size={48} className="text-slate-300" />
+            <p className="text-sm font-bold">Chọn một văn bản để xem chi tiết</p>
           </div>
-        </div>
+        )}
 
         <div className="p-4 border-t border-slate-100 flex gap-2">
           <button className="flex-1 py-2 rounded-xl text-[11px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100">
@@ -377,8 +377,9 @@ const StatBox = ({ label, count, unread, color, icon }) => (
   </div>
 );
 
-const DocRow = ({ id, date, title, target, active }) => (
+const DocRow = ({ id, date, title, target, active, onClick }) => (
   <tr
+    onClick={onClick}
     className={`group transition-all cursor-pointer ${active ? "bg-blue-50/40" : "hover:bg-slate-50"}`}
   >
     <td

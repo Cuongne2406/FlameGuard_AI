@@ -102,7 +102,7 @@ const ListView = () => {
               filteredActivities.map((activity) => (
                 <React.Fragment key={activity.id}>
                   <ParentRow {...activity} />
-                  {activity.subActivities.map((sub) => (
+                  {activity.subActivities?.map((sub) => (
                     <SubRow key={sub.id} {...sub} />
                   ))}
                 </React.Fragment>

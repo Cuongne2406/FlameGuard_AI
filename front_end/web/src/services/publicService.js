@@ -54,16 +54,7 @@ export const publicService = {
 
   getActivities: async () => {
     try {
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve([
-            { id: 1, title: "Chiến dịch Xuân tình nguyện 2026", date: "15/01/2026", location: "Huyện Định Quán", status: "Sắp diễn ra", participants: "200" },
-            { id: 2, title: "Giải chạy S-Race Sinh viên khỏe", date: "20/02/2026", location: "Sân vận động trường", status: "Đang diễn ra", participants: "500" },
-            { id: 3, title: "Hiến máu tình nguyện đợt 1", date: "25/03/2026", location: "Nhà thi đấu", status: "Sắp diễn ra", participants: "300" },
-            { id: 4, title: "Cuộc thi Olympic Tiếng Anh", date: "10/04/2026", location: "Hội trường A", status: "Đã kết thúc", participants: "150" }
-          ]);
-        }, 300);
-      });
+      return await apiClient('/public/activities');
     } catch (error) {
       console.error('Error fetching public activities:', error);
       return [];
@@ -93,19 +84,7 @@ export const publicService = {
 
   getNews: async () => {
     try {
-      // return await apiClient('/public/news');
-
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          resolve([
-            { id: 1, title: 'Lễ ra quân Chiến dịch Tình nguyện Hè 2024: Nhiệt huyết tuổi trẻ', image: 'https://picsum.photos/800/400', date: '21/05/2024', views: 2400, category: 'Tiêu điểm', isFeatured: true },
-            { id: 2, title: 'Chương trình "Áo ấm cho em" tại vùng cao 2024', image: 'https://picsum.photos/seed/2/400/250', date: '20/05/2024', views: 1200, category: 'Hoạt động', isFeatured: false },
-            { id: 3, title: 'Tọa đàm: Kỹ năng quản lý thời gian hiệu quả', image: 'https://picsum.photos/seed/3/400/250', date: '18/05/2024', views: 850, category: 'Học thuật', isFeatured: false },
-            { id: 4, title: 'Kết quả giải bóng đá nam truyền thống 2024', image: 'https://picsum.photos/seed/4/400/250', date: '15/05/2024', views: 3200, category: 'Thể thao', isFeatured: false },
-            { id: 5, title: 'Tuyển dụng CTV Ban Truyền thông nhiệm kỳ mới', image: 'https://picsum.photos/seed/5/400/250', date: '12/05/2024', views: 950, category: 'Thông báo', isFeatured: false }
-          ]);
-        }, 300);
-      });
+      return await apiClient('/public/news');
     } catch (error) {
        console.error('Error fetching news:', error);
        return [];

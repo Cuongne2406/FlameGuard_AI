@@ -1,65 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import { eventService } from '../../../services/eventService';
+import { financeService } from '../../../services/financeService';
 
 const SubAdminApprovals = () => {
     const [toast, setToast] = useState(null);
     const [activeTab, setActiveTab] = useState('Queue'); // 'Queue' hoặc 'Repo'
     const [searchTerm, setSearchTerm] = useState('');
 
-    // State cho các yêu cầu (Queue)
-    const [queueItems, setQueueItems] = useState([
-        {
-            id: 'req1',
-            type: 'finance',
-            title: 'Xin quyết toán kinh phí',
-            sender: 'Chi đoàn 23CT112',
-            subject: 'Quyết toán chiến dịch Mùa Hè Xanh mặt trận 1',
-            amount: '2.500.000 VNĐ',
-            file: 'Hoa_don_do_scan.pdf',
-            aiStatus: 'Đã khớp với dự trù ngân sách',
-            statusColor: 'emerald',
-            actions: ['sign', 'reject']
-        },
-        {
-            id: 'req2',
-            type: 'facility',
-            title: 'Mượn cơ sở vật chất',
-            sender: 'CLB Robot & AI',
-            subject: 'Mượn phòng Lab C.302 cho buổi Workshop',
-            time: '14:00 - 17:00, Thứ 7 (20/11)',
-            conflict: 'Phòng C.302 đã có lớp 21CT111 đăng ký lúc 15:00',
-            actions: ['reschedule', 'approve']
-        },
-        {
-            id: 'req3',
-            type: 'event',
-            title: 'Kế hoạch Đại hội',
-            sender: 'Chi đoàn 22CT111',
-            subject: 'Kế hoạch Đại hội Chi đoàn nhiệm kỳ mới',
-            actions: ['approve', 'reject']
-        }
-    ]);
+    const [queueItems, setQueueItems] = useState([]);
+    const [repoItems, setRepoItems] = useState([]);
+    const [loading, setLoading] = useState(false);
 
-    // State cho văn bản đã duyệt (Repo)
-    const [repoItems, setRepoItems] = useState([
-        {
-            id: 'doc1',
-            title: 'Kế hoạch tổ chức Hội trại 26/3',
-            sender: 'Chi đoàn 23CT114',
-            approvedDate: '20/11/2025',
-            type: 'event'
-        },
-        {
-            id: 'doc2',
-            title: 'Quyết định khen thưởng SV 5 tốt',
-            sender: 'Phòng CTSV',
-            approvedDate: '18/11/2025',
-            type: 'decision'
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [events, fundReqs] = await Promise.all([
+                eventService.getEvents(),
+                financeService.getFacultyTransactions()
+            ]);
+
+            const allItems = [];
+
+            // Mapping Events
+            if (Array.isArray(events)) {
+                events.forEach(e => {
+                    allItems.push({
+                        id: e.id,
+                        type: 'event',
+                        title: e.name,
+                        sender: e.organizer_id || 'System User',
+                        subject: e.description,
+                        status: e.status || 'PENDING',
+                        time: `${e.start_time} - ${e.end_time}`,
+                        actions: ['approve', 'reject']
+                    });
+                });
+            }
+
+            // Mapping Finance Requests
+            if (Array.isArray(fundReqs)) {
+                fundReqs.forEach(f => {
+                    allItems.push({
+                        id: f.id,
+                        type: 'finance',
+                        title: f.title || 'Xin quyết toán',
+                        sender: f.user || 'System User',
+                        subject: f.detail || f.description || '',
+                        amount: f.amount ? `${f.amount.toLocaleString()} VNĐ` : '',
+                        status: f.status || 'PENDING',
+                        actions: ['sign', 'reject']
+                    });
+                });
+            }
+
+            // Split into queue (PENDING) and repo (APPROVED/REJECTED/COMPLETED)
+            const pending = allItems.filter(i => i.status === 'PENDING' || i.status === 'DRAFT');
+            const done = allItems.filter(i => i.status !== 'PENDING' && i.status !== 'DRAFT');
+
+            setQueueItems(pending);
+            setRepoItems(done);
+        } catch (error) {
+            console.error('Lỗi khi fetch approval items:', error);
+            setToast({ message: 'Lỗi tải danh sách phê duyệt: ' + error.message, type: 'error' });
+        } finally {
+            setLoading(false);
         }
-    ]);
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     // State cho modal yêu cầu đổi giờ
     const [showRescheduleModal, setShowRescheduleModal] = useState(false);
@@ -80,37 +94,41 @@ const SubAdminApprovals = () => {
     );
 
     // Xử lý các action
-    const handleSignAndPay = (item) => {
-        const newDoc = {
-            id: item.id,
-            title: item.title,
-            sender: item.sender,
-            approvedDate: new Date().toLocaleDateString('vi-VN'),
-            type: 'finance',
-            details: item.subject
-        };
-        setRepoItems(prev => [newDoc, ...prev]);
-        setQueueItems(prev => prev.filter(i => i.id !== item.id));
-        setToast({ message: `Đã ký số và chuyển tiền cho "${item.title}"`, type: 'success' });
+    const handleSignAndPay = async (item) => {
+        try {
+            await financeService.approveFacultyTransaction(item.id);
+            setToast({ message: `Đã ký số và chuyển tiền cho "${item.title}"`, type: 'success' });
+            fetchData(); // Reload từ API
+        } catch (error) {
+            setToast({ message: 'Lỗi ký số: ' + error.message, type: 'error' });
+        }
     };
 
-    const handleApprove = (item) => {
-        const newDoc = {
-            id: item.id,
-            title: item.title,
-            sender: item.sender,
-            approvedDate: new Date().toLocaleDateString('vi-VN'),
-            type: item.type,
-            details: item.subject
-        };
-        setRepoItems(prev => [newDoc, ...prev]);
-        setQueueItems(prev => prev.filter(i => i.id !== item.id));
-        setToast({ message: `Đã duyệt "${item.title}"`, type: 'success' });
+    const handleApprove = async (item) => {
+        try {
+            if (item.type === 'event') {
+                await eventService.updateEvent(item.id, { status: 'APPROVED' });
+            } else if (item.type === 'finance') {
+                await financeService.approveFacultyTransaction(item.id);
+            }
+            setToast({ message: `Đã duyệt "${item.title}"`, type: 'success' });
+            fetchData();
+        } catch (error) {
+            setToast({ message: 'Lỗi khi duyệt: ' + error.message, type: 'error' });
+        }
     };
 
-    const handleReject = (item) => {
-        setQueueItems(prev => prev.filter(i => i.id !== item.id));
-        setToast({ message: `Đã từ chối "${item.title}"`, type: 'info' });
+    const handleReject = async (item) => {
+        try {
+            if (item.type === 'event') {
+                await eventService.updateEvent(item.id, { status: 'CANCELLED' });
+            }
+            // Add finance reject if supported
+            setToast({ message: `Đã từ chối "${item.title}"`, type: 'info' });
+            fetchData();
+        } catch (error) {
+            setToast({ message: 'Lỗi khi huỷ: ' + error.message, type: 'error' });
+        }
     };
 
     const handleRescheduleRequest = (item) => {

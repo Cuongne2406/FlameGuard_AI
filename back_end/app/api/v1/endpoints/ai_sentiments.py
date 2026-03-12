@@ -9,6 +9,11 @@ from app.services import ai_audit_service
 
 router = APIRouter()
 
+@router.get("/sub-admin")
+def get_sub_admin_ai_sentiments(db: Session = Depends(get_db)):
+    """Fetch AI Sentiments mixed with real database metrics"""
+    return ai_audit_service.get_sub_admin_dashboard_analysis(db=db)
+
 @router.post("/", response_model=AISentimentResponse)
 def create_ai_sentiment(
     *,

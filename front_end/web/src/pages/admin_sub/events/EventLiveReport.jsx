@@ -40,26 +40,15 @@ const EventLiveReport = () => {
     const stats = [
         { label: 'Tổng Check-in', val: checkedInCount.toString(), total: `/ ${totalRegCount}`, percent: `${checkinPercent}%`, sub: 'Dữ liệu thời gian thực', icon: 'qr_code_scanner', color: 'blue' },
         { label: 'Đại biểu & Khách mời', val: '0', total: '/ 0 Đại biểu', sub: 'Chưa có data API', icon: 'badge', color: 'orange', extra: '', statusIcon: 'check_circle' },
-        { label: 'Tương tác Q&A', val: '2', sub: 'Chủ đề hot: Tuyển dụng', icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
+        { label: 'Tương tác Q&A', val: '0', sub: '', icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
     ];
 
-    const chartData = [10, 25, 40, 85, 30, 20, 15, 12, 10];
-    const rankings = [
-        { rank: 1, name: '23CT112', percent: 100 },
-        { rank: 2, name: '21CT111', percent: 95 },
-        { rank: 3, name: '22CT112', percent: 88 },
-        { rank: 4, name: '23CT113', percent: 12, contact: true },
-    ];
-    const allRankings = rankings; // Giả lập, thực tế có thể fetch thêm
+    const chartData = [];
+    const rankings = [];
+    const allRankings = rankings;
 
-    const qaList = [
-        { id: 1, user: 'Nguyễn Văn A', question: 'Cơ hội thực tập tại công ty ABC?', time: '10:25', answered: true },
-        { id: 2, user: 'Trần Thị B', question: 'Khi nào có kết quả vòng loại?', time: '10:30', answered: false },
-    ];
-
-    const feedbackList = [
-        { id: 1, user: 'Lê Văn C', content: 'Âm thanh hơi nhỏ ở dãy cuối', time: '10:15' },
-    ];
+    const qaList = [];
+    const feedbackList = [];
 
     const handlePauseCheckin = () => {
         setCheckinPaused(!checkinPaused);

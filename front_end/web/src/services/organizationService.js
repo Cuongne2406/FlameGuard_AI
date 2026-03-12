@@ -18,4 +18,11 @@ export const organizationService = {
   createOrganization: (data) => apiClient('/organizations', { method: 'POST', body: JSON.stringify(data) }),
   updateOrganization: (id, data) => apiClient(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteOrganization: (id) => apiClient(`/organizations/${id}`, { method: 'DELETE' }),
+  getOrgStats: async () => {
+    try {
+      return await apiClient('/organizations/stats');
+    } catch {
+      return { totalUnits: 0, totalLeaders: 0, totalMembers: 0, subInfo: '' };
+    }
+  }
 };

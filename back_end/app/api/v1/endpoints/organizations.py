@@ -9,6 +9,18 @@ from app.services import core_service
 
 router = APIRouter()
 
+@router.get("/stats")
+def get_organization_stats(db: Session = Depends(get_db)):
+    # Mock data for SubAdmin/Admin dashboard
+    return {
+        "memberCount": 1205,
+        "memberTarget": 1500,
+        "fundCollected": 15000000,
+        "fundTarget": 20000000,
+        "eventCount": 45,
+        "activityScore": 92
+    }
+
 @router.post("/", response_model=OrganizationResponse)
 def create_organization(
     *,

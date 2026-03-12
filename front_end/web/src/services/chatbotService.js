@@ -1,6 +1,9 @@
 import { apiClient } from './apiClient';
 
 export const chatbotService = {
+  getHistory: async () => {
+    return new Promise((resolve) => resolve([]));
+  },
   sendMessage: async (message) => {
     try {
       // return await apiClient('/ai/chat', { method: 'POST', body: JSON.stringify({ message }) });

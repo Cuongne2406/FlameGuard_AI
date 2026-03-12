@@ -1,12 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, Download, Users, Briefcase } from "lucide-react";
 import OrgChart from "../../../components/admin/Org/OrgChart"; // Sơ đồ cây
 import UnitList from "../../../components/admin/Org/UnitList"; // Danh sách đơn vị
 import MemberProfiles from "../../../components/admin/Org/MemberProfile"; // Hồ sơ cán bộ
+import { organizationService } from "../../../services/organizationService";
 
 const Organization = () => {
   // Quản lý tab đang hiển thị
   const [activeTab, setActiveTab] = useState("list");
+  const [stats, setStats] = useState({ totalUnits: '0', totalLeaders: '0', totalMembers: '0', subInfo: '' });
+
+  useEffect(() => {
+    organizationService.getOrgStats().then(data => {
+      if (data) setStats({
+         totalUnits: data.totalUnits || '0',
+         totalLeaders: data.totalLeaders || '0', 
+         totalMembers: data.totalMembers || '0',
+         subInfo: data.subInfo || ''
+      });
+    }).catch(console.error);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -35,21 +48,21 @@ const Organization = () => {
         <StatSummary
           icon={<Briefcase size={20} />}
           label="Đơn vị trực thuộc"
-          value="25"
-          sub="10 Khoa & 15 CLB"
+          value={stats.totalUnits}
+          sub={stats.subInfo}
           color="blue"
         />
         <StatSummary
           icon={<Users size={20} />}
           label="Cán bộ chủ chốt"
-          value="150"
+          value={stats.totalLeaders}
           sub="Đang đương nhiệm"
           color="purple"
         />
         <StatSummary
           icon={<Users size={20} />}
           label="Tổng nhân sự"
-          value="12,450"
+          value={stats.totalMembers}
           sub="Đoàn viên, sinh viên"
           color="emerald"
         />

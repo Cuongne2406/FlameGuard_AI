@@ -17,6 +17,7 @@ const SubAdminEvents = () => {
     const [selectedEventId, setSelectedEventId] = useState(null);
     const [loading, setLoading] = useState(true);
     const [events, setEvents] = useState([]);
+    const [statsData, setStatsData] = useState({ totalEvents: '0', totalParticipants: '0', totalBudget: '0' });
 
     useEffect(() => {
         fetchEvents();
@@ -47,6 +48,16 @@ const SubAdminEvents = () => {
                     ]
             }));
             setEvents(mappedEvents);
+
+            // Tải dữ liệu thống kê sự kiện
+            const statsRes = await eventService.getEventStats();
+            if (statsRes) {
+                setStatsData({
+                    totalEvents: statsRes.totalEvents || '0',
+                    totalParticipants: statsRes.totalParticipants || '0',
+                    totalBudget: statsRes.totalBudget || '0'
+                });
+            }
         } catch (err) {
             console.error("Failed to fetch events:", err);
             // Fallback to empty if fails
@@ -56,9 +67,9 @@ const SubAdminEvents = () => {
     };
 
     const stats = [
-        { label: 'Tổng sự kiện năm', val: '12', sub: '80% Target', icon: 'event_note', color: 'blue' },
-        { label: 'Lượt tham gia', val: '3,500', sub: 'Avg 300 SV/event', icon: 'groups', color: 'blue' },
-        { label: 'Kinh phí đã chi', val: '25.000.000', unit: 'VNĐ', sub: '', icon: 'payments', color: 'orange' },
+        { label: 'Tổng sự kiện năm', val: statsData.totalEvents, sub: '', icon: 'event_note', color: 'blue' },
+        { label: 'Lượt tham gia', val: statsData.totalParticipants, sub: '', icon: 'groups', color: 'blue' },
+        { label: 'Kinh phí đã chi', val: statsData.totalBudget, unit: 'VNĐ', sub: '', icon: 'payments', color: 'orange' },
     ];
 
     const getEventState = (status) => {

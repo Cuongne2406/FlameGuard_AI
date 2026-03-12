@@ -7,6 +7,7 @@ export const userService = {
   },
   getUser: (id) => apiClient(`/users/${id}`, { method: 'GET' }),
   getMe: () => apiClient('/users/me', { method: 'GET' }),
+  getProfileStats: () => apiClient('/users/me/profile_stats', { method: 'GET' }),
   createUser: (data) => apiClient('/users/create', { method: 'POST', body: JSON.stringify(data) }),
   updateUser: (id, data) => apiClient(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   changePassword: (data) => apiClient('/users/changePassword', { method: 'POST', body: JSON.stringify(data) }),

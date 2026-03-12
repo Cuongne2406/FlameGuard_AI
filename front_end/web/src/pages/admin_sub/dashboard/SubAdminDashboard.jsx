@@ -25,11 +25,7 @@ const SubAdminDashboard = () => {
   }, []);
 
   // Dữ liệu giả lập (sau này fetch API)
-  const [pendingApprovals, setPendingApprovals] = useState([
-  { id: 1, title: 'Lớp 22CT111 xin rút quỹ', sub: 'Số tiền: 2.000.000 VNĐ', icon: 'payments', color: 'rose' },
-  { id: 2, title: 'CLB Robot xin mượn phòng Lab', sub: 'Địa điểm: Phòng C.302', icon: 'domain', color: 'indigo' },
-  { id: 3, title: 'Danh sách Đoàn viên ưu tú', sub: 'DS_DoanVien.pdf', icon: 'description', color: 'blue', isFile: true },
-]);
+  const [pendingApprovals, setPendingApprovals] = useState([]);
 
   // Export Excel
   const exportReport = () => {
@@ -58,17 +54,14 @@ const SubAdminDashboard = () => {
 
   // Stats cards - lấy từ systemService nếu có
   const stats = [
-    { label: 'Tổng Chi Đoàn', val: dashboardData?.stats?.totalMembers?.split(',')[0] || '20', sub: '100% đã có BCH', icon: 'groups', color: 'blue', unit: 'Lớp' },
-    { label: 'Tổng Sinh viên', val: dashboardData?.stats?.totalMembers?.replace(',','') || '1500', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
-    { label: 'Quỹ Khoa hiện tại', val: dashboardData?.stats?.totalBudgetStr?.split(' ')[0] || '50', unit: 'Triệu VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
-    { label: 'Chi tiêu năm', val: `Đạt ${100 - (dashboardData?.stats?.budgetLeftPercent || 15)}%`, sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
+    { label: 'Tổng Chi Đoàn', val: dashboardData?.stats?.totalMembers?.split(',')[0] || '0', sub: '100% đã có BCH', icon: 'groups', color: 'blue', unit: 'Lớp' },
+    { label: 'Tổng Sinh viên', val: dashboardData?.stats?.totalMembers?.replace(',','') || '0', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
+    { label: 'Quỹ Khoa hiện tại', val: dashboardData?.stats?.totalBudgetStr?.split(' ')[0] || '0', unit: 'Triệu VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
+    { label: 'Chi tiêu năm', val: `Đạt ${100 - (dashboardData?.stats?.budgetLeftPercent || 100)}%`, sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
   ];
 
   // Activities cho Monitoring
-  const activities = [
-    { id: '23CT112', name: 'Chi đoàn 23CT112', year: 'Khóa 2023 - CNTT', leader: 'Nguyễn Văn A', fee: '100% (Đã nộp đủ)', status: 'Excellent', statusColor: 'emerald' },
-    { id: '23CT113', name: 'Chi đoàn 23CT113', year: 'Khóa 2023 - CNTT', leader: 'Trần Thị B', fee: 'Missing: Báo cáo tháng 10', status: 'Warning', statusColor: 'orange', alert: 'Gửi nhắc nhở ngay' },
-  ];
+  const activities = [];
 
   return (
     <div className="p-4 md:p-6 lg:p-8 bg-[#F8FAFC] min-h-screen space-y-6 md:space-y-8 font-sans">
