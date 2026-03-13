@@ -51,11 +51,19 @@ async def login_access_token(
                     full_name=full_name,
                     student_id=student_id,
                     auth_provider=AuthProvider.S4H,
-                    # password_hash để trống vì dùng S4H
                 )
                 db.add(user)
-                db.commit()
-                db.refresh(user)
+                db.flush() # Lấy ID tạm thời để gán role
+            
+            # Đảm bảo User có ít nhất role STUDENT (Repair logic cho account cũ)
+            if not user.roles:
+                from app.models.core import Role
+                student_role = db.query(Role).filter(Role.name == "STUDENT").first()
+                if student_role:
+                    user.roles.append(student_role)
+                
+            db.commit()
+            db.refresh(user)
             
             # Cấp phát Token nội bộ FlameGuard
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)

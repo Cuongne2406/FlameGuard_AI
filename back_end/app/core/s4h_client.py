@@ -32,7 +32,7 @@ async def s4h_get_user_info(s4h_token: str) -> Optional[Dict[str, Any]]:
     """
     Sử dụng Token của S4H để lấy thông tin chi tiết (Tên đầy đủ, MSSV...)
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
             # Theo route: GET /users/me
             response = await client.get(
@@ -53,7 +53,7 @@ async def s4h_check_user_exists(student_id: str) -> bool:
     Kiểm tra xem User có tồn tại trên hệ thống S4H không.
     Sử dụng GET /users/{id} theo Swagger mô tả.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
             # S4H Endpoint GET /users/{id}
             response = await client.get(

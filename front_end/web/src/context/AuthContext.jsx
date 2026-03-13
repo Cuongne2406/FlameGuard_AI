@@ -40,13 +40,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setError(null);
     try {
-      // 1. Gửi request lấy jwt
+      // Gửi request lấy jwt (Backend đã gộp cả S4H và Local check vào 1 endpoint /auth/login)
       const res = await authService.login({ username, password });
       
-      // 2. Lưu token vào Storage
+      // Lưu token vào Storage
       localStorage.setItem('accessToken', res.access_token);
       
-      // 3. Fetch dữ liệu profile
+      // Fetch dữ liệu profile
       await checkUserLogged();
       
       return true; // Login thành công
