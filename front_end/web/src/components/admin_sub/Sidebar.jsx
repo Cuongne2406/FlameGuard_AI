@@ -9,15 +9,15 @@ const Sidebar = () => {
   const branding = isAIAnalysis ? 'Intelligence' : 'Manager';
 
   const menuItems = [
-    { path: '/admin-sub/dashboard', label: 'Tổng quan Khoa', icon: 'dashboard' },
-    { path: '/admin-sub/ai-analysis', label: 'Phân tích AI (Intelligence)', icon: 'psychology' },
-    { path: '/admin-sub/classes', label: 'Quản lý Chi Đoàn', icon: 'groups' },
-    { path: '/admin-sub/events', label: 'Sự kiện Khoa', icon: 'calendar_today' },
-    { path: '/admin-sub/approvals', label: 'Xét duyệt & Văn bản', icon: 'assignment_turned_in' },
-    { path: '/admin-sub/finance', label: 'Tài chính Khoa', icon: 'account_balance_wallet' },
-    { path: '/admin-sub/awards', label: 'Thi đua & Khen thưởng', icon: 'military_tech' },
-    { path: '/admin-sub/clubs', label: 'CLB & Đội nhóm', icon: 'diversity_3' },
-    { path: '/admin-sub/settings', label: 'Cài đặt', icon: 'settings' },
+    { path: '/admin_sub/dashboard', label: 'Tổng quan Khoa', icon: 'dashboard' },
+    { path: '/admin_sub/ai-analysis', label: 'Phân tích AI (Intelligence)', icon: 'psychology' },
+    { path: '/admin_sub/classes', label: 'Quản lý Chi Đoàn', icon: 'groups' },
+    { path: '/admin_sub/events', label: 'Sự kiện Khoa', icon: 'calendar_today' },
+    { path: '/admin_sub/approvals', label: 'Xét duyệt & Văn bản', icon: 'assignment_turned_in' },
+    { path: '/admin_sub/finance', label: 'Tài chính Khoa', icon: 'account_balance_wallet' },
+    { path: '/admin_sub/awards', label: 'Thi đua & Khen thưởng', icon: 'military_tech' },
+    { path: '/admin_sub/clubs', label: 'CLB & Đội nhóm', icon: 'diversity_3' },
+    { path: '/admin_sub/settings', label: 'Cài đặt', icon: 'settings' },
   ];
 
   return (

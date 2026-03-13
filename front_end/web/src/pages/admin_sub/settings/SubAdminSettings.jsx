@@ -5,15 +5,18 @@ import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import SignatureCanvas from 'react-signature-canvas';
+import { userService } from '../../../services/userService';
 
 const SubAdminSettings = () => {
   const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   // Profile
   const [profile, setProfile] = useState({
-    name: 'Lê Trọng Phúc Hậu',
-    role: 'Bí thư Đoàn Khoa',
-    email: 'hau.ltp@lhu.edu.vn',
-    phone: '0909 123 456',
+    name: '',
+    role: '',
+    email: '',
+    phone: '',
     avatar: null,
   });
   const [avatarFile, setAvatarFile] = useState(null);
@@ -21,7 +24,7 @@ const SubAdminSettings = () => {
 
   // Security
   const [toggles, setToggles] = useState({
-    twoFactor: true,
+    twoFactor: false,
     emailAlert: true,
     zaloAlert: true,
     dailyDigest: false,
@@ -52,65 +55,145 @@ const SubAdminSettings = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [newMember, setNewMember] = useState({ name: '', mssv: '', role: '' });
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [userData, devicesData, teamData] = await Promise.all([
+        userService.getMe(),
+        userService.getDevices(),
+        userService.getTeam()
+      ]);
+
+      if (userData) {
+        setProfile({
+          name: userData.full_name,
+          role: userData.role_title || 'Thành viên',
+          email: userData.email,
+          phone: userData.phone_number || 'Chưa cập nhật',
+          avatar: userData.avatar_url
+        });
+        setToggles({
+          twoFactor: userData.is_2fa_enabled,
+          emailAlert: userData.email_alerts_enabled,
+          zaloAlert: userData.zalo_alerts_enabled,
+          dailyDigest: userData.daily_digest_enabled
+        });
+        setSignature(userData.signature_data);
+        if (userData.avatar_url) setAvatarPreview(userData.avatar_url);
+      }
+
+      if (devicesData) setDevices(devicesData);
+      if (teamData) setTeam(teamData);
+    } catch (error) {
+      setToast({ message: 'Lỗi tải dữ liệu từ máy chủ', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Real search results should be fetched from an API
   const searchResults = [];
 
   const filteredResults = searchResults.filter(r =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.mssv.toLowerCase().includes(searchQuery.toLowerCase())
+    r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    r.mssv?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Avatar upload
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+      const previewUrl = URL.createObjectURL(file);
+      setAvatarPreview(previewUrl);
+      
+      // In a real app, you'd upload to S3/Cloudinary here.
+      // For now, let's pretend we have a URL or use base64 for demo if small.
+      try {
+        await userService.updateMe({ avatar_url: previewUrl });
+        setToast({ message: 'Đã cập nhật ảnh đại diện!', type: 'success' });
+      } catch (error) {
+        setToast({ message: 'Lỗi cập nhật ảnh!', type: 'error' });
+      }
     }
   };
 
   // Toggles
-  const handleToggle = (key) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  const handleToggle = async (key) => {
+    const newToggles = { ...toggles, [key]: !toggles[key] };
+    setToggles(newToggles);
+    
+    try {
+      await userService.updateMe({
+        is_2fa_enabled: newToggles.twoFactor,
+        email_alerts_enabled: newToggles.emailAlert,
+        zalo_alerts_enabled: newToggles.zaloAlert,
+        daily_digest_enabled: newToggles.dailyDigest
+      });
+      setToast({ message: 'Đã lưu cài đặt', type: 'success' });
+    } catch (error) {
+      setToast({ message: 'Lỗi lưu cài đặt', type: 'error' });
+      // Revert UI on error
+      setToggles(toggles);
+    }
   };
 
   // Devices: logout all others
   const handleLogoutAll = () => {
+    // In real app, call DELETE /me/devices
     setDevices(devices.map(d => d.status === 'Current' ? d : { ...d, status: 'Logged out' }));
     setToast({ message: 'Đã đăng xuất các thiết bị khác', type: 'success' });
   };
 
   // Signature handlers
-  const clearSignature = () => {
+  const clearSignature = async () => {
     if (window.confirm('Bạn có chắc muốn xóa chữ ký hiện tại?')) {
       if (signatureCanvasRef.current) {
         signatureCanvasRef.current.clear();
       }
       setSignature(null);
       setSignatureImage(null);
+      try {
+        await userService.updateMe({ signature_data: null });
+        setToast({ message: 'Đã xóa chữ ký số!', type: 'success' });
+      } catch (error) {
+         setToast({ message: 'Lỗi khi xóa chữ ký!', type: 'error' });
+      }
     }
   };
 
   const undoSignature = () => {
-    // Không có undo đơn giản, có thể dùng history stack, nhưng demo thì clear
     if (signatureCanvasRef.current) {
       signatureCanvasRef.current.clear();
     }
   };
 
-  const saveSignature = () => {
+  const saveSignature = async () => {
+    let signatureData = null;
     if (signatureTab === 'draw' && signatureCanvasRef.current) {
-      const dataUrl = signatureCanvasRef.current.toDataURL();
-      setSignature(dataUrl);
+      signatureData = signatureCanvasRef.current.toDataURL();
     } else if (signatureTab === 'upload' && signatureImage) {
-      setSignature(signatureImage);
+      signatureData = signatureImage;
     }
-    setShowSignatureModal(false);
-    setToast({ message: 'Đã cập nhật chữ ký số!', type: 'success' });
+
+    if (signatureData) {
+      setSignature(signatureData);
+      try {
+        await userService.updateMe({ signature_data: signatureData });
+        setShowSignatureModal(false);
+        setToast({ message: 'Đã cập nhật chữ ký số!', type: 'success' });
+      } catch (error) {
+        setToast({ message: 'Lỗi lưu chữ ký!', type: 'error' });
+      }
+    }
   };
 
   // Password change
-  const handlePasswordNext = () => {
+  const handlePasswordNext = async () => {
     if (passwordStep === 1 && !email) {
       setToast({ message: 'Vui lòng nhập email', type: 'error' });
       return;
@@ -128,13 +211,19 @@ const SubAdminSettings = () => {
         setToast({ message: 'Mật khẩu không khớp', type: 'error' });
         return;
       }
-      setShowPasswordModal(false);
-      setPasswordStep(1);
-      setEmail('');
-      setOtp('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setToast({ message: 'Đổi mật khẩu thành công!', type: 'success' });
+      
+      try {
+        await userService.updateMe({ password: newPassword });
+        setShowPasswordModal(false);
+        setPasswordStep(1);
+        setEmail('');
+        setOtp('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setToast({ message: 'Đổi mật khẩu thành công!', type: 'success' });
+      } catch (error) {
+        setToast({ message: 'Lỗi khi đổi mật khẩu', type: 'error' });
+      }
       return;
     }
     setPasswordStep(prev => prev + 1);

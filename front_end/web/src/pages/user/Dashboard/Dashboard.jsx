@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../../../context/AuthContext";
 import { systemService } from "../../../services/systemService";
+import { userService } from "../../../services/userService";
 import {
   Search,
   Bell,
@@ -11,21 +12,40 @@ import {
   Zap,
   ArrowRight,
   MessageSquare,
+  FileText,
+  BarChart,
+  Star as LucideStar
 } from "lucide-react";
 
 const UserDashboard = () => {
   const { user } = useContext(AuthContext);
   const [dashboardData, setDashboardData] = useState(null);
+  const [profileStats, setProfileStats] = useState(null);
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    const fetchData = async () => {
       try {
-         const data = await systemService.getSystemDashboard();
-         setDashboardData(data);
-      } catch (err) { console.error('Error fetching user dashboard:', err); }
+        const [dash, stats] = await Promise.all([
+          systemService.getSystemDashboard(),
+          userService.getProfileStats()
+        ]);
+        setDashboardData(dash);
+        setProfileStats(stats);
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      }
     };
-    fetchDashboard();
+    fetchData();
   }, []);
+
+  const getIcon = (iconName) => {
+    switch(iconName) {
+      case 'file_text': return <FileText size={18} />;
+      case 'bar_chart': return <BarChart size={18} />;
+      case 'event': return <LucideStar size={18} />;
+      default: return <Zap size={18} />;
+    }
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -71,13 +91,17 @@ const UserDashboard = () => {
                 <Sparkles size={12} />
               </div>
             </div>
-            <h3 className="font-bold text-slate-800">{user?.full_name || "Lê Trọng Phúc Hậu"}</h3>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-              MSSV: {user?.student_id || "123000926"}
+            <div>
+            <h3 className="text-xl font-black text-slate-800">
+              {user?.full_name}
+            </h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+              {user?.student_id}
             </p>
-            <span className="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-black rounded-full uppercase">
-              Lớp: 23CT112
-            </span>
+            <div className="mt-2 inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase">
+              {user?.student_id ? user?.class_name || "Sinh viên" : "Khách"}
+            </div>
+          </div>
           </div>
 
           {/* Cấp độ đoàn viên */}
@@ -94,11 +118,11 @@ const UserDashboard = () => {
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-black text-slate-800">{user?.training_score || 95}</span>
+                  <span className="text-lg font-black text-slate-800">{user?.training_score || 0}</span>
                   <span className="text-slate-400 text-xs font-bold">/100</span>
                 </div>
                 <p className="text-[10px] font-bold text-emerald-500 uppercase">
-                  Top 5% toàn khoa
+                  Xếp loại: { (user?.training_score >= 90) ? 'Xuất sắc' : (user?.training_score >= 80 ? 'Tốt' : 'Khá') }
                 </p>
               </div>
             </div>
@@ -159,14 +183,11 @@ const UserDashboard = () => {
 
             <div className="bg-slate-50/50 rounded-2xl p-4 mb-4 border border-slate-100">
               <p className="text-xs text-slate-600 leading-relaxed italic">
-                "Chào Phúc Hậu! 👋 Mình thấy bạn đang phấn đấu danh hiệu{" "}
+                "Chào {user?.full_name?.split(" ").pop()}! 👋 Mình thấy điểm rèn luyện của bạn đang ở mức{" "}
                 <span className="text-blue-600 font-black">
-                  "Sinh viên 5 Tốt"
+                  {user?.training_score || 0} điểm
                 </span>
-                . Hiện tại tiêu chí{" "}
-                <span className="text-orange-500 font-black">Thể lực tốt</span>{" "}
-                của bạn cần thêm một hoạt động. Mình đề xuất bạn tham gia giải
-                chạy Marathon sắp tới nhé?"
+                . { (user?.training_score < 90) ? "Cố gắng tham gia thêm hoạt động để đạt loại Xuất sắc nhé!" : "Tuyệt vời! Bạn đang duy trì phong độ rất tốt." }
               </p>
             </div>
 
@@ -258,43 +279,24 @@ const UserDashboard = () => {
             </h4>
 
             <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
-              {/* Item 1 */}
-              <div className="relative pl-8 group">
-                <div className="absolute left-0 top-1.5 w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center z-10 border border-white">
-                  <Trophy size={12} />
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mb-1">
-                  01/03/2026
-                </p>
-                <h5 className="text-[11px] font-black text-slate-800 group-hover:text-blue-600 transition-colors uppercase">
-                  Giải Nhất Hackathon 2026
-                </h5>
-                <p className="text-[10px] text-slate-400 mb-2">
-                  Cấp trường • Xác thực bởi Khoa CNTT
-                </p>
-                <button className="text-[10px] font-black text-blue-600 flex items-center gap-1">
-                  Xem chứng nhận <ArrowRight size={10} />
-                </button>
-              </div>
-
-              {/* Item 2 */}
-              <div className="relative pl-8 group">
-                <div className="absolute left-0 top-1.5 w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center z-10 border border-white">
-                  <Zap size={12} />
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mb-1">
-                  20/02/2026
-                </p>
-                <h5 className="text-[11px] font-black text-slate-800 group-hover:text-red-600 transition-colors uppercase">
-                  Hiến máu nhân đạo
-                </h5>
-                <p className="text-[10px] text-slate-400 mb-2">
-                  Đợt 1/2026 • Được xác thực bởi Hội Chữ Thập Đỏ
-                </p>
-                <button className="text-[10px] font-black text-red-600 flex items-center gap-1">
-                  Tải PDF <ArrowRight size={10} />
-                </button>
-              </div>
+              {profileStats?.recent_certificates?.length > 0 ? profileStats.recent_certificates.map((award, idx) => (
+                 <div key={award.id || idx} className="relative pl-8 group">
+                   <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-lg ${idx % 2 === 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'} flex items-center justify-center z-10 border border-white`}>
+                     <Trophy size={12} />
+                   </div>
+                   <p className="text-[9px] font-bold text-slate-400 mb-1">
+                     {award.time}
+                   </p>
+                   <h5 className="text-[11px] font-black text-slate-800 group-hover:text-blue-600 transition-colors uppercase">
+                     {award.title}
+                   </h5>
+                   <p className="text-[10px] text-slate-400 mb-2">
+                     Xác thực bởi Hệ thống
+                   </p>
+                 </div>
+              )) : (
+                <p className="text-[10px] text-slate-400 italic pl-8">Chưa có thành tích ghi nhận</p>
+              )}
             </div>
 
             <button className="w-full mt-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors border-t border-slate-50 pt-4">

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, Enum, ForeignKey, Date, Table
+from sqlalchemy import Column, String, Integer, Boolean, Enum, ForeignKey, Date, Table
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -52,12 +52,47 @@ class User(Base):
     status = Column(Enum(UserStatus), default=UserStatus.ACTIVE)
     avatar_url = Column(String)
     last_login_at = Column(Date)
+    level = Column(Integer, default=1)
+    training_score = Column(Integer, default=0)
+    university = Column(String, default="ĐH Lạc Hồng")
+    address = Column(String, default="Đồng Nai")
+    
+    # Settings & Profile
+    is_2fa_enabled = Column(Boolean, default=False)
+    email_alerts_enabled = Column(Boolean, default=True)
+    zalo_alerts_enabled = Column(Boolean, default=True)
+    daily_digest_enabled = Column(Boolean, default=False)
+    signature_data = Column(String, nullable=True) # Base64 or URL
     
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     organizations = relationship("UserOrganization", back_populates="user")
     event_registrations = relationship("EventRegistration", back_populates="user")
     fund_requests = relationship("FundRequest", foreign_keys="[FundRequest.requested_by]", back_populates="requester")
     asset_loans = relationship("AssetLoan", back_populates="borrower")
+    skills = relationship("UserSkill", back_populates="user", cascade="all, delete-orphan")
+    experiences = relationship("UserExperience", back_populates="user", cascade="all, delete-orphan")
+
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    level = Column(Integer, default=0)
+    
+    user = relationship("User", back_populates="skills")
+
+class UserExperience(Base):
+    __tablename__ = "user_experiences"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    role = Column(String, nullable=False)
+    location = Column(String)
+    period = Column(String) # e.g., "2023 - Nay"
+    bullets = Column(String) # Store as JSON string or text for simplicity
+    
+    user = relationship("User", back_populates="experiences")
 
 class Role(Base):
     __tablename__ = "roles"

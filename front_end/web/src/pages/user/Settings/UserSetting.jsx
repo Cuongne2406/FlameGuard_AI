@@ -212,13 +212,13 @@ const UserSetting = () => {
             </div>
 
             <h3 className="text-xl font-black text-slate-800">
-              {user?.full_name || "Lê Trọng Phúc Hậu"}
+              {user?.full_name}
             </h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              MSSV: {user?.student_id || "123000926"}
+              MSSV: {user?.student_id}
             </p>
             <div className="mt-2 inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase">
-              Lớp: {user?.student_id ? "" : "23CT112"} {user?.roles?.map(r=>r.name).includes("STUDENT") ? "" : "(SubAdmin)"}
+              Lớp: {user?.class_name || "N/A"}
             </div>
 
             <div className="mt-8 space-y-4 text-left">

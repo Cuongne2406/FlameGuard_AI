@@ -15,7 +15,7 @@ class DigitalDocumentBase(BaseModel):
     processed_date: Optional[datetime] = None
 
 class DigitalDocumentCreate(BaseModel):
-    user_id: UUID
+    user_id: Optional[UUID] = None
     document_type: str
     purpose: Optional[str] = None
 

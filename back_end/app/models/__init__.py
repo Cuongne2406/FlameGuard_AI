@@ -8,6 +8,7 @@ from app.models.awards import Award
 from app.models.documents import DigitalDocument
 from app.models.notifications import Notification
 from app.models.settings import SystemSetting
+from app.models.news import News
 
 # Expose Base and all models here for Alembic correctly detecting them
 __all__ = [
@@ -17,5 +18,5 @@ __all__ = [
     "Campaign", "Event", "EventRegistration",
     "Budget", "FundRequest", "Asset", "AssetLoan",
     "AISentiment", "AIPrediction", "AIAudit", "ChatbotLog", "AuditLog",
-    "Award", "DigitalDocument", "Notification", "SystemSetting"
+    "Award", "DigitalDocument", "Notification", "SystemSetting", "News"
 ]

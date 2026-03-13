@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.models.documents import DigitalDocument
 from app.schemas.document_schemas import DigitalDocumentCreate, DigitalDocumentUpdate, DigitalDocumentResponse
 
@@ -14,8 +14,11 @@ def create_document(
     *,
     db: Session = Depends(get_db),
     doc_in: DigitalDocumentCreate,
+    current_user = Depends(get_current_active_user),
 ):
-    db_obj = DigitalDocument(**doc_in.model_dump())
+    doc_data = doc_in.model_dump()
+    doc_data["user_id"] = current_user.id
+    db_obj = DigitalDocument(**doc_data)
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
@@ -25,9 +28,31 @@ def create_document(
 def read_documents(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
 ):
-    return db.query(DigitalDocument).offset(skip).limit(limit).all()
+    """
+    Get documents for the current user.
+    """
+    return db.query(DigitalDocument).filter(
+        DigitalDocument.user_id == current_user.id
+    ).offset(skip).limit(limit).all()
+
+@router.get("/stats")
+def get_document_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Get stats for current user's documents.
+    """
+    incoming = db.query(DigitalDocument).filter(DigitalDocument.user_id == current_user.id, DigitalDocument.status == "APPROVED").count()
+    pending = db.query(DigitalDocument).filter(DigitalDocument.user_id == current_user.id, DigitalDocument.status == "PENDING").count()
+    return {
+        "incoming": incoming,
+        "outgoing": 0, # Placeholder
+        "pending": pending
+    }
 
 @router.get("/{doc_id}", response_model=DigitalDocumentResponse)
 def read_document(

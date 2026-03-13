@@ -399,7 +399,7 @@ const TicketModal = ({ isOpen, onClose, studentInfo }) => {
           <div className="flex items-center gap-4 w-full mb-8">
             <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-slate-100">
               <img
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${studentInfo.id || 'Felix'}`}
                 alt="avatar"
                 className="w-full h-full object-cover"
               />
@@ -509,7 +509,7 @@ const Event = () => {
   const studentInfo = {
     name: user?.full_name || "Lê Trọng Phúc Hậu",
     id: user?.student_id || "23800926",
-    class: user?.student_id ? "" : "23CT112",
+    class: user?.class_name || "Chưa cập nhật",
   };
 
   return (

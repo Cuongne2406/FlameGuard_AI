@@ -277,29 +277,18 @@ const MemberProfiles = () => {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // Here we ideally fetch from an endpoint that returns admin users or filtered by role.
-        // We'll use userService.getAllUsers() if it exists or mock it if it doesn't.
-        if (userService.getAllUsers) {
-           const data = await userService.getAllUsers();
-           const formattedData = data.map(u => ({
-             id: `CB-${u.id || Math.floor(100000 + Math.random() * 900000)}`,
-             userId: u.id, // Keep the real DB id
-             name: u.full_name || u.email,
-             role: u.role || "UVBCH",
-             email: u.email,
-             unit: "Khoa CNTT", // Default since it's hard to map without exact endpoint logic
-             status: "Active",
-             joinDate: "15/09/2021",
-           }));
-           setMembers(formattedData);
-        } else {
-           // Fallback to static if getAllUsers is not implemented in userService
-           setMembers([
-            { id: "CB-215482", name: "Lê Trọng Phúc Hậu", role: "Bí thư LCĐ", unit: "Khoa CNTT", status: "Active", joinDate: "15/09/2021" },
-            { id: "CB-215488", name: "Nguyễn Thùy Linh", role: "Phó Bí thư", unit: "Khoa CNTT", status: "Active", joinDate: "20/10/2021" },
-            { id: "CB-215490", name: "Trần Anh Tuấn", role: "UVBCH", unit: "Khoa Ngoại ngữ", status: "Inactive", joinDate: "12/02/2022" },
-           ]);
-        }
+        const data = await userService.getAllUsers();
+        const formattedData = data.map(u => ({
+          id: u.student_id || `CB-${u.id.substring(0,6)}`,
+          userId: u.id,
+          name: u.full_name || u.email,
+          role: u.role || "Thành viên",
+          email: u.email,
+          unit: u.organizations?.[0]?.name || "Chưa xếp lớp",
+          status: u.is_active ? "Active" : "Inactive",
+          joinDate: u.created_at ? new Date(u.created_at).toLocaleDateString() : "15/09/2021",
+        }));
+        setMembers(formattedData);
       } catch (err) {
         console.error("Failed to fetch members:", err);
       } finally {

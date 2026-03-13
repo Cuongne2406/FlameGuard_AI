@@ -32,7 +32,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
       if (roles.includes("UNIVERSITY_ADMIN")) {
          return <Navigate to="/admin/dashboard" replace />;
       } else if (roles.includes("FACULTY_ADMIN")) {
-         return <Navigate to="/admin-sub/dashboard" replace />;
+         return <Navigate to="/admin_sub/dashboard" replace />;
       } else {
          return <Navigate to="/user/dashboard" replace />;
       }

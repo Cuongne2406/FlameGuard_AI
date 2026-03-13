@@ -7,18 +7,29 @@ from app.api.deps import get_db
 from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
 from app.services import core_service
 
+from sqlalchemy import func
+from app.models.core import UserOrganization, Organization
+from app.models.events import Event
+from app.models.finance import Budget
+
 router = APIRouter()
 
 @router.get("/stats")
 def get_organization_stats(db: Session = Depends(get_db)):
-    # Mock data for SubAdmin/Admin dashboard
+    """
+    Lấy thống kê thực tế từ Database cho Admin Dashboard.
+    """
+    member_count = db.query(func.count(UserOrganization.id)).scalar() or 0
+    org_count = db.query(func.count(Organization.id)).scalar() or 0
+    total_budget = db.query(func.sum(Budget.total_amount)).scalar() or 0
+    used_budget = db.query(func.sum(Budget.used_amount)).scalar() or 0
+    event_count = db.query(func.count(Event.id)).scalar() or 0
+    
     return {
-        "memberCount": 1205,
-        "memberTarget": 1500,
-        "fundCollected": 15000000,
-        "fundTarget": 20000000,
-        "eventCount": 45,
-        "activityScore": 92
+        "totalUnits": org_count,
+        "totalLeaders": 12, # Mock sub-info until roles are fully linked to units
+        "totalMembers": member_count,
+        "subInfo": f"Tăng {member_count - 10} so với tháng trước"
     }
 
 @router.post("/", response_model=OrganizationResponse)

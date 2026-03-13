@@ -12,18 +12,33 @@ from app.services import event_service
 
 router = APIRouter()
 
+from sqlalchemy import func
+from app.models.events import Event, EventStatus, EventRegistration
+
+router = APIRouter()
+
 @router.get("/stats")
 def get_event_stats(db: Session = Depends(get_db)):
-    # Mock stats data to unblock frontend
+    """
+    Lấy thống kê sự kiện thực tế từ Database.
+    """
+    total_events = db.query(func.count(Event.id)).scalar() or 0
+    upcoming_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.PUBLISHED).scalar() or 0
+    live_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.LIVE).scalar() or 0
+    ended_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.ENDED).scalar() or 0
+    total_participants = db.query(func.count(EventRegistration.id)).scalar() or 0
+    total_feedback = 0 # Future requirement: add Feedback table
+    avg_rating = 0.0 # Future requirement: add Feedback table
+    
     return {
-        "totalEvents": 45,
-        "upcomingEvents": 12,
-        "liveEvents": 3,
-        "endedEvents": 30,
-        "totalParticipants": 1500,
+        "totalEvents": total_events,
+        "upcomingEvents": upcoming_events,
+        "liveEvents": live_events,
+        "endedEvents": ended_events,
+        "totalParticipants": total_participants,
         "participantTarget": 2000,
-        "totalFeedback": 450,
-        "avgRating": 4.8
+        "totalFeedback": total_feedback,
+        "avgRating": avg_rating
     }
 
 # ==========================================

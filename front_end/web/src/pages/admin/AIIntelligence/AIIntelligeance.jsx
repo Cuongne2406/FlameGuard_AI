@@ -54,19 +54,19 @@ const IntelligeanceAI = () => {
         <div className="flex items-center gap-6">
           <StatusIndicator
             label="AI Engine"
-            status={data.overview.status}
+            status="Active"
             color="text-emerald-500"
           />
           <div className="w-px h-8 bg-slate-100"></div>
           <StatusIndicator
-            label="Đang xử lý"
-            value={data.overview.activeStreams}
-            sub="luồng dữ liệu"
+            label="Phản hồi"
+            value={data.overview.totalFeedbacksProcessed || 0}
+            sub="lượt"
           />
           <div className="w-px h-8 bg-slate-100"></div>
           <StatusIndicator
-            label="Cập nhật"
-            value="Real-time"
+            label="Hệ thống"
+            value={`${data.overview.systemHealth}%`}
             icon={<Clock size={12} />}
           />
         </div>
@@ -94,26 +94,17 @@ const IntelligeanceAI = () => {
           {/* Simulated Chart Area */}
           <div className="h-48 flex items-end justify-between px-4 relative">
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/80 backdrop-blur-md border border-red-100 p-4 rounded-2xl shadow-2xl flex items-start gap-3 z-10 animate-bounce-subtle">
-                <div className="p-2 bg-red-50 text-red-500 rounded-full">
-                  <AlertTriangle size={16} />
+              <div className="bg-white/80 backdrop-blur-md border border-indigo-100 p-4 rounded-2xl shadow-2xl flex items-start gap-3 z-10">
+                <div className="p-2 bg-indigo-50 text-indigo-500 rounded-full">
+                  <Activity size={16} />
                 </div>
                 <div>
-                  <h4 className="text-[10px] font-black text-red-600 uppercase">
-                    Cảnh báo Tiêu cực ({data.sentimentAlerts.date})
+                  <h4 className="text-[10px] font-black text-indigo-600 uppercase">
+                    Chỉ số Cảm xúc: {data.overview.sentimentScore}/10
                   </h4>
                   <p className="text-[10px] text-slate-500 leading-tight">
-                    Phát hiện lượng lớn phản hồi tại <strong>{data.sentimentAlerts.location}</strong>
-                    <br />
-                    liên quan đến từ khóa:
+                    Phân tích từ {data.overview.totalFeedbacksProcessed} lượt phản hồi thực tế.
                   </p>
-                  <div className="flex gap-1 mt-2">
-                    {data.sentimentAlerts.keywords.map(kw => (
-                       <span key={kw} className="px-2 py-0.5 bg-red-50 text-red-500 text-[9px] font-bold rounded">
-                         {kw}
-                       </span>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>
@@ -150,7 +141,7 @@ const IntelligeanceAI = () => {
           </div>
 
           <div className="space-y-4 flex-1">
-            {data.autoModeration.map(mod => (
+            {(data?.autoModeration || []).map(mod => (
               <AuditItem
                 key={mod.id}
                 status={mod.status}
@@ -250,7 +241,7 @@ const IntelligeanceAI = () => {
               Chủ đề HOT (24h)
             </h4>
             <div className="space-y-3">
-              {data.chatbotStats.hotTopics.map(topic => (
+              {(data?.chatbotStats?.hotTopics || []).map(topic => (
                  <HotTopic
                   key={topic.id}
                   label={topic.label}

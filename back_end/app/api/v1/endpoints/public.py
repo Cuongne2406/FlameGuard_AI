@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.models.events import Event, EventStatus
+from app.models.news import News
 
 router = APIRouter()
 
@@ -12,44 +13,12 @@ def read_public_activities(db: Session = Depends(get_db)):
     """
     events = db.query(Event).filter(Event.status == EventStatus.PUBLISHED).limit(6).all()
     
-    if not events:
-        # Fallback if DB is empty
-        return [
-            {
-                "id": "1",
-                "title": "Hội thảo Tương lai AI trong Kỷ nguyên số",
-                "date": "25 Tháng 03, 2026",
-                "location": "Hội trường A",
-                "participants": "1.2k Tham gia",
-                "type": "Học thuật",
-                "image_url": "https://picsum.photos/seed/ai-workshop/800/600"
-            },
-            {
-                "id": "2",
-                "title": "Cuộc thi Lập trình viên Tài năng 2026",
-                "date": "10 Tháng 04, 2026",
-                "location": "Phòng máy B3.01",
-                "participants": "500 Đăng ký",
-                "type": "Cuộc thi",
-                "image_url": "https://picsum.photos/seed/hackathon/800/600"
-            },
-            {
-                "id": "3",
-                "title": "Khai mạc Hội thao cấp Trường 2026",
-                "date": "20 Tháng 04, 2026",
-                "location": "Sân vận động Phú Thọ",
-                "participants": "3.5k Tham gia",
-                "type": "Thể thao",
-                "image_url": "https://picsum.photos/seed/sports/800/600"
-            }
-        ]
-
     activities_data = []
     for evt in events:
         activities_data.append({
             "id": str(evt.id),
             "title": evt.name,
-            "date": evt.start_time.strftime("%d Tháng %m, %Y") if evt.start_time else "Chưa xác định",
+            "date": evt.start_time.strftime("%d/%m/%Y") if evt.start_time else "Chưa xác định",
             "location": evt.location,
             "participants": f"{evt.capacity} Chỗ" if hasattr(evt, 'capacity') and evt.capacity else "N/A",
             "type": "Sự kiện",
@@ -57,24 +26,76 @@ def read_public_activities(db: Session = Depends(get_db)):
         })
     return activities_data
 
-@router.get("/news")
-def read_public_news(db: Session = Depends(get_db)):
+@router.get("/home")
+def read_public_home(db: Session = Depends(get_db)):
     """
-    Lấy danh sách tin tức công khai
+    Dữ liệu tổng hợp cho trang chủ công khai.
     """
+    featured_event = db.query(Event).filter(Event.status == EventStatus.PUBLISHED).order_by(Event.start_time.desc()).first()
+    recent_news = db.query(News).order_by(News.created_at.desc()).limit(2).all()
+    upcoming_events = db.query(Event).filter(Event.status == EventStatus.PUBLISHED).limit(3).all()
+    
+    return {
+        "featuredEvent": {
+            "title": featured_event.name if featured_event else "Đang cập nhật sự kiện mới",
+            "desc": featured_event.location if featured_event else "Hành trình kết nối sinh viên.",
+            "image": f"https://picsum.photos/seed/{featured_event.id if featured_event else 'home'}/800/600"
+        },
+        "news": [
+            {
+                "id": str(n.id),
+                "title": n.title,
+                "date": n.created_at.strftime("%d/%m/%Y") if n.created_at else "N/A",
+                "image": n.image_url or f"https://picsum.photos/seed/{n.id}/600/400"
+            }
+            for n in recent_news
+        ],
+        "upcomingEvents": [
+            {
+                "day": evt.start_time.strftime("%d") if evt.start_time else "01",
+                "month": evt.start_time.strftime("%m") if evt.start_time else "01",
+                "title": evt.name,
+                "category": "Sự kiện"
+            }
+            for evt in upcoming_events
+        ],
+        "featuredStudent": None # Sẽ cập nhật khi có bảng Vinh danh/Award
+    }
+
+@router.get("/academic")
+def read_public_academic_docs(db: Session = Depends(get_db)):
+    """
+    Dữ liệu tài liệu học thuật cho public page.
+    """
+    from app.models.documents import DigitalDocument
+    docs = db.query(DigitalDocument).limit(5).all()
     return [
         {
-            "id": 1,
-            "title": "Trường ĐH Tổ chức Lễ Kỷ niệm 30 năm Thành lập",
-            "excerpt": "Hơn 10.000 cựu sinh viên và khách mời sẽ tham dự sự kiện lớn nhất năm 2026.",
-            "date": "10/03/2026",
-            "image": "https://picsum.photos/seed/news1/800/600"
-        },
-        {
-            "id": 2,
-            "title": "Khoa CNTT ra mắt Phòng lab AI hiện đại nhất",
-            "excerpt": "Được trang bị dàn máy tính hiệu năng cao hỗ trợ huấn luyện các mô hình GenAI.",
-            "date": "08/03/2026",
-            "image": "https://picsum.photos/seed/news2/800/600"
+            "id": str(d.id),
+            "title": d.document_type, # Tạm dùng loại làm tiêu đề hoặc content
+            "type": "PDF",
+            "size": "N/A",
+            "downloads": 0
         }
+        for d in docs
     ]
+
+@router.get("/news/{news_id}")
+def read_news_detail(news_id: UUID, db: Session = Depends(get_db)):
+    """
+    Lấy chi tiết một bản tin.
+    """
+    news = db.query(News).filter(News.id == news_id).first()
+    if not news:
+        return {"error": "News not found"}
+    
+    return {
+        "id": str(news.id),
+        "title": news.title,
+        "category": news.category or "Hoạt động",
+        "date": news.created_at.strftime("%d/%m/%Y") if news.created_at else "N/A",
+        "readTime": "5 phút đọc",
+        "author": news.author.full_name if news.author else "Ban Truyền thông",
+        "content": news.content or news.excerpt,
+        "image": news.image_url or f"https://picsum.photos/seed/{news.id}/900/500"
+    }

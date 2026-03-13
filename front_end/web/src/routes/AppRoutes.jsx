@@ -76,7 +76,7 @@ const AppRoutes = () => {
       </Route>
 
       {/* admin_sub */}
-      <Route path="/admin-sub" element={
+      <Route path="/admin_sub" element={
         <ProtectedRoute allowedRoles={['FACULTY_ADMIN', 'UNIVERSITY_ADMIN']} />
       }>
         <Route element={<SubAdminLayout />}>

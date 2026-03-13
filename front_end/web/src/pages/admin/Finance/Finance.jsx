@@ -30,8 +30,14 @@ const Finance = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const fetchedAssets = await financeService.getAssets();
-        // Giả sử API trả về danh sách, ánh xạ sang model UI
+        const [fetchedAssets, budgetStats, fundRequests, budgets] = await Promise.all([
+          financeService.getAssets(),
+          financeService.getBudgetStats(),
+          financeService.getFacultyTransactions(),
+          apiClient('/budgets')
+        ]);
+        
+        // Map Assets
         const mappedAssets = fetchedAssets.map(a => ({
           id: a.id,
           title: a.name || 'Tài sản',
@@ -41,6 +47,37 @@ const Finance = () => {
           footer: `Vị trí: ${a.storage_location || 'Kho'}`
         }));
         setAssets(mappedAssets);
+
+        // Map Stats
+        const total = budgetStats.totalIncome || 0;
+        const used = budgetStats.totalExpense || 0;
+        const remaining = total - used;
+        const usedPercent = total > 0 ? Math.round((used / total) * 100) : 0;
+        
+        setStats({
+          total: (total / 1000000).toFixed(1), // Convert to Millions
+          used: (used / 1000000).toFixed(1),
+          remaining: (remaining / 1000000).toFixed(1),
+          assetsCount: fetchedAssets.length.toString(),
+          usedPercent
+        });
+
+        // Map Fund Requests
+        setRequests(fundRequests.map(r => ({
+          dept: r.user || 'N/A',
+          time: 'Vừa xong',
+          desc: r.title + ': ' + r.detail
+        })));
+
+        // Map Budgets for table
+        setBudgetRows(budgets.map(b => ({
+          name: b.name || 'Ngân sách',
+          estimate: (b.total_amount / 1000000).toFixed(1),
+          actual: (b.used_amount / 1000000).toFixed(1),
+          diff: ((b.total_amount - b.used_amount) / 1000000).toFixed(1),
+          status: b.used_amount > b.total_amount ? "danger" : (b.used_amount === b.total_amount ? "warning" : "success")
+        })));
+
       } catch (error) {
         console.error("Lỗi khi tải dữ liệu tài chính:", error);
       } finally {

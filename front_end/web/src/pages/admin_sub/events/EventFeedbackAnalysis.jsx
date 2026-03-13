@@ -8,13 +8,33 @@ const EventFeedbackAnalysis = () => {
     const [toast, setToast] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
 
+    const [loading, setLoading] = useState(true);
+
     const [stats, setStats] = useState([]);
     const [sentiment, setSentiment] = useState([]);
     const [keywords, setKeywords] = useState([]);
     const [feedbacks, setFeedbacks] = useState([]);
 
-    useEffect(() => {
-        // Placeholder for fetching feedback analysis from API
+    React.useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const res = await apiClient(`/ai-sentiments/event/${id}`);
+                setSentiment(res.sentiment || []);
+                setFeedbacks(res.feedbacks || []);
+                setKeywords((res.keywords || []).map(kw => ({
+                    text: kw,
+                    size: 'text-2xl font-black',
+                    color: res.score > 0 ? 'emerald' : 'rose'
+                })));
+                setStats(res);
+            } catch (error) {
+                console.error("Error fetching event analysis:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
     }, [id]);
 
     const filteredFeedbacks = activeTab === 'all' ? feedbacks :
@@ -54,12 +74,12 @@ const EventFeedbackAnalysis = () => {
                                 </div>
                             </div>
                             <div className="flex items-baseline gap-3">
-                                <p className="text-7xl font-bold text-slate-900 tracking-tighter">4.8</p>
+                                <p className="text-7xl font-bold text-slate-900 tracking-tighter">{stats.score || 0}</p>
                                 <p className="text-2xl font-bold text-slate-300">/ 5.0</p>
                             </div>
                         </div>
-                        <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden shadow-inner border border-slate-100">
-                            <div className="h-full bg-orange-400 rounded-full" style={{ width: '96%' }}></div>
+                        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-100">
+                            <div className="h-full bg-orange-400 rounded-full" style={{ width: `${(stats.score || 0) / 5 * 100}%` }}></div>
                         </div>
                     </div>
 
@@ -86,8 +106,8 @@ const EventFeedbackAnalysis = () => {
                                     <circle cx="80" cy="80" r="70" stroke="#f97316" strokeWidth="20" fill="transparent" strokeDasharray="440" strokeDashoffset="400" />
                                 </svg>
                                 <div className="absolute flex flex-col items-center">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</p>
-                                    <p className="text-xl font-bold text-slate-900">0</p>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Phản hồi</p>
+                                    <p className="text-xl font-bold text-slate-900">{stats.total || 0}</p>
                                 </div>
                             </div>
                         </div>

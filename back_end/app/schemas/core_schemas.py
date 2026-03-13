@@ -131,6 +131,11 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None
     status: UserStatusEnum = UserStatusEnum.ACTIVE
     avatar_url: Optional[str] = None
+    is_2fa_enabled: bool = False
+    email_alerts_enabled: bool = True
+    zalo_alerts_enabled: bool = True
+    daily_digest_enabled: bool = False
+    signature_data: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -143,12 +148,22 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     status: Optional[UserStatusEnum] = None
     avatar_url: Optional[str] = None
+    is_2fa_enabled: Optional[bool] = None
+    email_alerts_enabled: Optional[bool] = None
+    zalo_alerts_enabled: Optional[bool] = None
+    daily_digest_enabled: Optional[bool] = None
+    signature_data: Optional[str] = None
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
 
 class UserResponse(UserBase):
     id: UUID
     last_login_at: Optional[date] = None
+    level: int = 1
+    training_score: int = 0
+    university: Optional[str] = None
+    address: Optional[str] = None
+    role_title: Optional[str] = None
     roles: List[RoleResponse] = []
 
     class Config:

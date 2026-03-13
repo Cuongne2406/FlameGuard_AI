@@ -1,18 +1,69 @@
 import { apiClient } from './apiClient';
 
 export const userService = {
-  getAllUsers: (params) => {
-    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
-    return apiClient(`/users${query}`, { method: 'GET' });
+  getMe: async () => {
+    try {
+      return await apiClient('/users/me');
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      return null;
+    }
   },
-  getUser: (id) => apiClient(`/users/${id}`, { method: 'GET' }),
-  getMe: () => apiClient('/users/me', { method: 'GET' }),
-  getProfileStats: () => apiClient('/users/me/profile_stats', { method: 'GET' }),
-  createUser: (data) => apiClient('/users/create', { method: 'POST', body: JSON.stringify(data) }),
-  updateUser: (id, data) => apiClient(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-  changePassword: (data) => apiClient('/users/changePassword', { method: 'POST', body: JSON.stringify(data) }),
-  verifyEmail: (data) => apiClient('/users/verifyEmail', { method: 'POST', body: JSON.stringify(data) }),
-  verifyEmailConfirm: (data) => apiClient('/users/verifyEmail/confirm', { method: 'POST', body: JSON.stringify(data) }),
-  importUsers: (data) => apiClient('/users/import', { method: 'POST', body: JSON.stringify(data) }), // Note: this might need FormData depending on backend implementation
-  enableUser: (data) => apiClient('/users/enabled', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateMe: async (userData) => {
+    try {
+      return await apiClient('/users/me', {
+        method: 'PUT',
+        body: JSON.stringify(userData)
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  },
+
+  getDevices: async () => {
+    try {
+      return await apiClient('/users/me/devices');
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+      return [];
+    }
+  },
+
+  getTeam: async () => {
+    try {
+      return await apiClient('/users/me/team');
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      return [];
+    }
+  },
+
+  getProfileStats: async () => {
+    try {
+      return await apiClient('/users/me/profile_stats');
+    } catch (error) {
+      console.error('Error fetching profile stats:', error);
+      return { skills: [], recent_certificates: [], experiences: [] };
+    }
+  },
+
+  getObligations: async () => {
+    try {
+      return await apiClient('/users/me/obligations');
+    } catch (error) {
+      console.error('Error fetching obligations:', error);
+      return [];
+    }
+  },
+
+  getSpendingStats: async () => {
+    try {
+      return await apiClient('/users/me/spending_stats');
+    } catch (error) {
+      console.error('Error fetching spending stats:', error);
+      return { total_expense: 0, data: [] };
+    }
+  }
 };

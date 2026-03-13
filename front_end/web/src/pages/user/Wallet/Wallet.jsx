@@ -24,20 +24,28 @@ const WalletPage = () => {
   const { user } = useContext(AuthContext);
   const [activeModal, setActiveModal] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [obligations, setObligations] = useState([]);
+  const [spendingStats, setSpendingStats] = useState({ total_expense: 0, data: [] });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchWallet = async () => {
+    const fetchData = async () => {
       try {
-        const data = await financeService.getTransactions();
-        setTransactions(data);
+        const [transData, obliData, spentData] = await Promise.all([
+           financeService.getTransactions(),
+           userService.getObligations(),
+           userService.getSpendingStats()
+        ]);
+        setTransactions(transData);
+        setObligations(obliData);
+        setSpendingStats(spentData);
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchWallet();
+    fetchData();
   }, []);
 
   const studentClass = user?.class_name || 'Đoàn Nhóm';
@@ -45,8 +53,17 @@ const WalletPage = () => {
   const firstName = nameParts[nameParts.length - 1].toUpperCase();
   const topUpCode = `NAP QUY ${firstName} ${studentClass}`;
   
-  const balance = transactions.reduce((acc, t) => acc + (t.type === 'Thu' ? Number(t.amount.replace(/[^0-9.-]+/g,"")) : -Number(t.amount.replace(/[^0-9.-]+/g,""))), 0);
-  const totalExpense = transactions.reduce((acc, t) => acc + (t.type === 'Chi' ? Number(t.amount.replace(/[^0-9.-]+/g,"")) : 0), 0);
+  const balance = transactions.reduce((acc, t) => {
+    const amt = typeof t.amount === 'number' ? t.amount : Number(String(t.amount).replace(/[^0-9.-]+/g,"") || 0);
+    const isIncome = t.type === 'income' || t.type === 'Thu' || t.type === 'THU';
+    return isIncome ? acc + amt : acc - amt;
+  }, 0);
+
+  const totalExpense = transactions.reduce((acc, t) => {
+    const amt = typeof t.amount === 'number' ? t.amount : Number(String(t.amount).replace(/[^0-9.-]+/g,"") || 0);
+    const isExpense = t.type === 'expense' || t.type === 'Chi' || t.type === 'CHI';
+    return isExpense ? acc + amt : acc;
+  }, 0);
 
   // Component Modal dùng chung để đồng bộ giao diện
   const Modal = ({ title, onClose, children }) => (
@@ -159,69 +176,31 @@ const WalletPage = () => {
             </div>
 
             <div className="space-y-4">
-              {/* Item 1 */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-transparent hover:border-blue-100 transition-all group">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                  <span className="text-xl">🎓</span>
-                </div>
-                <div className="flex-1">
-                  <h5 className="text-sm font-bold text-slate-800">
-                    Đoàn phí năm học 2025-2026
-                  </h5>
-                  <p className="text-[11px] text-slate-400 font-medium tracking-tight">
-                    Hạn chót: 31/01/2026
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase flex items-center gap-1">
-                    <CheckCircle2 size={10} /> Đã nộp
-                  </span>
-                  <p className="text-[9px] text-slate-400 mt-1 font-bold">
-                    10/01/2026
-                  </p>
-                </div>
-              </div>
-
-              {/* Item 2 */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-transparent hover:border-blue-100 transition-all">
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
-                  <span className="text-xl">🍱</span>
-                </div>
-                <div className="flex-1">
-                  <h5 className="text-sm font-bold text-slate-800">
-                    Quỹ lớp tháng 03/2026
-                  </h5>
-                  <p className="text-[11px] text-slate-400 font-medium tracking-tight">
-                    Hạn chót: 15/03/2026
-                  </p>
-                </div>
-                <span className="bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase">
-                  Đã hoàn thành
-                </span>
-              </div>
-
-              {/* Item 3 */}
-              <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-transparent hover:border-blue-100 transition-all opacity-80">
-                <div className="w-12 h-12 bg-slate-200 rounded-xl flex items-center justify-center text-slate-500">
-                  <Calendar size={24} />
-                </div>
-                <div className="flex-1">
-                  <h5 className="text-sm font-bold text-slate-800">
-                    Quỹ lớp tháng 04/2026
-                  </h5>
-                  <p className="text-[11px] text-slate-400 font-medium tracking-tight italic">
-                    Sắp tới
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="bg-amber-50 text-amber-600 text-[10px] font-black px-2 py-1 rounded uppercase flex items-center gap-1">
-                    <Clock size={10} /> Chờ thanh toán
-                  </span>
-                  <p className="text-[9px] text-slate-400 mt-1 font-bold">
-                    Mở sau 15 ngày
-                  </p>
-                </div>
-              </div>
+               {obligations.length > 0 ? obligations.map((ob, idx) => (
+                 <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-transparent hover:border-blue-100 transition-all group">
+                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                     <span className="text-xl">🎓</span>
+                   </div>
+                   <div className="flex-1">
+                     <h5 className="text-sm font-bold text-slate-800">
+                       {ob.title}
+                     </h5>
+                     <p className="text-[11px] text-slate-400 font-medium tracking-tight">
+                       Hạn chót: {ob.due_date}
+                     </p>
+                   </div>
+                   <div className="text-right">
+                     <span className={`bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase flex items-center gap-1`}>
+                       <CheckCircle2 size={10} /> {ob.status === "APPROVED" ? "Đã duyệt" : "Chờ nộp"}
+                     </span>
+                     <p className="text-[9px] text-slate-400 mt-1 font-bold">
+                       {ob.amount.toLocaleString()} VNĐ
+                     </p>
+                   </div>
+                 </div>
+               )) : (
+                 <p className="text-xs text-slate-400 font-bold italic">Không có nghĩa vụ tài chính nào.</p>
+               )}
             </div>
           </div>
 
@@ -285,33 +264,25 @@ const WalletPage = () => {
               </div>
 
               <div className="flex-1 space-y-4 w-full">
-                {[
-                  {
-                    label: "Hoạt động ngoại khóa",
-                    value: "50%",
-                    color: "bg-blue-600",
-                  },
-                  {
-                    label: "Cơ sở vật chất",
-                    value: "30%",
-                    color: "bg-orange-500",
-                  },
+                {(spendingStats.data.length > 0 ? spendingStats.data : [
+                  { label: "Hoạt động ngoại khóa", value: "50%", color: "bg-blue-600" },
+                  { label: "Cơ sơ vật chất", value: "30%", color: "bg-orange-500" },
                   { label: "Dự phòng", value: "20%", color: "bg-slate-400" },
-                ].map((item, idx) => (
+                ]).map((item, idx) => (
                   <div
                     key={idx}
                     className="flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-2.5 h-2.5 rounded-full ${item.color}`}
+                        className={`w-2.5 h-2.5 rounded-full ${item.color || 'bg-slate-400'}`}
                       ></div>
                       <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">
                         {item.label}
                       </span>
                     </div>
                     <span className="text-xs font-black text-slate-800">
-                      {item.value}
+                      {typeof item.value === 'number' ? `${item.value}%` : item.value}
                     </span>
                   </div>
                 ))}
@@ -347,15 +318,19 @@ const WalletPage = () => {
                     <div className="flex items-center gap-4">
                       <div
                         className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                          t.type === "income"
-                            ? "bg-emerald-50 text-emerald-600"
-                            : "bg-red-50 text-red-500"
+                            t.type === "income" || t.type === "THU"
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            : "bg-red-50 text-red-500 border-red-100"
                         }`}
                       >
-                        {t.type === "income" ? (
-                          <ArrowDownLeft size={18} />
+                        {t.type === "income" || t.type === "THU" ? (
+                          <div className="flex items-center gap-1">
+                            <ArrowUpRight size={14} /> +
+                          </div>
                         ) : (
-                          <ArrowUpRight size={18} />
+                          <div className="flex items-center gap-1">
+                            <ArrowDownRight size={14} /> -
+                          </div>
                         )}
                       </div>
                       <div>

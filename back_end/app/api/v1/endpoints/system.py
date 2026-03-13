@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy import func
 from app.api.deps import get_db
 from app.models.core import User
@@ -16,7 +16,7 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
     total_members = db.query(User).count()
     
     # 2. Total Budget
-    budget_sum = db.query(func.sum(Budget.balance)).scalar() or 0
+    budget_sum = db.query(func.sum(Budget.total_amount)).scalar() or 0
     total_budget_str = f"{budget_sum:,.0f} VNĐ"
     
     # 3. Active Events
@@ -64,11 +64,24 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
             { "name": "Tiêu cực", "value": round((negative_count / total_sentiments) * 100), "color": "#EF4444" },
             { "name": "Trung lập", "value": round((neutral_count / total_sentiments) * 100), "color": "#CBD5E1" }
         ]
-        # Get latest distinct keywords (mock real logic placeholder)
-        ai_keywords = [
-            kw[0] for kw in db.query(AISentiment.keyword).distinct().limit(5).all()
-            if kw[0]
-        ]
+        # Get latest distinct keywords
+        all_sentiments = db.query(AISentiment.detected_keywords).all()
+        keywords_set = set()
+        for s in all_sentiments:
+            if s[0] and isinstance(s[0], list):
+                keywords_set.update(s[0])
+        ai_keywords = list(keywords_set)[:5]
+
+    # 7. Suggested Event for User Dashboard
+    suggested_event = db.query(Event).filter(Event.status == "LIVE").order_by(Event.start_time.asc()).first()
+    suggested_event_data = None
+    if suggested_event:
+        suggested_event_data = {
+            "id": str(suggested_event.id),
+            "name": suggested_event.name,
+            "date": suggested_event.start_time.strftime("%d/%m/%Y") if suggested_event.start_time else "TBA",
+            "location": suggested_event.location
+        }
 
     return {
         "stats": {
@@ -81,5 +94,11 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
         "timelines": timelines_data,
         "risks": risks_data,
         "aiSentiment": sentiment_data,
-        "aiKeywords": ai_keywords or ["Chưa có dữ liệu"]
+        "aiKeywords": ai_keywords or ["Chưa có dữ liệu"],
+        "suggestedEvent": suggested_event_data,
+        "quickActions": [
+            {"id": 1, "title": "Giấy xác nhận SV", "icon": "file_text", "primary": True},
+            {"id": 2, "title": "Bảng điểm Rèn luyện", "icon": "bar_chart", "primary": False},
+            {"id": 3, "title": "Đăng ký Event", "icon": "event", "primary": False}
+        ]
     }

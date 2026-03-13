@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db
 from app.schemas.finance_schemas import BudgetCreate, BudgetUpdate, BudgetResponse
 from app.services import finance_service
+from app.models.finance import Budget
 
 router = APIRouter()
 
@@ -24,6 +26,17 @@ def read_budgets(
     db: Session = Depends(get_db)
 ):
     return finance_service.get_budgets(db, skip=skip, limit=limit)
+
+@router.get("/stats")
+def get_budget_stats(db: Session = Depends(get_db)):
+    """Fetch budget statistics for Admin Finance Dashboard"""
+    total_income = db.query(func.sum(Budget.total_amount)).scalar() or 0
+    total_expense = db.query(func.sum(Budget.used_amount)).scalar() or 0
+    return {
+        "totalIncome": float(total_income),
+        "totalExpense": float(total_expense),
+        "remaining": float(total_income - total_expense)
+    }
 
 @router.put("/{budget_id}", response_model=BudgetResponse)
 def update_budget(

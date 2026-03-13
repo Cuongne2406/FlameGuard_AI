@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../../context/AuthContext";
 import {
   Radar,
@@ -30,6 +30,7 @@ const Profile = () => {
   const { user } = useContext(AuthContext);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  const [profileStats, setProfileStats] = useState(null);
   const [skillData, setSkillData] = useState([]);
   const [recentCertificates, setRecentCertificates] = useState([]);
   const [experiences, setExperiences] = useState([]);
@@ -39,6 +40,7 @@ const Profile = () => {
     const fetchProfileStats = async () => {
       try {
         const data = await userService.getProfileStats();
+        setProfileStats(data);
         setSkillData(data.skills || []);
         setRecentCertificates(data.recent_certificates || []);
         setExperiences(data.experiences || []);
@@ -100,13 +102,13 @@ const Profile = () => {
               </div>
               <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
                 <span className="text-blue-600 font-bold flex items-center gap-1">
-                  <Zap size={14} fill="currentColor" /> SV loại Giỏi
+                  <Zap size={14} fill="currentColor" /> {profileStats?.ranking || "SV loại Giỏi"}
                 </span>
                 <span className="flex items-center gap-1">
-                  <GraduationCap size={14} /> ĐH Lạc Hồng
+                  <GraduationCap size={14} /> {user?.university || "ĐH Lạc Hồng"}
                 </span>
                 <span className="flex items-center gap-1">
-                  <MapPin size={14} /> Đồng Nai
+                  <MapPin size={14} /> {user?.address || "Đồng Nai"}
                 </span>
               </div>
             </div>
@@ -202,14 +204,14 @@ const Profile = () => {
                       {user?.full_name || "Lê Trọng Phúc Hậu"}
                     </h1>
                     <p className="text-blue-600 font-bold text-xs uppercase tracking-widest mt-1">
-                      Sinh viên 5 Tốt | LHU
+                      {profileStats?.ranking || "Sinh viên 5 Tốt | LHU"}
                     </p>
                     <div className="flex gap-4 mt-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
                       <span className="bg-slate-100 px-2 py-1 rounded">
                         MSSV: {user?.student_id || "23CT112"}
                       </span>
-                      <span>letrongphuchau@email.com</span>
-                      <span>(+84) 909 123 456</span>
+                      <span>{user?.email || "letrongphuchau@email.com"}</span>
+                      <span>{user?.phone_number || "(+84) 909 123 456"}</span>
                     </div>
                   </div>
                   {/* Summary */}
@@ -218,11 +220,7 @@ const Profile = () => {
                       Tóm tắt
                     </h4>
                     <p className="text-[11px] leading-relaxed text-slate-600">
-                      Sinh viên năng động với nền tảng vững chắc về Công nghệ
-                      thông tin và kỹ năng lãnh đạo đã được kiểm chứng. Có kinh
-                      nghiệm tổ chức các sự kiện quy mô lớn và đạt nhiều giải
-                      thưởng trong các cuộc thi học thuật. Hướng tới mục tiêu
-                      trở thành một nhà quản lý dự án công nghệ chuyên nghiệp.
+                      {profileStats?.summary || "Sinh viên năng động với nền tảng vững chắc về Công nghệ thông tin và kỹ năng lãnh đạo đã được kiểm chứng. Có kinh nghiệm tổ chức các sự kiện quy mô lớn và đạt nhiều giải thưởng trong các cuộc thi học thuật. Hướng tới mục tiêu trở thành một nhà quản lý dự án công nghệ chuyên nghiệp."}
                     </p>
                   </div>
                   {/* Experience */}
@@ -318,7 +316,7 @@ const Profile = () => {
                 </section>
 
                 {/* Section 2: Language */}
-                <section>
+                <section className="mt-6">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                     Ngôn ngữ hiển thị
                   </h4>
@@ -332,7 +330,7 @@ const Profile = () => {
                   </div>
                 </section>
 
-                <section>
+                <section className="mt-6">
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
                     Dữ liệu hiển thị
                   </h4>
