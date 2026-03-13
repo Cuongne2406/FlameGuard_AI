@@ -1,0 +1,41 @@
+Attempting login to https://api-auth.s4h.edu.vn/auth/login with cainnguyen2005@gmail.com...
+Status Code: 200
+Response Body: {"accessToken":"eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzaGFyZTRIYXBweSIsInN1YiI6IjY5YjQyNTFkMWJjYTlhMDU5Yjc2N2Y2MSIsImlhdCI6MTc3MzQxMzY2MSwiZXhwIjoxNzczNDE3MjYxfQ.Lx88HwMm0PUI5i1zLY0abE6I_NQEMVLvtzEs8D13fcFEoKSP0Amh7x9AP56QWwO1B1DIVeHFxw6nJu2pTdzJ4g","refreshToken":"eyJhbGciOiJIUzUxMiJ9.eyJpc3MiOiJzaGFyZTRIYXBweSIsInN1YiI6IjY5YjQyNTFkMWJjYTlhMDU5Yjc2N2Y2MSIsImlhdCI6MTc3MzQxMzY2MSwiZXhwIjoxNzc2MDA1NjYxfQ.heUD3nmaxQUsNsKy8hBtFh38IKx-GfqKY0E1I7_Smmp4OWBBJCzwWP5w2MwSeqVRfvAjpMeFejkPrcswLJwmpA"}
+Response Headers:
+  date: Fri, 13 Mar 2026 14:54:22 GMT
+  content-type: application/json
+  transfer-encoding: chunked
+  connection: keep-alive
+  server: cloudflare
+  nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+  vary: Origin, Access-Control-Request-Method, Access-Control-Request-Headers
+  x-content-type-options: nosniff
+  x-xss-protection: 0
+  cache-control: no-cache, no-store, max-age=0, must-revalidate
+  pragma: no-cache
+  expires: 0
+  x-frame-options: DENY
+  x-served-by: api-auth.s4h.edu.vn
+  cf-cache-status: DYNAMIC
+  report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=rb7jucBFQJH8Uuu3%2BEvXgql5HuEl%2FDNYydOKFGL9H7UmS6C%2BHPwt5wLRMHVzF87P7SOUW1u6HU0v6ibLefmbKvmBlz5fmWpXSBVgkPKu9qJWQVcJxMqlq%2BP3kzu%2FbIc%3D"}]}
+  content-encoding: gzip
+  cf-ray: 9dbbdf9a2b4a166a-HKG
+  alt-svc: h3=":443"; ma=86400
+DEBUG: Found token in JSON BODY: eyJhbGciOiJIUzU...
+SUCCESS: Token retrieved.
+Me Status: 200
+Me Data: {
+  "id": "67a9c748a60b5524321e0c05",
+  "firstName": "C\u01b0\u1eddng",
+  "lastName": "Nguy\u1ec5n Trung",
+  "email": "cainnguyen2005@gmail.com",
+  "phone": "0923409668",
+  "roles": [
+    "ROLE_USER"
+  ],
+  "gender": null,
+  "birthday": null,
+  "address": null,
+  "avatarUrl": null,
+  "bio": null
+}

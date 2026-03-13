@@ -1,26 +1,28 @@
 import httpx
 from typing import Dict, Any, Optional
 
-S4H_BASE_URL = "http://api-auth.s4h.edu.vn"
+S4H_BASE_URL = "https://api-auth.s4h.edu.vn"
 
-async def s4h_login(student_id: str, password: str) -> Optional[Dict[str, Any]]:
+async def s4h_login(identifier: str, password: str) -> Optional[Dict[str, Any]]:
     """
-    Xác thực MSSV và Password thông qua S4H API.
-    Nếu chuẩn, trả về JSON chứa token của S4H và một số info.
-    Nếu sai mật khẩu hoặc lỗi, trả về None.
+    Xác thực qua S4H API. Hỗ trợ cả Email và MSSV.
     """
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
-            # S4H thường cũng nhận JSON hoặc Form Data
-            # Theo danh sách route: POST /auth/login
+            # S4H Endpoint: POST /auth/login
+            # Identifier có thể là email hoặc student_id
             response = await client.post(
                 f"{S4H_BASE_URL}/auth/login",
-                json={"username": student_id, "password": password}, # MSSV được coi là username trong Payload
+                json={"email": identifier, "password": password},
                 timeout=10.0
             )
             
-            if response.status_code == 200 or response.status_code == 201:
-                return response.json()
+            if response.status_code in [200, 201]:
+                data = response.json()
+                # Đồng nhất key token về "token" cho FlameGuard sử dụng
+                if "accessToken" in data:
+                    data["token"] = data["accessToken"]
+                return data
             return None
         except Exception as e:
             print("S4H Login Error:", e)

@@ -29,20 +29,29 @@ async def login_access_token(
         # Lấy thông tin User S4H bằng token vừa được cấp
         user_info = await s4h_get_user_info(s4h_response["token"])
         if user_info:
-            # Lấy student_id từ user_info hoặc từ form_data.username
-            student_id = user_info.get("student_id", form_data.username)
-            email = user_info.get("email", f"{student_id}@s4h.edu.vn") # Cấp email fallback nếu S4H không trả
+            # Mapping thông tin từ S4H sang FlameGuard
+            email = user_info.get("email", form_data.username if "@" in form_data.username else f"{form_data.username}@s4h.edu.vn")
+            first_name = user_info.get("firstName", "")
+            last_name = user_info.get("lastName", "")
+            full_name = f"{last_name} {first_name}".strip() or email
             
-            # Tìm xem user đã import vào FlameGuard DB chưa dựa trên MSSV
-            user = db.query(User).filter(User.student_id == student_id).first()
+            # ID định danh từ S4H (là UUID string)
+            # Lưu ý: FlameGuard dùng student_id để mapping nếu có, hoặc dùng email.
+            student_id = user_info.get("student_id") or (None if "@" in form_data.username else form_data.username)
+            
+            # Tìm xem user đã tồn tại chưa dựa trên Email (vì email là duy nhất)
+            user = db.query(User).filter(User.email == email).first()
+            if not user and student_id:
+                user = db.query(User).filter(User.student_id == student_id).first()
+                
             if not user:
                 # Tự động tạo user mới (Auto-Sync)
                 user = User(
                     email=email,
-                    full_name=user_info.get("full_name", student_id),
+                    full_name=full_name,
                     student_id=student_id,
                     auth_provider=AuthProvider.S4H,
-                    # password_hash để trống vì đăng nhập S4H
+                    # password_hash để trống vì dùng S4H
                 )
                 db.add(user)
                 db.commit()
