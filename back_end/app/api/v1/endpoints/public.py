@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db
 from app.models.events import Event, EventStatus
 from app.models.news import News
+from uuid import UUID
 
 router = APIRouter()
 
