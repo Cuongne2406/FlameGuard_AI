@@ -25,6 +25,10 @@ class AwardUpdate(BaseModel):
 
 class AwardResponse(AwardBase):
     id: UUID
+    # Thêm thông tin User để Frontend hiển thị
+    student_id: Optional[str] = None
+    full_name: Optional[str] = None
+    university: Optional[str] = None
 
     class Config:
         from_attributes = True

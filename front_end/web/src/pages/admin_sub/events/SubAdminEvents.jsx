@@ -73,18 +73,21 @@ const SubAdminEvents = () => {
     ];
 
     const getEventState = (status) => {
-        if (status.includes('Đang diễn ra') || status.includes('Live')) return 'live';
-        if (status.includes('Đang mở đăng ký')) return 'open';
-        if (status.includes('Sắp tới')) return 'upcoming';
-        if (status.includes('Đã kết thúc')) return 'ended';
+        if (!status) return 'upcoming';
+        const strStatus = String(status);
+        if (strStatus.includes('Đang diễn ra') || strStatus.includes('Live')) return 'live';
+        if (strStatus.includes('Đang mở đăng ký')) return 'open';
+        if (strStatus.includes('Sắp tới')) return 'upcoming';
+        if (strStatus.includes('Đã kết thúc')) return 'ended';
         return 'upcoming';
     };
 
     const filteredEvents = events.filter(event => {
         if (activeTab === 'Tất cả') return true;
-        if (activeTab === 'Đang diễn ra (Live)') return event.status.includes('Đang diễn ra') || event.status.includes('Đang mở');
-        if (activeTab === 'Sắp tới') return event.status === 'Sắp tới';
-        if (activeTab === 'Đã kết thúc') return event.status === 'Đã kết thúc';
+        const status = event.status || '';
+        if (activeTab === 'Đang diễn ra (Live)') return status.includes('Đang diễn ra') || status.includes('Đang mở');
+        if (activeTab === 'Sắp tới') return status === 'Sắp tới';
+        if (activeTab === 'Đã kết thúc') return status === 'Đã kết thúc';
         return true;
     });
 
@@ -279,8 +282,8 @@ const SubAdminEvents = () => {
                                         </div>
 
                                         <div className="flex flex-col sm:flex-row lg:flex-col gap-3 min-w-[200px] md:min-w-[240px]">
-                                            {ev.actions
-                                                .filter(act => act.showFor.includes(state))
+                                            {(ev.actions || [])
+                                                .filter(act => act.showFor && act.showFor.includes(state))
                                                 .map((act, i) => (
                                                     <button
                                                         key={i}

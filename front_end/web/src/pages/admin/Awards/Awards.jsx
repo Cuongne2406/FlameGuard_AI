@@ -35,8 +35,9 @@ const Awards = () => {
         // Cập nhật bằng dữ liệu API khi có backend thực tế
         setCandidates(awardsData || []);
         setRankings(statsData?.rankings || []);
-        // Nếu API trả về stats chi tiết:
-        // setStats(statsData?.stats || { remainingDays: '0', submitted: '0', ... })
+        if (statsData?.summary) {
+          setStats(statsData.summary);
+        }
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu khen thưởng:", err);
       } finally {
@@ -277,40 +278,65 @@ const RankRow = ({ rank, name, score, trend, trendIcon, trendColor }) => (
   </tr>
 );
 
-const CriterionItem = ({ label, points, color, icon }) => (
-  <div
-    className={`flex justify-between items-center p-4 rounded-xl border border-transparent hover:border-slate-100 transition-all ${color.split(" ")[0].replace("bg-", "bg-opacity-20 bg-")}`}
-  >
-    <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${color}`}>{icon}</div>
-      <span className="text-xs font-bold text-slate-700">{label}</span>
-    </div>
-    <span className={`text-sm font-black ${color.split(" ")[1]}`}>
-      {points}
-    </span>
-  </div>
-);
+const CriterionItem = ({ label, points, color, icon }) => {
+  const safeColor = color || "bg-slate-100 text-slate-400";
+  const colorParts = safeColor.split(" ");
+  const bgOpacityClass = colorParts[0] ? colorParts[0].replace("bg-", "bg-opacity-20 bg-") : "";
+  const textColorClass = colorParts[1] || "";
 
-const CandidateCard = ({ name, id, unit, status, statusColor }) => (
-  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 flex justify-between items-center hover:shadow-md transition-all">
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
-        {name.split(" ").pop().charAt(0)}
-      </div>
-      <div>
-        <h5 className="text-xs font-black text-slate-800">{name}</h5>
-        <p className="text-[10px] text-slate-400 font-medium">
-          {id} • {unit}
-        </p>
-      </div>
-    </div>
-    <span
-      className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${statusColor}`}
+  return (
+    <div
+      className={`flex justify-between items-center p-4 rounded-xl border border-transparent hover:border-slate-100 transition-all ${bgOpacityClass}`}
     >
-      {status}
-    </span>
-  </div>
-);
+      <div className="flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${safeColor}`}>{icon}</div>
+        <span className="text-xs font-bold text-slate-700">{label}</span>
+      </div>
+      <span className={`text-sm font-black ${textColorClass}`}>
+        {points}
+      </span>
+    </div>
+  );
+};
+
+const CandidateCard = ({ full_name, student_id, university, status }) => {
+  // Mapping màu sắc dựa trên status
+  const statusColors = {
+    PENDING: "bg-amber-100 text-amber-600 border border-amber-200",
+    APPROVED: "bg-emerald-100 text-emerald-600 border border-emerald-200",
+    REJECTED: "bg-rose-100 text-rose-600 border border-rose-200",
+  };
+
+  const statusColor = statusColors[status] || "bg-slate-100 text-slate-400";
+  const displayName = full_name || "Chưa có tên";
+  const displayId = student_id || "N/A";
+  const displayUnit = university || "N/A";
+  
+  // Trích xuất chữ cái đầu của tên (Safe split)
+  const nameParts = displayName.split(" ");
+  const initial = nameParts.length > 0 ? nameParts[nameParts.length - 1].charAt(0) : "?";
+
+  return (
+    <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 flex justify-between items-center hover:shadow-md transition-all">
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
+          {initial}
+        </div>
+        <div>
+          <h5 className="text-xs font-black text-slate-800">{displayName}</h5>
+          <p className="text-[10px] text-slate-400 font-medium">
+            {displayId} • {displayUnit}
+          </p>
+        </div>
+      </div>
+      <span
+        className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${statusColor}`}
+      >
+        {status}
+      </span>
+    </div>
+  );
+};
 
 const TabBtn = ({ label, active }) => (
   <button
