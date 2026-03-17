@@ -101,6 +101,7 @@ class UserOrgMiniResponse(BaseModel):
     organization_name: str
     title: Optional[str] = None
     is_primary: bool = False
+    joined_date: Optional[date] = None
 
     class Config:
         from_attributes = True
@@ -196,6 +197,8 @@ class UserResponse(UserBase):
     university: Optional[str] = None
     address: Optional[str] = None
     role_title: Optional[str] = None
+    activity_count: int = 0
+    award_count: int = 0
     roles: List[RoleResponse] = []
     organizations: List[UserOrgMiniResponse] = []
 

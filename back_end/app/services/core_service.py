@@ -281,56 +281,62 @@ def create_user(db: Session, user_in: UserCreate):
     db.refresh(db_user)
     return db_user
 
+def format_user_dict(db: Session, user: User):
+    from app.models.events import EventRegistration
+    from app.models.awards import Award, AwardStatus
+    
+    # Tính toán role_title (ưu tiên vị trí chính)
+    role_title = "Thành viên"
+    org_data_list = []
+    
+    for uo in user.organizations:
+        org_data_list.append({
+            "organization_id": uo.organization_id,
+            "organization_name": uo.organization.name,
+            "title": uo.title,
+            "is_primary": uo.is_primary,
+            "joined_date": uo.joined_date.isoformat() if uo.joined_date else None
+        })
+        if uo.is_primary:
+            role_title = uo.title
+    
+    # Nếu chưa có primary role nhưng có đơn vị, lấy role đầu tiên
+    if role_title == "Thành viên" and org_data_list:
+        role_title = org_data_list[0]["title"] or "Cán bộ"
+    
+    # Tính toán số lượng hoạt động và khen thưởng thực tế
+    activity_count = db.query(EventRegistration).filter(EventRegistration.user_id == user.id).count()
+    award_count = db.query(Award).filter(Award.user_id == user.id, Award.status == AwardStatus.APPROVED).count()
+
+    return {
+        "id": str(user.id),
+        "student_id": user.student_id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "status": user.status.value if user.status else "ACTIVE",
+        "avatar_url": user.avatar_url,
+        "level": user.level,
+        "training_score": user.training_score,
+        "university": user.university,
+        "address": user.address,
+        "role_title": role_title,
+        "activity_count": activity_count,
+        "award_count": award_count,
+        "organizations": org_data_list,
+        "roles": [
+            {
+                "id": str(r.id),
+                "name": r.name,
+                "description": r.description
+            } for r in user.roles
+        ],
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None
+    }
+
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     users = db.query(User).offset(skip).limit(limit).all()
-    results = []
-    
-    for user in users:
-        # Tính toán role_title (ưu tiên vị trí chính)
-        role_title = "Thành viên"
-        org_data_list = []
-        
-        for uo in user.organizations:
-            org_data_list.append({
-                "organization_id": uo.organization_id,
-                "organization_name": uo.organization.name,
-                "title": uo.title,
-                "is_primary": uo.is_primary
-            })
-            if uo.is_primary:
-                role_title = uo.title
-        
-        # Nếu chưa có primary role nhưng có đơn vị, lấy role đầu tiên
-        if role_title == "Thành viên" and org_data_list:
-            role_title = org_data_list[0]["title"] or "Cán bộ"
-        
-        # Chuyển đổi sang dict và thêm các trường động
-        user_dict = {
-            "id": str(user.id),
-            "student_id": user.student_id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "phone_number": user.phone_number,
-            "status": user.status.value if user.status else "ACTIVE",
-            "avatar_url": user.avatar_url,
-            "level": user.level,
-            "training_score": user.training_score,
-            "university": user.university,
-            "address": user.address,
-            "role_title": role_title,
-            "organizations": org_data_list,
-            "roles": [
-                {
-                    "id": str(r.id),
-                    "name": r.name,
-                    "description": r.description
-                } for r in user.roles
-            ],
-            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None
-        }
-        results.append(user_dict)
-        
-    return results
+    return [format_user_dict(db, u) for u in users]
 
 def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -360,7 +366,7 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
         created_at=datetime.now()
     ))
     
-    return db_user
+    return format_user_dict(db, db_user)
 
 def delete_user(db: Session, user_id: UUID):
     db_user = db.query(User).filter(User.id == user_id).first()

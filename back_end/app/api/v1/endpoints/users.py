@@ -40,22 +40,13 @@ async def create_user(
 
 @router.get("/me")
 def read_users_me(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """
     Get current user profile with role/organization details.
     """
-    # Lấy thông tin chức vụ từ organization đầu tiên (nếu có)
-    title = "Thành viên"
-    for org in current_user.organizations:
-        if org.title:
-            title = org.title
-            break
-            
-    # Chuyển đổi sang dict để thêm trường động
-    user_data = UserResponse.model_validate(current_user).model_dump()
-    user_data["role_title"] = title
-    return user_data
+    return core_service.format_user_dict(db, current_user)
 
 @router.put("/me", response_model=UserResponse)
 def update_user_me(

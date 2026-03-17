@@ -28,5 +28,10 @@ export const rbacService = {
       method: 'POST',
       body: JSON.stringify(data)
     });
+  },
+  deleteRole: async (id) => {
+    return apiClient(`/roles/${id}`, {
+      method: 'DELETE'
+    });
   }
 };

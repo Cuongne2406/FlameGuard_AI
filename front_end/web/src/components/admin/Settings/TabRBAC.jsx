@@ -18,6 +18,9 @@ import { Toggle } from "../ui/Toggle";
 import { activityLogService } from "../../../services/activityLogService";
 import { rbacService } from "../../../services/rbacService";
 import { userService } from "../../../services/userService";
+import { Trash2 } from "lucide-react";
+
+const PROTECTED_ROLES = ["STUDENT", "FACULTY_ADMIN", "UNIVERSITY_ADMIN"];
 
 const TabRBAC = () => {
   const [auditLogs, setAuditLogs] = useState([]);
@@ -42,7 +45,7 @@ const TabRBAC = () => {
         rbacService.getPermissions(),
         userService.getAllUsers(),
       ]);
-      setAuditLogs(logsData.slice(0, 4));
+      setAuditLogs(logsData.items || []);
       setRoles(rolesData);
       setPermissions(permsData);
       setUsers(usersData);
@@ -118,6 +121,27 @@ const TabRBAC = () => {
     }
   };
 
+  const handleDeleteRole = async (role) => {
+    if (PROTECTED_ROLES.includes(role.name)) {
+      return alert("Không thể xóa các vai trò hệ thống!");
+    }
+
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa vai trò "${role.name}"? Hành động này không thể hoàn tác.`)) {
+      return;
+    }
+
+    try {
+      await rbacService.deleteRole(role.id);
+      alert("Xóa vai trò thành công!");
+      // Refresh data
+      const updatedRoles = await rbacService.getRoles();
+      setRoles(updatedRoles);
+    } catch (err) {
+      console.error("Failed to delete role:", err);
+      alert("Lỗi khi xóa vai trò. Vui lòng thử lại.");
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const matchesSearch = 
       u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -178,18 +202,29 @@ const TabRBAC = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]">
+            <table className="w-full text-left border-collapse min-w-[800px] table-fixed">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans w-[280px]">
                     Quyền hạn / Chức năng
                   </th>
                   {roles.map((role, i) => (
                     <th
                       key={role.id}
-                      className={`px-4 py-4 text-[10px] font-black text-center uppercase tracking-tighter font-sans ${i === 2 ? "text-blue-600" : "text-slate-400"}`}
+                      className={`px-4 py-4 text-[10px] font-black text-center uppercase tracking-tighter font-sans w-32 ${i === 2 ? "text-blue-600" : "text-slate-400"}`}
                     >
-                      {role.name}
+                      <div className="relative inline-flex items-center justify-center group/role">
+                        <span className="whitespace-nowrap">{role.name}</span>
+                        {!PROTECTED_ROLES.includes(role.name) && (
+                          <button
+                            onClick={() => handleDeleteRole(role)}
+                            className="absolute -right-6 opacity-0 group-hover/role:opacity-100 p-1 text-slate-300 hover:text-red-500 transition-all"
+                            title="Xóa vai trò"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
                     </th>
                   ))}
                 </tr>
