@@ -6,7 +6,9 @@ from app.models.documents import DocumentStatus
 
 class DigitalDocumentBase(BaseModel):
     user_id: UUID
+    document_code: Optional[str] = None
     document_type: str
+    title: Optional[str] = None
     purpose: Optional[str] = None
     status: DocumentStatus = DocumentStatus.PENDING
     file_url: Optional[str] = None
@@ -16,7 +18,9 @@ class DigitalDocumentBase(BaseModel):
 
 class DigitalDocumentCreate(BaseModel):
     user_id: Optional[UUID] = None
+    document_code: Optional[str] = None
     document_type: str
+    title: Optional[str] = None
     purpose: Optional[str] = None
 
 class DigitalDocumentUpdate(BaseModel):

@@ -33,6 +33,17 @@ const TimeLineView = () => {
     fetchCampaigns();
   }, []);
 
+  // Helper tính toán vị trí dựa trên ngày (giả định hiển thị năm 2026)
+  const getTimelinePos = (dateStr) => {
+    if (!dateStr) return 0;
+    const date = new Date(dateStr);
+    const startOfYear = new Date(2026, 0, 1);
+    const diff = date - startOfYear;
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    return Math.max(0, Math.min(100, (dayOfYear / 365) * 100));
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-500">
       {/* 1. Header Timeline (Tháng) */}
@@ -44,7 +55,7 @@ const TimeLineView = () => {
           {months.map((month) => (
             <div
               key={month}
-              className={`min-w-[120px] flex-1 p-4 text-center text-[10px] font-bold border-r border-slate-100 last:border-r-0 ${month === "Feb 2026" ? "text-blue-600 bg-blue-50/30" : "text-slate-400"}`}
+              className={`min-w-[120px] flex-1 p-4 text-center text-[10px] font-bold border-r border-slate-100 last:border-r-0 ${month === "Jun 2026" ? "text-blue-600 bg-blue-50/30" : "text-slate-400"}`}
             >
               {month}
             </div>
@@ -54,22 +65,19 @@ const TimeLineView = () => {
 
       {/* 2. Body Content */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Vạch kẻ "Hôm nay" - Cố định vị trí dựa theo thời gian thực tế trong ảnh */}
-        <div className="absolute left-[300px] ml-[15%] top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none">
+        {/* Vạch kẻ "Hôm nay" */}
+        <div className="absolute left-[300px] ml-[45%] top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none">
           <div className="absolute top-0 -translate-x-1/2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow-sm">
-            Hôm nay (14/02)
+            Hôm nay (17/03)
           </div>
         </div>
 
         {/* Cột trái: Tên chiến dịch */}
-        <div className="w-[300px] border-r border-slate-200 shrink-0 bg-white z-10">
+        <div className="w-[300px] border-r border-slate-200 shrink-0 bg-white z-10 overflow-y-auto">
           <div className="divide-y divide-slate-50">
             {campaigns.map((camp) => (
               <React.Fragment key={camp.id}>
                 <CampaignNameRow name={camp.name} isParent />
-                {camp.subActivities && camp.subActivities.map((sub) => (
-                  <CampaignNameRow key={sub.id} name={`${sub.name} (${sub.unit})`} isSub />
-                ))}
               </React.Fragment>
             ))}
           </div>
@@ -88,28 +96,24 @@ const TimeLineView = () => {
               ))}
             </div>
 
-            {campaigns.map((camp, cIndex) => (
-              <React.Fragment key={camp.id}>
-                <TimelineRow>
+            {campaigns.map((camp, cIndex) => {
+              const startPos = getTimelinePos(camp.start_date);
+              const endPos = getTimelinePos(camp.end_date);
+              const width = Math.max(2, endPos - startPos); // Tối thiểu 2% để nhìn thấy
+
+              return (
+                <TimelineRow key={camp.id}>
                   <TimelineBar
-                    color={cIndex % 2 === 0 ? "bg-blue-500" : "bg-emerald-500"}
-                    start={`${20 + cIndex * 10}%`}
-                    width={`${20 + cIndex * 5}%`}
-                    label={`${camp.name} (${camp.time})`}
-                    hasMilestone={camp.status === "RUNNING"}
+                    color={camp.unit.includes("CNTT") ? "bg-orange-500" : 
+                           camp.unit.includes("Xây dựng") ? "bg-emerald-500" : "bg-blue-500"}
+                    start={`${startPos}%`}
+                    width={`${width}%`}
+                    label={camp.name}
+                    hasMilestone={camp.status === "ONGOING" || camp.status === "RUNNING"}
                   />
                 </TimelineRow>
-                {camp.subActivities && camp.subActivities.map((sub, sIndex) => (
-                  <TimelineRow key={sub.id}>
-                    <TimelineBar 
-                      color={sIndex % 2 === 0 ? "bg-orange-500" : "bg-emerald-400"} 
-                      start={`${25 + (cIndex + sIndex) * 5}%`} 
-                      width="15%" 
-                    />
-                  </TimelineRow>
-                ))}
-              </React.Fragment>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

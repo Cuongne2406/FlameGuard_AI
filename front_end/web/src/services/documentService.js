@@ -8,10 +8,10 @@ export const documentService = {
     } catch { return []; }
   },
   
-  createRequest: async (type) => {
+  createRequest: async (data) => {
     return apiClient('/digital-documents/', { 
       method: 'POST', 
-      body: JSON.stringify({ document_type: type })
+      body: JSON.stringify(data)
     });
   },
 

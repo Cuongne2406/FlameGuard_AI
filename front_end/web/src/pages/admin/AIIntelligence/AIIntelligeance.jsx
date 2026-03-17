@@ -91,10 +91,10 @@ const IntelligeanceAI = () => {
             </button>
           </div>
 
-          {/* Simulated Chart Area */}
+          {/* Real Sentiment Chart Area */}
           <div className="h-48 flex items-end justify-between px-4 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/80 backdrop-blur-md border border-indigo-100 p-4 rounded-2xl shadow-2xl flex items-start gap-3 z-10">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="bg-white/80 backdrop-blur-md border border-indigo-100 p-4 rounded-2xl shadow-2xl flex items-start gap-3 z-10 pointer-events-auto">
                 <div className="p-2 bg-indigo-50 text-indigo-500 rounded-full">
                   <Activity size={16} />
                 </div>
@@ -108,21 +108,29 @@ const IntelligeanceAI = () => {
                 </div>
               </div>
             </div>
-            {/* Chart Bars/Lines placeholder */}
-            {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((day, i) => (
-              <div key={day} className="flex flex-col items-center gap-2 group">
+            
+            {(data.overview.sentimentHistory || []).map((item, i) => (
+              <div key={i} className="flex flex-col items-center gap-2 group relative z-0">
                 <div
                   className={`w-1 group-hover:w-2 transition-all rounded-full bg-slate-100 h-32 relative overflow-hidden`}
                 >
                   <div
-                    className={`absolute bottom-0 w-full ${day === "T6" ? "bg-red-400 h-[80%]" : "bg-indigo-400 h-[40%] opacity-20"}`}
+                    className={`absolute bottom-0 w-full transition-all duration-1000 ${
+                      item.value < 0 ? 'bg-red-400' : 'bg-indigo-400'
+                    }`}
+                    style={{ height: `${Math.abs(item.value)}%` }}
                   ></div>
                 </div>
                 <span
-                  className={`text-[10px] font-black ${day === "T6" ? "text-red-500" : "text-slate-300"}`}
+                  className={`text-[10px] font-black ${item.isStrong ? "text-indigo-600" : "text-slate-300"}`}
                 >
-                  {day}
+                  {item.day}
                 </span>
+                
+                {/* Tooltip on hover */}
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[8px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
+                  {item.value}%
+                </div>
               </div>
             ))}
           </div>

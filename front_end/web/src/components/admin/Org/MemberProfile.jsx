@@ -17,12 +17,73 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { userService } from "../../../services/userService";
+import { organizationService } from "../../../services/organizationService";
 
 // --- 1. MODAL THÊM MỚI / CHỈNH SỬA ---
 const MemberModal = ({ isOpen, onClose, member, onSave }) => {
-  const [formData, setFormData] = useState(
-    member || { name: "", role: "UVBCH", unit: "Khoa CNTT", status: "Active" },
-  );
+  const [formData, setFormData] = useState({
+    name: "",
+    role: "UVBCH",
+    unit: "",
+    unitId: "",
+    email: "",
+    userId: null,
+    status: "Active",
+  });
+
+  const [searchUser, setSearchUser] = useState("");
+  const [searchUnit, setSearchUnit] = useState("");
+  const [allUsers, setAllUsers] = useState([]);
+  const [allOrgs, setAllOrgs] = useState([]);
+  const [showUserSuggestions, setShowUserSuggestions] = useState(false);
+  const [showUnitSuggestions, setShowUnitSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (member) {
+      setFormData({
+        ...member,
+        unit: member.unit || "",
+        unitId: "", // Sẽ cần fetch hoặc set nếu có
+      });
+      setSearchUser(member.name || "");
+      setSearchUnit(member.unit || "");
+    } else {
+      setFormData({ name: "", role: "UVBCH", unit: "", unitId: "", email: "", userId: null, status: "Active" });
+      setSearchUser("");
+      setSearchUnit("");
+    }
+  }, [member, isOpen]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [users, orgs] = await Promise.all([
+          userService.getAllUsers(),
+          organizationService.getOrganizations()
+        ]);
+        setAllUsers(users);
+        setAllOrgs(orgs);
+      } catch (err) {
+        console.error("Failed to fetch modal data:", err);
+      }
+    };
+    if (isOpen) fetchData();
+  }, [isOpen]);
+
+  const filteredUsers = useMemo(() => {
+    if (!searchUser || formData.userId || member) return [];
+    return allUsers.filter(u => 
+      u.full_name?.toLowerCase().includes(searchUser.toLowerCase()) || 
+      u.student_id?.toLowerCase().includes(searchUser.toLowerCase())
+    ).slice(0, 5);
+  }, [allUsers, searchUser, formData.userId, member]);
+
+  const filteredOrgs = useMemo(() => {
+    if (!searchUnit || formData.unitId) return [];
+    return allOrgs.filter(o => 
+      o.name?.toLowerCase().includes(searchUnit.toLowerCase())
+    ).slice(0, 5);
+  }, [allOrgs, searchUnit, formData.unitId]);
 
   if (!isOpen) return null;
 
@@ -33,68 +94,109 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
           <h3 className="text-xl font-black text-slate-800">
             {member ? "Chỉnh sửa Cán bộ" : "Thêm Cán bộ mới"}
           </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white rounded-full transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
         <div className="p-8 space-y-4">
-          <div>
-            <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-              Họ và tên
-            </label>
-            <input
-              className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="Nhập tên cán bộ..."
-            />
+          <div className="relative">
+            <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Họ và tên / MSSV</label>
+            <div className="relative">
+              <input
+                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.userId ? 'border-blue-500 bg-blue-50/30' : 'border-slate-100'} rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold`}
+                value={searchUser}
+                onChange={(e) => {
+                  setSearchUser(e.target.value);
+                  setFormData(prev => ({ ...prev, name: e.target.value, userId: null }));
+                  setShowUserSuggestions(true);
+                }}
+                placeholder="Tìm MSSV hoặc nhập tên mới..."
+              />
+              {formData.userId && (
+                <button 
+                  onClick={() => { setSelectedUser(null); setFormData(p => ({...p, userId: null})); setSearchUser(""); }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            
+            {showUserSuggestions && filteredUsers.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                {filteredUsers.map(u => (
+                  <button
+                    key={u.id}
+                    className="w-full px-5 py-3 text-left hover:bg-blue-50 border-b border-slate-50 last:border-0 flex justify-between items-center"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, name: u.full_name, userId: u.id, email: u.email }));
+                      setSearchUser(u.full_name);
+                      setShowUserSuggestions(false);
+                    }}
+                  >
+                    <div>
+                      <p className="font-bold text-slate-800">{u.full_name}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">{u.student_id || "User"}</p>
+                    </div>
+                    <Plus size={14} className="text-blue-500" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-                Chức vụ
-              </label>
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Chức vụ</label>
               <select
                 className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
                 value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
                 <option>Bí thư LCĐ</option>
                 <option>Phó Bí thư</option>
                 <option>UVBCH</option>
+                <option>Chủ nhiệm CLB</option>
               </select>
             </div>
-            <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-                Đơn vị
-              </label>
+            <div className="relative">
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Đơn vị</label>
               <input
-                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
-                value={formData.unit}
-                onChange={(e) =>
-                  setFormData({ ...formData, unit: e.target.value })
-                }
+                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.unitId ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100'} rounded-2xl outline-none font-bold`}
+                value={searchUnit}
+                onChange={(e) => {
+                  setSearchUnit(e.target.value);
+                  setFormData(prev => ({ ...prev, unit: e.target.value, unitId: "" }));
+                  setShowUnitSuggestions(true);
+                }}
+                placeholder="Tìm tên khoa/lớp..."
               />
+              {showUnitSuggestions && filteredOrgs.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                  {filteredOrgs.map(o => (
+                    <button
+                      key={o.id}
+                      className="w-full px-5 py-3 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, unit: o.name, unitId: o.id }));
+                        setSearchUnit(o.name);
+                        setShowUnitSuggestions(false);
+                      }}
+                    >
+                      <p className="font-bold text-slate-800">{o.name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="px-8 py-6 bg-slate-50 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700"
-          >
-            Hủy bỏ
-          </button>
+          <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Hủy bỏ</button>
           <button
             onClick={() => onSave(formData)}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200"
+            disabled={!formData.name || !formData.unit}
+            className="flex-1 py-3 bg-blue-600 disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200"
           >
             Lưu thay đổi
           </button>
@@ -200,14 +302,9 @@ const MemberDetail = ({ member, onBack }) => {
               </div>
               <div className="space-y-4 mt-8 pt-8 border-t border-slate-100">
                 <ContactInfo
-                  icon={<Mail size={16} />}
-                  label="Email"
-                  value="phuchau.le@gmail.com"
-                />
-                <ContactInfo
                   icon={<Phone size={16} />}
                   label="Số điện thoại"
-                  value="0905 ••• •••"
+                  value={member.phone_number || "0905 ••• •••"}
                 />
                 <ContactInfo
                   icon={<MapPin size={16} />}
@@ -278,14 +375,17 @@ const MemberProfiles = () => {
       setLoading(true);
       try {
         const data = await userService.getAllUsers();
-        const formattedData = data.map(u => ({
+        // Lọc: Chỉ lấy những người thực sự đã được bổ nhiệm vào đơn vị
+        const officers = data.filter(u => u.organizations && u.organizations.length > 0);
+        
+        const formattedData = officers.map(u => ({
           id: u.student_id || `CB-${u.id.substring(0,6)}`,
           userId: u.id,
           name: u.full_name || u.email,
-          role: u.role || "Thành viên",
+          role: u.role_title || "Cán bộ", // Sử dụng role_title đã tính toán từ BE
           email: u.email,
-          unit: u.organizations?.[0]?.name || "Chưa xếp lớp",
-          status: u.is_active ? "Active" : "Inactive",
+          unit: u.organizations?.[0]?.organization_name || "Đơn vị",
+          status: u.status === "ACTIVE" ? "Active" : "Inactive",
           joinDate: u.created_at ? new Date(u.created_at).toLocaleDateString() : "15/09/2021",
         }));
         setMembers(formattedData);
@@ -319,27 +419,64 @@ const MemberProfiles = () => {
   // Handler: Lưu (Thêm/Sửa)
   const handleSaveMember = async (data) => {
     try {
+      let finalUserId = data.userId;
+      
       if (modalMode.type === "edit") {
-        if (userService.updateUser && data.userId) {
-           await userService.updateUser(data.userId, { full_name: data.name, role: data.role });
+        if (data.userId) {
+           await userService.updateUser(data.userId, { full_name: data.name });
         }
-        setMembers(members.map((m) => (m.id === data.id ? data : m)));
+        // Nếu chọn đơn vị mới, thực hiện gán
+        if (data.unitId) {
+           await organizationService.assignMember({
+             user_id: data.userId,
+             organization_id: data.unitId,
+             title: data.role,
+             is_primary: true
+           });
+        }
       } else {
         // Thêm mới
-        if (userService.createUser) {
-           const res = await userService.createUser({ full_name: data.name, role: data.role, email: `user${Date.now()}@dyus.edu.vn`, password: "password" });
-           data.userId = res.id;
+        if (!finalUserId) {
+          // Tạo user mới (cho GV/Thầy cô)
+          const res = await userService.createUser({ 
+            full_name: data.name, 
+            email: `cb.${Date.now()}@lhu.edu.vn`, // Tự động tạo email hệ thống
+            password: "password123",
+            student_id: null
+          });
+          finalUserId = res.id;
         }
-        const newMember = {
-          ...data,
-          id: `CB-${Math.floor(100000 + Math.random() * 900000)}`,
-          status: "Active",
-        };
-        setMembers([newMember, ...members]);
+        
+        // Gán vào tổ chức
+        if (data.unitId) {
+          await organizationService.assignMember({
+            user_id: finalUserId,
+            organization_id: data.unitId,
+            title: data.role,
+            is_primary: true
+          });
+        }
       }
+      
+      // Reload danh sách để cập nhật dữ liệu mới nhất từ BE
+      const updatedUsers = await userService.getAllUsers();
+      const officers = updatedUsers.filter(u => u.organizations && u.organizations.length > 0);
+      const formattedData = officers.map(u => ({
+        id: u.student_id || `CB-${u.id.substring(0,6)}`,
+        userId: u.id,
+        name: u.full_name || u.email,
+        role: u.role_title || "Cán bộ",
+        email: u.email,
+        unit: u.organizations?.[0]?.organization_name || "Đơn vị",
+        status: u.status === "ACTIVE" ? "Active" : "Inactive",
+        joinDate: u.created_at ? new Date(u.created_at).toLocaleDateString() : "15/09/2021",
+      }));
+      setMembers(formattedData);
+      
       setModalMode({ open: false, type: "add", data: null });
     } catch (err) {
       console.error("Failed to save member:", err);
+      alert("Lỗi khi lưu cán bộ. Vui lòng kiểm tra lại dữ liệu.");
     }
   };
 

@@ -4,9 +4,26 @@ import TabGeneral from "../../../components/admin/Settings/TabGeneral";
 import TabRBAC from "../../../components/admin/Settings/TabRBAC";
 import TabAuditLog from "../../../components/admin/Settings/TabAuditLog";
 import TabSecurity from "../../../components/admin/Settings/TabSecurity";
+import { systemService } from "../../../services/systemService";
 
 const SystemSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
+  const [pendingChanges, setPendingChanges] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await systemService.updateSettingsBatch(pendingChanges);
+      alert("Đã lưu tất cả thay đổi thành công!");
+      setPendingChanges({}); // Clear after save
+    } catch (error) {
+      console.error("Failed to save settings:", error);
+      alert("Lỗi khi lưu thiết lập. Vui lòng thử lại.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const tabs = [
     { id: "general", label: "Cài đặt Chung", icon: <Settings size={14} /> },
@@ -22,8 +39,19 @@ const SystemSettings = () => {
         <h2 className="text-lg font-black text-slate-800">
           Thiết lập Hệ thống
         </h2>
-        <button className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2">
-          <Save size={16} /> Lưu Thay Đổi
+        <button 
+          onClick={handleSave}
+          disabled={isSaving || Object.keys(pendingChanges).length === 0}
+          className={`px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all ${
+            isSaving || Object.keys(pendingChanges).length === 0 
+            ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+            : "bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
+          }`}
+        >
+          {isSaving ? (
+            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          ) : <Save size={16} />} 
+          {isSaving ? "Đang lưu..." : "Lưu Thay Đổi"}
         </button>
       </div>
 
@@ -46,10 +74,10 @@ const SystemSettings = () => {
 
       {/* Tab Content Rendering */}
       <div className="animate-in fade-in duration-300">
-        {activeTab === "general" && <TabGeneral />}
+        {activeTab === "general" && <TabGeneral onUpdate={(changes) => setPendingChanges(prev => ({ ...prev, ...changes }))} />}
         {activeTab === "rbac" && <TabRBAC />}
         {activeTab === "audit" && <TabAuditLog />}
-        {activeTab === "security" && <TabSecurity />}
+        {activeTab === "security" && <TabSecurity onUpdate={(changes) => setPendingChanges(prev => ({ ...prev, ...changes }))} />}
       </div>
     </div>
   );

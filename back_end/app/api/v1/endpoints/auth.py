@@ -9,7 +9,10 @@ from app.core import security
 from app.core.config import settings
 from app.models.core import User, AuthProvider
 from app.schemas.core_schemas import Token
+from app.schemas.ai_audit_schemas import AuditLogCreate
+from app.services import ai_audit_service, core_service
 from app.core.s4h_client import s4h_login, s4h_get_user_info
+from datetime import datetime
 
 router = APIRouter()
 
@@ -65,6 +68,15 @@ async def login_access_token(
             db.commit()
             db.refresh(user)
             
+            # Ghi nhật ký đăng nhập
+            ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+                user_id=user.id,
+                action="LOGIN",
+                entity_type="Authentication",
+                entity_id=user.id,
+                created_at=datetime.now()
+            ))
+
             # Cấp phát Token nội bộ FlameGuard
             access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
             return {
@@ -83,6 +95,15 @@ async def login_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
+    # Ghi nhật ký đăng nhập Local
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        user_id=user.id,
+        action="LOGIN",
+        entity_type="Authentication",
+        entity_id=user.id,
+        created_at=datetime.now()
+    ))
+
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(

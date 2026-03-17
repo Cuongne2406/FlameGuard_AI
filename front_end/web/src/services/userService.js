@@ -65,5 +65,26 @@ export const userService = {
       console.error('Error fetching spending stats:', error);
       return { total_expense: 0, data: [] };
     }
+  },
+
+  getAllUsers: async () => {
+    try {
+      const res = await apiClient('/users');
+      return Array.isArray(res) ? res : [];
+    } catch { return []; }
+  },
+
+  createUser: async (userData) => {
+    return apiClient('/users', {
+      method: 'POST',
+      body: JSON.stringify(userData)
+    });
+  },
+
+  updateUser: async (id, userData) => {
+    return apiClient(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData)
+    });
   }
 };

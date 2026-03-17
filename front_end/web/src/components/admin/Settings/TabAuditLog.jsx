@@ -15,22 +15,32 @@ import { activityLogService } from "../../../services/activityLogService";
 
 const TabAuditLog = () => {
   const [logs, setLogs] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const data = await activityLogService.getLogs({
+        skip: (page - 1) * pageSize,
+        limit: pageSize
+      });
+      setLogs(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error("Failed to fetch logs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      setLoading(true);
-      try {
-        const data = await activityLogService.getLogs();
-        setLogs(data);
-      } catch (error) {
-        console.error("Failed to fetch logs:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchLogs();
-  }, []);
+  }, [page]);
+
+  const totalPages = Math.ceil(total / pageSize);
 
   const getLogIcon = (type) => {
     switch (type) {
@@ -43,10 +53,9 @@ const TabAuditLog = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Bộ lọc và Công cụ */}
+      {/* Bộ lọc và Công cụ (Giữ nguyên giao diện) */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Lọc theo ngày */}
           <div className="relative">
             <input
               type="text"
@@ -58,29 +67,16 @@ const TabAuditLog = () => {
               size={14}
             />
           </div>
-
-          {/* Lọc theo vai trò */}
           <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none">
             <option>Mọi Vai trò</option>
             <option>Super Admin</option>
             <option>Bí thư Khoa</option>
           </select>
-
-          {/* Nút lọc nâng cao */}
           <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
             <Filter size={14} /> Lọc
           </button>
         </div>
-
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-slate-400">
-            <div className="w-8 h-4 bg-slate-200 rounded-full relative">
-              <div className="absolute right-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-            </div>
-            <span className="text-[10px] font-black uppercase tracking-wider">
-              Auto-purge {">"} 2 năm
-            </span>
-          </div>
           <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all">
             <Download size={14} /> Xuất báo cáo
           </button>
@@ -92,64 +88,33 @@ const TabAuditLog = () => {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Thời gian
-              </th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Người thực hiện
-              </th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Vai trò
-              </th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Hành động
-              </th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Đối tượng tác động
-              </th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thời gian</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Người thực hiện</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Vai trò</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Hành động</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Đối tượng tác động</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {logs.length > 0 ? logs.map((log) => (
-              <tr
-                key={log.id || log.time + log.action}
-                className={`hover:bg-slate-50/80 transition-colors ${log.type === "danger" ? "bg-red-50/30" : ""}`}
-              >
-                <td className="px-6 py-4 text-[11px] font-bold text-slate-500 italic">
-                  {log.time}
-                </td>
+              <tr key={log.id} className={`hover:bg-slate-50/80 transition-colors ${log.type === "danger" ? "bg-red-50/30" : ""}`}>
+                <td className="px-6 py-4 text-[11px] font-bold text-slate-500 italic">{log.time}</td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-white ring-2 ring-slate-50">
-                      {log.initials}
-                    </div>
-                    <span className="text-xs font-black text-slate-700">
-                      {log.user}
-                    </span>
+                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 border border-white ring-2 ring-slate-50">{log.initials}</div>
+                    <span className="text-xs font-black text-slate-700">{log.user}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-xs font-bold text-slate-400">
-                  {log.role}
-                </td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-400">{log.role}</td>
                 <td className="px-6 py-4">
-                  <div
-                    className={`flex items-center gap-2 text-xs font-black ${
-                      log.type === "danger"
-                        ? "text-red-600"
-                        : log.type === "success"
-                          ? "text-emerald-600"
-                          : log.type === "info"
-                            ? "text-blue-600"
-                            : "text-slate-700"
-                    }`}
-                  >
+                  <div className={`flex items-center gap-2 text-xs font-black ${
+                      log.type === "danger" ? "text-red-600" : log.type === "success" ? "text-emerald-600" : log.type === "info" ? "text-blue-600" : "text-slate-700"
+                    }`}>
                     {getLogIcon(log.type)}
                     {log.action}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-xs font-bold text-slate-500">
-                  {log.target}
-                </td>
+                <td className="px-6 py-4 text-xs font-bold text-slate-500">{log.target}</td>
               </tr>
             )) : (
               <tr>
@@ -161,24 +126,29 @@ const TabAuditLog = () => {
           </tbody>
         </table>
 
-        {/* Phân trang */}
+        {/* Phân trang động */}
         <div className="p-5 border-t border-slate-100 flex justify-between items-center bg-slate-50/30">
           <p className="text-[11px] font-bold text-slate-400">
-            Đang hiển thị 1 đến 50 trong tổng số 12,482 bản ghi
+            Hiển thị {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)} trong tổng số {total} bản ghi
           </p>
           <div className="flex gap-1">
-            {[1, 2, 3, "...", 8].map((page, i) => (
-              <button
-                key={i}
-                className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all ${
-                  page === 1
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-100"
-                    : "hover:bg-white text-slate-400"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .map((p, i, arr) => (
+                <React.Fragment key={p}>
+                  {i > 0 && arr[i-1] !== p - 1 && <span className="px-2 text-slate-400">...</span>}
+                  <button
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 rounded-lg text-[11px] font-black transition-all ${
+                      page === p
+                        ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                        : "hover:bg-white text-slate-400"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                </React.Fragment>
+              ))}
           </div>
         </div>
       </div>

@@ -89,6 +89,38 @@ class OrganizationUpdate(BaseModel):
 
 class OrganizationResponse(OrganizationBase):
     id: UUID
+    leader_name: Optional[str] = None
+    leader_student_id: Optional[str] = None
+    total_members: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+class UserOrgMiniResponse(BaseModel):
+    organization_id: UUID
+    organization_name: str
+    title: Optional[str] = None
+    is_primary: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# UserOrganization Schemas
+# ==========================================
+class UserOrganizationBase(BaseModel):
+    user_id: UUID
+    organization_id: UUID
+    title: Optional[str] = None
+    is_primary: bool = False
+    joined_date: Optional[date] = None
+
+class UserOrganizationCreate(UserOrganizationBase):
+    pass
+
+class UserOrganizationResponse(UserOrganizationBase):
+    id: UUID
 
     class Config:
         from_attributes = True
@@ -165,6 +197,7 @@ class UserResponse(UserBase):
     address: Optional[str] = None
     role_title: Optional[str] = None
     roles: List[RoleResponse] = []
+    organizations: List[UserOrgMiniResponse] = []
 
     class Config:
         from_attributes = True

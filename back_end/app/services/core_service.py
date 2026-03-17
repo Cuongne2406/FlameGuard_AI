@@ -6,10 +6,14 @@ from app.schemas.core_schemas import (
     UserCreate, UserUpdate,
     RoleCreate, RoleUpdate,
     PermissionCreate, PermissionUpdate,
-    OrganizationCreate, OrganizationUpdate,
-    AcademicTermCreate, AcademicTermUpdate
+    OrganizationCreate, OrganizationUpdate, OrganizationResponse,
+    AcademicTermCreate, AcademicTermUpdate,
+    UserOrganizationCreate
 )
 from app.core.security import get_password_hash
+from app.services import ai_audit_service
+from app.schemas.ai_audit_schemas import AuditLogCreate
+from datetime import datetime
 
 # ==========================================
 # Permission Services
@@ -59,6 +63,15 @@ def create_role(db: Session, role_in: RoleCreate):
     db.add(db_role)
     db.commit()
     db.refresh(db_role)
+    
+    # Ghi nhật ký: Tạo vai trò mới
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="CREATE_ROLE",
+        entity_type="Role",
+        entity_id=db_role.id,
+        created_at=datetime.now()
+    ))
+    
     return db_role
 
 def get_roles(db: Session, skip: int = 0, limit: int = 100):
@@ -80,6 +93,15 @@ def update_role(db: Session, role_id: UUID, role_in: RoleUpdate):
         
     db.commit()
     db.refresh(db_role)
+    
+    # Ghi nhật ký: Cập nhật vai trò
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="UPDATE_ROLE",
+        entity_type="Role",
+        entity_id=db_role.id,
+        created_at=datetime.now()
+    ))
+    
     return db_role
 
 def delete_role(db: Session, role_id: UUID):
@@ -88,6 +110,15 @@ def delete_role(db: Session, role_id: UUID):
         raise HTTPException(status_code=404, detail="Role not found")
     db.delete(db_role)
     db.commit()
+    
+    # Ghi nhật ký: Xóa vai trò
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="DELETE_ROLE",
+        entity_type="Role",
+        entity_id=role_id,
+        created_at=datetime.now()
+    ))
+    
     return {"message": "Role deleted successfully"}
 
 
@@ -102,7 +133,27 @@ def create_organization(db: Session, org_in: OrganizationCreate):
     return db_org
 
 def get_organizations(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Organization).offset(skip).limit(limit).all()
+    orgs = db.query(Organization).offset(skip).limit(limit).all()
+    results = []
+    
+    for org in orgs:
+        # Get primary leader
+        from app.models.core import UserOrganization, User
+        leader_info = db.query(User.full_name, User.student_id)\
+            .join(UserOrganization, User.id == UserOrganization.user_id)\
+            .filter(UserOrganization.organization_id == org.id, UserOrganization.is_primary == True)\
+            .first()
+            
+        total_members = db.query(UserOrganization).filter(UserOrganization.organization_id == org.id).count()
+        
+        org_data = OrganizationResponse.model_validate(org).model_dump()
+        if leader_info:
+            org_data["leader_name"] = leader_info.full_name
+            org_data["leader_student_id"] = leader_info.student_id
+        org_data["total_members"] = total_members
+        results.append(org_data)
+        
+    return results
 
 def update_organization(db: Session, org_id: UUID, org_in: OrganizationUpdate):
     db_org = db.query(Organization).filter(Organization.id == org_id).first()
@@ -124,6 +175,44 @@ def delete_organization(db: Session, org_id: UUID):
     db.delete(db_org)
     db.commit()
     return {"message": "Organization deleted successfully"}
+
+def assign_member_to_org(db: Session, assign_in: UserOrganizationCreate):
+    from app.models.core import UserOrganization
+    
+    # Check if user and org exist
+    user = db.query(User).filter(User.id == assign_in.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    org = db.query(Organization).filter(Organization.id == assign_in.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    # If this is a primary assignment, unset previous primary for this org
+    if assign_in.is_primary:
+        db.query(UserOrganization)\
+            .filter(UserOrganization.organization_id == assign_in.organization_id, UserOrganization.is_primary == True)\
+            .update({"is_primary": False})
+
+    # Check if this user is already in this org
+    db_assign = db.query(UserOrganization).filter(
+        UserOrganization.user_id == assign_in.user_id,
+        UserOrganization.organization_id == assign_in.organization_id
+    ).first()
+
+    if db_assign:
+        # Update existing
+        update_data = assign_in.dict(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(db_assign, key, value)
+    else:
+        # Create new
+        db_assign = UserOrganization(**assign_in.dict())
+        db.add(db_assign)
+        
+    db.commit()
+    db.refresh(db_assign)
+    return db_assign
 
 
 # ==========================================
@@ -193,7 +282,55 @@ def create_user(db: Session, user_in: UserCreate):
     return db_user
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(User).offset(skip).limit(limit).all()
+    users = db.query(User).offset(skip).limit(limit).all()
+    results = []
+    
+    for user in users:
+        # Tính toán role_title (ưu tiên vị trí chính)
+        role_title = "Thành viên"
+        org_data_list = []
+        
+        for uo in user.organizations:
+            org_data_list.append({
+                "organization_id": uo.organization_id,
+                "organization_name": uo.organization.name,
+                "title": uo.title,
+                "is_primary": uo.is_primary
+            })
+            if uo.is_primary:
+                role_title = uo.title
+        
+        # Nếu chưa có primary role nhưng có đơn vị, lấy role đầu tiên
+        if role_title == "Thành viên" and org_data_list:
+            role_title = org_data_list[0]["title"] or "Cán bộ"
+        
+        # Chuyển đổi sang dict và thêm các trường động
+        user_dict = {
+            "id": str(user.id),
+            "student_id": user.student_id,
+            "full_name": user.full_name,
+            "email": user.email,
+            "phone_number": user.phone_number,
+            "status": user.status.value if user.status else "ACTIVE",
+            "avatar_url": user.avatar_url,
+            "level": user.level,
+            "training_score": user.training_score,
+            "university": user.university,
+            "address": user.address,
+            "role_title": role_title,
+            "organizations": org_data_list,
+            "roles": [
+                {
+                    "id": str(r.id),
+                    "name": r.name,
+                    "description": r.description
+                } for r in user.roles
+            ],
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None
+        }
+        results.append(user_dict)
+        
+    return results
 
 def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -214,6 +351,15 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
         
     db.commit()
     db.refresh(db_user)
+    
+    # Ghi nhật ký: Cập nhật người dùng (bao gồm gán vai trò)
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="UPDATE_USER",
+        entity_type="User",
+        entity_id=db_user.id,
+        created_at=datetime.now()
+    ))
+    
     return db_user
 
 def delete_user(db: Session, user_id: UUID):

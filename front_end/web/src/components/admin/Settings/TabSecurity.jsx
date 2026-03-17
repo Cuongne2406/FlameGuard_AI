@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Key,
@@ -11,8 +11,35 @@ import {
 } from "lucide-react";
 import { SectionCard } from "../ui/SectionCard";
 import { Toggle } from "../ui/Toggle";
+import { systemService } from "../../../services/systemService";
 
-const TabSecurity = () => {
+const TabSecurity = ({ onUpdate }) => {
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const data = await systemService.getSettings();
+        const settingsObj = {};
+        data.forEach(s => { settingsObj[s.key] = s.value; });
+        setSettings(settingsObj);
+      } catch (err) {
+        console.error("Failed to fetch security settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleChange = (key, value) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    if (onUpdate) onUpdate(newSettings);
+  };
+
   const apiKeys = [
     {
       name: "Mobile App (Student)",
@@ -30,6 +57,12 @@ const TabSecurity = () => {
       lastUsed: "1 ngày trước",
     },
   ];
+
+  if (loading) return (
+    <div className="flex items-center justify-center p-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -50,7 +83,10 @@ const TabSecurity = () => {
                   Yêu cầu xác thực hai bước cho Admin
                 </p>
               </div>
-              <Toggle checked={false} />
+              <Toggle 
+                checked={settings.TWO_FACTOR_REQUIRED === "true"} 
+                onChange={(val) => handleChange("TWO_FACTOR_REQUIRED", val ? "true" : "false")}
+              />
             </div>
 
             <div className="space-y-3">
@@ -59,11 +95,16 @@ const TabSecurity = () => {
                   Session Timeout
                 </label>
                 <span className="text-xs font-black text-blue-600">
-                  30 mins
+                  {settings.SESSION_TIMEOUT || 30} mins
                 </span>
               </div>
               <input
                 type="range"
+                min="5"
+                max="120"
+                step="5"
+                value={settings.SESSION_TIMEOUT || 30}
+                onChange={(e) => handleChange("SESSION_TIMEOUT", e.target.value)}
                 className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
               />
               <div className="flex justify-between text-[10px] font-bold text-slate-300">
@@ -78,24 +119,25 @@ const TabSecurity = () => {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  "Min length: 12 chars",
-                  "Require Symbols (!@#)",
-                  "Require Uppercase",
-                  "Expire after 90 days",
+                  { key: "PW_MIN_LENGTH", label: "Min length: 12 chars" },
+                  { key: "PW_REQUIRE_SYMBOLS", label: "Require Symbols (!@#)" },
+                  { key: "PW_REQUIRE_UPPERCASE", label: "Require Uppercase" },
+                  { key: "PW_EXPIRE_90", label: "Expire after 90 days" },
                 ].map((policy, i) => (
                   <div
-                    key={i}
-                    className="flex items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm"
+                    key={policy.key}
+                    onClick={() => handleChange(policy.key, settings[policy.key] === "true" ? "false" : "true")}
+                    className="flex items-center gap-2 p-3 bg-white border border-slate-100 rounded-xl shadow-sm cursor-pointer hover:bg-slate-50 transition-colors"
                   >
                     <div
-                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${i < 3 ? "bg-blue-600 border-blue-600" : "border-slate-200"}`}
+                      className={`w-4 h-4 rounded-full border flex items-center justify-center ${settings[policy.key] === "true" ? "bg-blue-600 border-blue-600" : "border-slate-200"}`}
                     >
-                      {i < 3 && (
+                      {settings[policy.key] === "true" && (
                         <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
                       )}
                     </div>
                     <span className="text-[10px] font-bold text-slate-600">
-                      {policy}
+                      {policy.label}
                     </span>
                   </div>
                 ))}
@@ -131,10 +173,13 @@ const TabSecurity = () => {
                   Daily Backup (Auto)
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold">
-                  Tự động sao lưu lúc 02:00 AM
+                  Tự động sao lưu hàng ngày
                 </p>
               </div>
-              <Toggle checked={true} />
+              <Toggle 
+                checked={settings.AUTO_BACKUP === "true"} 
+                onChange={(val) => handleChange("AUTO_BACKUP", val ? "true" : "false")}
+              />
             </div>
 
             <div className="space-y-3">
@@ -144,20 +189,56 @@ const TabSecurity = () => {
               <div className="flex gap-2">
                 <input
                   type="text"
+                  id="ip-input"
                   placeholder="192.168.1.1"
                   className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:bg-white"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = e.target.value.trim();
+                      if (val) {
+                        const current = settings.IP_WHITELIST ? settings.IP_WHITELIST.split(',') : [];
+                        if (!current.includes(val)) {
+                          handleChange("IP_WHITELIST", [...current, val].join(','));
+                          e.target.value = '';
+                        }
+                      }
+                    }
+                  }}
                 />
-                <button className="p-2.5 bg-slate-800 text-white rounded-xl hover:bg-black transition-all">
+                <button 
+                  onClick={() => {
+                    const input = document.getElementById('ip-input');
+                    const val = input.value.trim();
+                    if (val) {
+                      const current = settings.IP_WHITELIST ? settings.IP_WHITELIST.split(',') : [];
+                      if (!current.includes(val)) {
+                        handleChange("IP_WHITELIST", [...current, val].join(','));
+                        input.value = '';
+                      }
+                    }
+                  }}
+                  className="p-2.5 bg-slate-800 text-white rounded-xl hover:bg-black transition-all"
+                >
                   <Plus size={18} />
                 </button>
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-black">
-                  113.22.19.102 (Office) ×
-                </span>
-                <span className="px-3 py-1 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg text-[10px] font-black">
-                  14.232.112.55 (VPN) ×
-                </span>
+                {settings.IP_WHITELIST ? settings.IP_WHITELIST.split(',').map(ip => (
+                  <span key={ip} className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-black flex items-center gap-2">
+                    {ip}
+                    <button 
+                      onClick={() => {
+                        const current = settings.IP_WHITELIST.split(',');
+                        handleChange("IP_WHITELIST", current.filter(i => i !== ip).join(','));
+                      }}
+                      className="hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  </span>
+                )) : (
+                  <p className="text-[10px] text-slate-400 font-bold italic">Chưa có IP nào được cấp phép.</p>
+                )}
               </div>
             </div>
           </div>
@@ -231,8 +312,10 @@ const TabSecurity = () => {
               </label>
               <input
                 type="text"
-                defaultValue="https://api.dyus-university.edu.vn/webhook"
+                value={settings.WEBHOOK_CALLBACK_URL || ""}
+                onChange={(e) => handleChange("WEBHOOK_CALLBACK_URL", e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:bg-white"
+                placeholder="https://api.dyus-university.edu.vn/webhook"
               />
             </div>
 
@@ -243,7 +326,8 @@ const TabSecurity = () => {
               <div className="relative">
                 <input
                   type="password"
-                  defaultValue="••••••••••••••••••••••••••••"
+                  value={settings.WEBHOOK_SECRET || "••••••••••••••••••••••••••••"}
+                  onChange={(e) => handleChange("WEBHOOK_SECRET", e.target.value)}
                   className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none"
                 />
                 <EyeOff

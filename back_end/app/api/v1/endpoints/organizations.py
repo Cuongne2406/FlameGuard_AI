@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db
-from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
+from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse, UserOrganizationCreate, UserOrganizationResponse
 from app.services import core_service
 
 from sqlalchemy import func
@@ -21,13 +21,17 @@ def get_organization_stats(db: Session = Depends(get_db)):
     """
     member_count = db.query(func.count(UserOrganization.id)).scalar() or 0
     org_count = db.query(func.count(Organization.id)).scalar() or 0
+    # Đếm số lượng lãnh đạo (những người có is_primary=True trong bất kỳ tổ chức nào)
+    # Lưu ý: Một người có thể là lãnh đạo của nhiều đơn vị, nhưng ở đây ta đếm 'suất' lãnh đạo.
+    leader_count = db.query(func.count(UserOrganization.id)).filter(UserOrganization.is_primary == True).scalar() or 0
+    
     total_budget = db.query(func.sum(Budget.total_amount)).scalar() or 0
     used_budget = db.query(func.sum(Budget.used_amount)).scalar() or 0
     event_count = db.query(func.count(Event.id)).scalar() or 0
     
     return {
         "totalUnits": org_count,
-        "totalLeaders": 12, # Mock sub-info until roles are fully linked to units
+        "totalLeaders": leader_count,
         "totalMembers": member_count,
         "subInfo": f"Tăng {member_count - 10} so với tháng trước"
     }
@@ -64,3 +68,14 @@ def delete_organization(
     org_id: UUID,
 ):
     return core_service.delete_organization(db=db, org_id=org_id)
+
+@router.post("/assign-member", response_model=UserOrganizationResponse)
+def assign_member(
+    *,
+    db: Session = Depends(get_db),
+    assign_in: UserOrganizationCreate,
+):
+    """
+    Bổ nhiệm hoặc gán nhân sự vào một tổ chức/đơn vị.
+    """
+    return core_service.assign_member_to_org(db=db, assign_in=assign_in)

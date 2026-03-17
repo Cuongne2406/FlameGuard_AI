@@ -26,5 +26,40 @@ export const systemService = {
         aiKeywords: []
       };
     }
+  },
+
+  getSettings: async () => {
+    try {
+      const res = await apiClient('/settings');
+      return Array.isArray(res) ? res : [];
+    } catch { return []; }
+  },
+
+  updateSetting: async (id, data) => {
+    return apiClient(`/settings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  updateSettingsBatch: async (settings) => {
+    return apiClient('/settings/batch/update', {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    });
+  },
+
+  createSetting: async (data) => {
+    return apiClient('/settings/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  getAcademicTerms: async () => {
+    try {
+      const res = await apiClient('/academic-terms');
+      return Array.isArray(res) ? res : [];
+    } catch { return []; }
   }
 };

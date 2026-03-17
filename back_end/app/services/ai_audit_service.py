@@ -167,10 +167,35 @@ def get_admin_dashboard_analysis(db: Session):
             "width": f"w-[{percent}%]"
         })
 
+    # 4. Sentiment History (Last 7 Days)
+    sentiment_history = []
+    days_map = {0: "T2", 1: "T3", 2: "T4", 3: "T5", 4: "T6", 5: "T7", 6: "CN"}
+    
+    # Get current date info
+    from datetime import timedelta
+    today = datetime.now()
+    
+    for i in range(6, -1, -1):
+        target_date = today - timedelta(days=i)
+        day_start = target_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = target_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        
+        day_avg = db.query(func.avg(AISentiment.sentiment_score))\
+            .filter(AISentiment.analyzed_at >= day_start, AISentiment.analyzed_at <= day_end).scalar()
+        
+        score = round(float(day_avg * 100), 0) if day_avg is not None else 0
+        
+        sentiment_history.append({
+            "day": days_map[target_date.weekday()],
+            "value": score,
+            "isStrong": score > 50 or score < -50
+        })
+
     return {
         "overview": {
             "totalFeedbacksProcessed": feedback_count,
             "sentimentScore": sentiment_score,
+            "sentimentHistory": sentiment_history,
             "systemHealth": 98
         },
         "autoModeration": auto_moderation,
@@ -323,10 +348,30 @@ def create_system_audit_log(db: Session, log_in: AuditLogCreate):
     # Typically, audit logs are created internally by the system (not fully via outside API)
     # They should not be updated or deleted.
     db_log = AuditLog(**log_in.dict())
+    if not db_log.created_at:
+        db_log.created_at = datetime.now()
     db.add(db_log)
     db.commit()
     db.refresh(db_log)
     return db_log
 
 def get_system_audit_logs(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(AuditLog).offset(skip).limit(limit).all()
+    total = db.query(AuditLog).count()
+    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).offset(skip).limit(limit).all()
+    results = []
+    for log in logs:
+        user = db.query(User).filter(User.id == log.user_id).first() if log.user_id else None
+        user_name = user.full_name if user else "System"
+        initials = "".join([n[0] for n in user_name.split() if n]) if user_name else "S"
+        
+        results.append({
+            "id": str(log.id),
+            "time": log.created_at.strftime("%H:%M %d/%m/%Y") if log.created_at else "N/A",
+            "user": user_name,
+            "initials": initials[:2].upper(),
+            "role": "Admin" if user else "System",
+            "action": log.action,
+            "target": f"{log.entity_type} ({str(log.entity_id)[:8]}...)" if log.entity_id else log.entity_type,
+            "type": "info" if "CREATE" in log.action else "danger" if "DELETE" in log.action else "success"
+        })
+    return {"items": results, "total": total, "page": (skip // limit) + 1, "size": limit}

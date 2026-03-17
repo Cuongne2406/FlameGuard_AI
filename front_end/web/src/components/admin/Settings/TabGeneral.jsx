@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Upload,
   Mail,
@@ -10,8 +10,41 @@ import {
 } from "lucide-react";
 import { SectionCard } from "../ui/SectionCard"; // Component khung đã tạo ở bước trước
 import { Toggle } from "../ui/Toggle";
+import { systemService } from "../../../services/systemService";
 
-const TabGeneral = () => {
+const TabGeneral = ({ onUpdate }) => {
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const data = await systemService.getSettings();
+        const settingsObj = {};
+        data.forEach(s => { settingsObj[s.key] = s.value; });
+        setSettings(settingsObj);
+      } catch (err) {
+        console.error("Failed to fetch system settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleChange = (key, value) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    if (onUpdate) onUpdate(newSettings);
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center p-20">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    </div>
+  );
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* CỘT TRÁI (2/3) */}
@@ -43,8 +76,10 @@ const TabGeneral = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Digital Youth Union System"
+                  value={settings.SYSTEM_NAME || ""}
+                  onChange={(e) => handleChange("SYSTEM_NAME", e.target.value)}
                   className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                  placeholder="Digital Youth Union System"
                 />
               </div>
               <div className="space-y-2">
@@ -53,8 +88,10 @@ const TabGeneral = () => {
                 </label>
                 <input
                   type="text"
-                  defaultValue="Empowering Student Success"
+                  value={settings.SYSTEM_MOTTO || ""}
+                  onChange={(e) => handleChange("SYSTEM_MOTTO", e.target.value)}
                   className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                  placeholder="Empowering Student Success"
                 />
               </div>
             </div>
@@ -71,7 +108,11 @@ const TabGeneral = () => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 Năm học hiện tại (Current Year)
               </label>
-              <select className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white outline-none appearance-none cursor-pointer">
+              <select 
+                value={settings.CURRENT_YEAR || "2025-2026"}
+                onChange={(e) => handleChange("CURRENT_YEAR", e.target.value)}
+                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:bg-white outline-none appearance-none cursor-pointer"
+              >
                 <option>2025-2026</option>
                 <option>2024-2025</option>
               </select>
@@ -83,8 +124,8 @@ const TabGeneral = () => {
               </label>
               <div className="flex items-center gap-6 p-1 bg-slate-50 rounded-2xl border border-slate-100 h-[54px] px-4">
                 {[
-                  { id: 1, label: "Học kỳ 1" },
-                  { id: 2, label: "Học kỳ 2" },
+                  { id: "1", label: "Học kỳ 1" },
+                  { id: "2", label: "Học kỳ 2" },
                   { id: "summer", label: "Hè" },
                 ].map((term) => (
                   <label
@@ -94,7 +135,8 @@ const TabGeneral = () => {
                     <input
                       type="radio"
                       name="semester"
-                      defaultChecked={term.id === 1}
+                      checked={settings.CURRENT_SEMESTER === term.id}
+                      onChange={() => handleChange("CURRENT_SEMESTER", term.id)}
                       className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
                     />
                     <span className="text-xs font-black text-slate-600 group-hover:text-blue-600 transition-colors">
@@ -115,7 +157,10 @@ const TabGeneral = () => {
                     Tự động chuyển học kỳ theo lịch trình hệ thống
                   </p>
                 </div>
-                <Toggle checked={false} />
+                <Toggle 
+                  checked={settings.AUTO_TRANSITION === "true"} 
+                  onChange={(val) => handleChange("AUTO_TRANSITION", val ? "true" : "false")}
+                />
               </div>
             </div>
           </div>
@@ -142,6 +187,8 @@ const TabGeneral = () => {
                 <input
                   type="text"
                   placeholder="smtp.gmail.com"
+                  value={settings.SMTP_HOST || ""}
+                  onChange={(e) => handleChange("SMTP_HOST", e.target.value)}
                   className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white transition-all"
                 />
               </div>
@@ -159,6 +206,8 @@ const TabGeneral = () => {
                 <input
                   type="text"
                   placeholder="ID Zalo OA Secret Key"
+                  value={settings.ZALO_OA_KEY || ""}
+                  onChange={(e) => handleChange("ZALO_OA_KEY", e.target.value)}
                   className="w-full pl-12 pr-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white transition-all"
                 />
               </div>
@@ -173,7 +222,10 @@ const TabGeneral = () => {
                   Gửi thông báo đẩy qua ứng dụng mobile
                 </p>
               </div>
-              <Toggle checked={true} />
+              <Toggle 
+                checked={settings.PUSH_NOTIFICATIONS === "true"} 
+                onChange={(val) => handleChange("PUSH_NOTIFICATIONS", val ? "true" : "false")}
+              />
             </div>
           </div>
         </SectionCard>
@@ -190,9 +242,14 @@ const TabGeneral = () => {
               </label>
               <div className="flex items-center gap-3">
                 <span className="text-[11px] font-mono font-black text-slate-400">
-                  #0056D2
+                  {settings.PRIMARY_COLOR || "#0056D2"}
                 </span>
-                <div className="w-10 h-10 bg-[#0056D2] rounded-xl shadow-lg shadow-blue-200 ring-2 ring-white"></div>
+                <input 
+                  type="color" 
+                  value={settings.PRIMARY_COLOR || "#0056D2"}
+                  onChange={(e) => handleChange("PRIMARY_COLOR", e.target.value)}
+                  className="w-10 h-10 rounded-xl shadow-lg shadow-blue-200 ring-2 ring-white cursor-pointer border-none"
+                />
               </div>
             </div>
 
@@ -205,7 +262,10 @@ const TabGeneral = () => {
                   Cho phép người dùng chuyển chế độ tối
                 </p>
               </div>
-              <Toggle checked={true} />
+              <Toggle 
+                checked={settings.DARK_MODE_SUPPORT === "true"} 
+                onChange={(val) => handleChange("DARK_MODE_SUPPORT", val ? "true" : "false")}
+              />
             </div>
           </div>
         </SectionCard>

@@ -1,7 +1,26 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Lock, Smartphone, Monitor, LogOut, ShieldCheck } from "lucide-react";
+import { userService } from "../../../services/userService";
 
 const TabSecurityLogin = () => {
+  const [devices, setDevices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDevices = async () => {
+      setLoading(true);
+      try {
+        const data = await userService.getDevices();
+        setDevices(data);
+      } catch (err) {
+        console.error("Failed to fetch devices:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDevices();
+  }, []);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-right-4">
       {/* Đổi mật khẩu */}
@@ -54,17 +73,19 @@ const TabSecurityLogin = () => {
           <ShieldCheck size={18} className="text-emerald-500" /> Thiết bị
         </h3>
         <div className="space-y-4">
-          <DeviceItem
-            icon={<Monitor />}
-            name="Windows PC • Chrome"
-            location="Biên Hòa, VN"
-            active
-          />
-          <DeviceItem
-            icon={<Smartphone />}
-            name="iPhone 15 Pro"
-            location="Hồ Chí Minh, VN"
-          />
+          {devices.length > 0 ? devices.map((device, idx) => (
+            <DeviceItem
+              key={device.id || idx}
+              icon={device.device_type === 'mobile' ? <Smartphone /> : <Monitor />}
+              name={`${device.os || 'Unknown OS'} • ${device.browser || 'Browser'}`}
+              location={device.location || "Unknown Location"}
+              active={device.is_current}
+            />
+          )) : (
+            <div className="text-center py-4 text-xs text-slate-400 italic">
+              {loading ? "Đang tải dữ liệu..." : "Chưa có dữ liệu thiết bị."}
+            </div>
+          )}
           <button className="w-full py-3 text-[10px] font-black text-red-500 bg-red-50 rounded-xl flex items-center justify-center gap-2 hover:bg-red-100 transition-all">
             <LogOut size={14} /> Đăng xuất tất cả thiết bị
           </button>

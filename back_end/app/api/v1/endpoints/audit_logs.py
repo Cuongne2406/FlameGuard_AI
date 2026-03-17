@@ -4,7 +4,12 @@ from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db
-from app.schemas.ai_audit_schemas import AuditLogCreate, AuditLogResponse
+from app.schemas.ai_audit_schemas import (
+    AuditLogCreate, 
+    AuditLogResponse, 
+    AuditDisplayResponse,
+    PaginatedAuditLogResponse
+)
 from app.services import ai_audit_service
 
 router = APIRouter()
@@ -20,10 +25,10 @@ def create_system_audit_log(
     """
     return ai_audit_service.create_system_audit_log(db=db, log_in=log_in)
 
-@router.get("/", response_model=List[AuditLogResponse])
+@router.get("/", response_model=PaginatedAuditLogResponse)
 def read_system_audit_logs(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 20,
     db: Session = Depends(get_db)
 ):
     """

@@ -17,7 +17,8 @@ def create_document(
     current_user = Depends(get_current_active_user),
 ):
     doc_data = doc_in.model_dump()
-    doc_data["user_id"] = current_user.id
+    if not doc_data.get("user_id"):
+        doc_data["user_id"] = current_user.id
     db_obj = DigitalDocument(**doc_data)
     db.add(db_obj)
     db.commit()
@@ -32,11 +33,15 @@ def read_documents(
     current_user = Depends(get_current_active_user)
 ):
     """
-    Get documents for the current user.
+    Get documents. Admins see everything, users see their own.
     """
-    return db.query(DigitalDocument).filter(
-        DigitalDocument.user_id == current_user.id
-    ).offset(skip).limit(limit).all()
+    query = db.query(DigitalDocument)
+    # Check if user has administrative role (Simple check: if not a regular student)
+    # Note: In a real app, use permission-based checks.
+    if current_user.role.name not in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"]:
+        query = query.filter(DigitalDocument.user_id == current_user.id)
+        
+    return query.order_by(DigitalDocument.request_date.desc()).offset(skip).limit(limit).all()
 
 @router.get("/stats")
 def get_document_stats(
@@ -44,13 +49,17 @@ def get_document_stats(
     current_user = Depends(get_current_active_user)
 ):
     """
-    Get stats for current user's documents.
+    Get stats for documents.
     """
-    incoming = db.query(DigitalDocument).filter(DigitalDocument.user_id == current_user.id, DigitalDocument.status == "APPROVED").count()
-    pending = db.query(DigitalDocument).filter(DigitalDocument.user_id == current_user.id, DigitalDocument.status == "PENDING").count()
+    query = db.query(DigitalDocument)
+    if current_user.role.name not in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"]:
+        query = query.filter(DigitalDocument.user_id == current_user.id)
+    
+    incoming = query.filter(DigitalDocument.status == "APPROVED").count()
+    pending = query.filter(DigitalDocument.status == "PENDING").count()
     return {
         "incoming": incoming,
-        "outgoing": 0, # Placeholder
+        "outgoing": 0, # Placeholder for future logic
         "pending": pending
     }
 

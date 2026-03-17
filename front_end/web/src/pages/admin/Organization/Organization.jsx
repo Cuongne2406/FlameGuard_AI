@@ -9,6 +9,7 @@ const Organization = () => {
   // Quản lý tab đang hiển thị
   const [activeTab, setActiveTab] = useState("list");
   const [stats, setStats] = useState({ totalUnits: '0', totalLeaders: '0', totalMembers: '0', subInfo: '' });
+  const [triggerCreate, setTriggerCreate] = useState(false);
 
   useEffect(() => {
     organizationService.getOrgStats().then(data => {
@@ -33,14 +34,20 @@ const Organization = () => {
             Cơ cấu Tổ chức & Cán bộ
           </h2>
         </div>
-        {/* <div className="flex items-center gap-2">
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all">
+        <div className="flex items-center gap-2">
+          {/* <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all">
             <Download size={16} /> Xuất Danh sách
-          </button>
-          <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">
+          </button> */}
+          <button 
+            onClick={() => {
+              setActiveTab("list");
+              setTriggerCreate(true);
+            }}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+          >
             <Plus size={16} /> Thêm Đơn vị
           </button>
-        </div> */}
+        </div>
       </div>
 
       {/* 2. Stats Overview */}
@@ -95,7 +102,12 @@ const Organization = () => {
         {/* 4. Content Area - Chuyển đổi giữa các Component */}
         <div className="p-6">
           {activeTab === "chart" && <OrgChart />}
-          {activeTab === "list" && <UnitList />}
+          {activeTab === "list" && (
+            <UnitList 
+              triggerCreateModal={triggerCreate} 
+              onModalClose={() => setTriggerCreate(false)} 
+            />
+          )}
           {activeTab === "members" && <MemberProfiles />}
         </div>
       </div>

@@ -13,6 +13,7 @@ export const awardService = {
       return await apiClient(`/awards/stats?timescale=${timescale}`);
     } catch {
       return {
+        summary: { remainingDays: '0', submitted: '0', approved: '0', passRate: '0%' },
         stats: [],
         rankings: [],
         warningClass: null

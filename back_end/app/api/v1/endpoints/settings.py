@@ -7,6 +7,10 @@ from app.api.deps import get_db
 from app.models.settings import SystemSetting
 from app.schemas.setting_schemas import SystemSettingCreate, SystemSettingUpdate, SystemSettingResponse
 
+from app.services import ai_audit_service
+from app.schemas.ai_audit_schemas import AuditLogCreate
+from datetime import datetime
+
 router = APIRouter()
 
 @router.post("/", response_model=SystemSettingResponse)
@@ -19,6 +23,15 @@ def create_setting(
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+    
+    # Ghi nhật ký: Lưu cài đặt mới
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="CREATE_SETTING",
+        entity_type="SystemSetting",
+        entity_id=db_obj.id,
+        created_at=datetime.now()
+    ))
+    
     return db_obj
 
 @router.get("/", response_model=List[SystemSettingResponse])
@@ -57,6 +70,15 @@ def update_setting(
     db.add(setting)
     db.commit()
     db.refresh(setting)
+    
+    # Ghi nhật ký: Cập nhật cài đặt hệ thống
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="UPDATE_SETTING",
+        entity_type="SystemSetting",
+        entity_id=setting.id,
+        created_at=datetime.now()
+    ))
+    
     return setting
 
 @router.delete("/{setting_id}")
@@ -70,4 +92,47 @@ def delete_setting(
         raise HTTPException(status_code=404, detail="Setting not found")
     db.delete(setting)
     db.commit()
+    
+    # Ghi nhật ký: Xóa cài đặt
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="DELETE_SETTING",
+        entity_type="SystemSetting",
+        entity_id=setting_id,
+        created_at=datetime.now()
+    ))
+    
     return {"message": "Setting deleted successfully"}
+
+@router.put("/batch/update")
+def batch_update_settings(
+    *,
+    db: Session = Depends(get_db),
+    settings_in: dict
+):
+    """
+    Cập nhật hoặc tạo mới hàng loạt các thiết lập hệ thống.
+    settings_in: { "key1": "value1", "key2": "value2" }
+    """
+    updated_count = 0
+    created_count = 0
+    
+    for key, value in settings_in.items():
+        db_setting = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+        if db_setting:
+            db_setting.value = str(value)
+            updated_count += 1
+        else:
+            db_setting = SystemSetting(key=key, value=str(value))
+            db.add(db_setting)
+            created_count += 1
+            
+    db.commit()
+    
+    # Ghi nhật ký: Cập nhật hàng loạt (Chỉ 1 dòng log duy nhất)
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="BATCH_UPDATE_SETTINGS",
+        entity_type="SystemSetting",
+        created_at=datetime.now()
+    ))
+    
+    return {"message": f"Updated {updated_count}, Created {created_count} settings"}

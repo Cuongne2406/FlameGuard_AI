@@ -31,7 +31,14 @@ def create_campaign(db: Session, campaign_in: CampaignCreate):
     return db_campaign
 
 def get_campaigns(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Campaign).offset(skip).limit(limit).all()
+    campaigns = db.query(Campaign).offset(skip).limit(limit).all()
+    # Gán tên cho response (Pydantic will pick them up)
+    for camp in campaigns:
+        if camp.organization:
+            camp.organization_name = camp.organization.name
+        if camp.academic_term:
+            camp.academic_term_name = f"{camp.academic_term.semester_name} ({camp.academic_term.year_name})"
+    return campaigns
 
 def update_campaign(db: Session, campaign_id: UUID, campaign_in: CampaignUpdate):
     db_campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()

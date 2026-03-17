@@ -55,6 +55,8 @@ class CampaignResponse(CampaignBase):
     id: UUID
     organization_id: UUID
     academic_term_id: UUID
+    organization_name: Optional[str] = None
+    academic_term_name: Optional[str] = None
 
     class Config:
         from_attributes = True

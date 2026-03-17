@@ -42,5 +42,19 @@ export const financeService = {
 
   createFacultyTransaction: async (data) => {
     return apiClient('/fund-requests', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  getBudgets: async () => {
+    try {
+      const res = await apiClient('/budgets');
+      return Array.isArray(res) ? res : [];
+    } catch { return []; }
+  },
+
+  createAsset: async (data) => {
+    return apiClient('/assets', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
   }
 };
