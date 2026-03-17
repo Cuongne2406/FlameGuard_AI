@@ -126,6 +126,29 @@ class UserOrganizationResponse(UserOrganizationBase):
     class Config:
         from_attributes = True
 
+# ==========================================
+# Club Proposal Schemas
+# ==========================================
+class ClubProposalBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    organization_id: Optional[UUID] = None
+    icon: Optional[str] = "help"
+
+class ClubProposalCreate(ClubProposalBase):
+    pass
+
+class ClubProposalResponse(ClubProposalBase):
+    id: UUID
+    requested_by: UUID
+    status: str
+    created_at: date
+    requester_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
 
 # ==========================================
 # Academic Term Schemas
@@ -152,6 +175,11 @@ class AcademicTermResponse(AcademicTermBase):
 
     class Config:
         from_attributes = True
+
+class ClubDashboardStats(BaseModel):
+    totalClubs: int
+    totalMembers: int
+    totalBudget: float
 
 
 # ==========================================

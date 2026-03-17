@@ -111,13 +111,16 @@ const SubAdminSettings = () => {
       const previewUrl = URL.createObjectURL(file);
       setAvatarPreview(previewUrl);
       
-      // In a real app, you'd upload to S3/Cloudinary here.
-      // For now, let's pretend we have a URL or use base64 for demo if small.
       try {
-        await userService.updateMe({ avatar_url: previewUrl });
-        setToast({ message: 'Đã cập nhật ảnh đại diện!', type: 'success' });
+        const response = await userService.uploadAvatar(file);
+        if (response && response.avatar_url) {
+          setAvatarPreview(response.avatar_url);
+          setProfile(prev => ({ ...prev, avatar: response.avatar_url }));
+          setToast({ message: 'Đã cập nhật ảnh đại diện lên bộ nhớ đám mây!', type: 'success' });
+        }
       } catch (error) {
-        setToast({ message: 'Lỗi cập nhật ảnh!', type: 'error' });
+        setToast({ message: 'Lỗi cập nhật ảnh lên dịch vụ đám mây!', type: 'error' });
+        // Fallback to old preview if needed or just show error
       }
     }
   };

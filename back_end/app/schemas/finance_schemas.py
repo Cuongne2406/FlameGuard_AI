@@ -27,6 +27,15 @@ class AssetLoanStatusEnum(str, Enum):
     RETURNED = "RETURNED"
     OVERDUE = "OVERDUE"
 
+class TransactionTypeEnum(str, Enum):
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+
+class TransactionStatusEnum(str, Enum):
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    REJECTED = "REJECTED"
+
 # ==========================================
 # Budget Schemas
 # ==========================================
@@ -141,3 +150,37 @@ class AssetLoanResponse(AssetLoanBase):
 
     class Config:
         from_attributes = True
+
+# ==========================================
+# Finance Transaction Schemas
+# ==========================================
+class TransactionBase(BaseModel):
+    type: TransactionTypeEnum
+    title: str
+    amount: Decimal
+    description: Optional[str] = None
+    performed_by_name: Optional[str] = None
+    status: TransactionStatusEnum = TransactionStatusEnum.COMPLETED
+
+class TransactionCreate(TransactionBase):
+    budget_id: UUID
+
+class TransactionResponse(TransactionBase):
+    id: UUID
+    budget_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FinanceDashboardStats(BaseModel):
+    totalFund: float
+    totalIncome: float
+    totalExpense: float
+    remaining: float
+    # New dynamic fields
+    feeProgress: dict # { percent, paidCount, totalCount, termName }
+    monthlyExpense: float
+    topExpenseCategory: str
+    externalFunding: float
+    latestSponsor: str

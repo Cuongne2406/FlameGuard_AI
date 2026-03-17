@@ -8,10 +8,14 @@ export const apiClient = async (endpoint, options = {}) => {
   const token = localStorage.getItem('accessToken');
   
   const headers = {
-    'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   };
+
+  // Only set Content-Type to JSON if not explicitly set and body is not FormData
+  if (!headers['Content-Type'] && !(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const config = {
     ...options,

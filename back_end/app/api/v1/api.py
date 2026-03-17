@@ -9,6 +9,7 @@ from app.api.v1.endpoints import (
     campaigns,
     events,
     budgets,
+    finance,
     fund_requests,
     assets,
     asset_loans,
@@ -43,6 +44,7 @@ api_router.include_router(events.router, prefix="/events", tags=["Events"])
 
 # Phase 3
 api_router.include_router(budgets.router, prefix="/budgets", tags=["Budgets"])
+api_router.include_router(finance.router, prefix="/finance", tags=["Faculty Finance"])
 api_router.include_router(fund_requests.router, prefix="/fund-requests", tags=["Fund Requests"])
 api_router.include_router(assets.router, prefix="/assets", tags=["Assets"])
 api_router.include_router(asset_loans.router, prefix="/asset-loans", tags=["Asset Loans"])

@@ -25,5 +25,11 @@ export const organizationService = {
     } catch {
       return { totalUnits: 0, totalLeaders: 0, totalMembers: 0, subInfo: '' };
     }
-  }
+  },
+
+  // Clubs detailed
+  getClubsDetailed: () => apiClient('/organizations/clubs'),
+  getClubsStats: () => apiClient('/organizations/clubs/stats'),
+  getClubProposals: () => apiClient('/organizations/clubs/proposals'),
+  approveClubProposal: (id) => apiClient(`/organizations/clubs/proposals/${id}/approve`, { method: 'PUT' }),
 };

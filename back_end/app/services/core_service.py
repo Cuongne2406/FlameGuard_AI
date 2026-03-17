@@ -1,15 +1,17 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException
-from app.models.core import User, Role, Permission, Organization, AcademicTerm
+from app.models.core import User, Role, Permission, Organization, AcademicTerm, UserOrganization, OrgType, ClubProposal
 from app.schemas.core_schemas import (
     UserCreate, UserUpdate,
     RoleCreate, RoleUpdate,
     PermissionCreate, PermissionUpdate,
     OrganizationCreate, OrganizationUpdate, OrganizationResponse,
     AcademicTermCreate, AcademicTermUpdate,
-    UserOrganizationCreate
+    UserOrganizationCreate,
+    ClubProposalCreate
 )
+from sqlalchemy import func
 from app.core.security import get_password_hash
 from app.services import ai_audit_service
 from app.schemas.ai_audit_schemas import AuditLogCreate
@@ -375,3 +377,86 @@ def delete_user(db: Session, user_id: UUID):
     db.delete(db_user)
     db.commit()
     return {"message": "User deleted successfully"}
+# ==========================================
+# Club Specific Services
+# ==========================================
+def get_clubs_detailed_stats(db: Session):
+    from app.models.finance import Budget
+    total_clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB).count()
+    total_members = db.query(UserOrganization).join(Organization).filter(Organization.type == OrgType.CLUB).count()
+    total_budget = db.query(func.sum(Budget.total_amount)).join(Organization).filter(Organization.type == OrgType.CLUB).scalar() or 0
+    
+    return {
+        "totalClubs": total_clubs,
+        "totalMembers": total_members,
+        "totalBudget": float(total_budget)
+    }
+
+def get_clubs_list_detailed(db: Session):
+    from app.models.finance import Budget
+    clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB).all()
+    results = []
+    for club in clubs:
+        leader = db.query(User).join(UserOrganization).filter(
+            UserOrganization.organization_id == club.id,
+            UserOrganization.is_primary == True
+        ).first()
+        
+        member_count = db.query(UserOrganization).filter(UserOrganization.organization_id == club.id).count()
+        budget = db.query(Budget).filter(Budget.organization_id == club.id).first()
+        
+        # Mock some dynamic health stats if not in DB yet
+        activity = 0
+        if member_count > 0:
+            activity = 85 # Mock
+            
+        budget_percent = 0
+        if budget and budget.total_amount > 0:
+            budget_percent = int((budget.used_amount / budget.total_amount) * 100)
+            
+        results.append({
+            "id": str(club.id),
+            "name": club.name,
+            "leader": leader.full_name if leader else "Chưa có",
+            "members": str(member_count),
+            "nextEvent": "Tech Day 2026" if club.name == "CLB Tin học" else None,
+            "activity": activity,
+            "budget": budget_percent,
+            "status": "active",
+            "statusText": "Đang hoạt động",
+            "statusColor": "emerald",
+            "borderColor": "blue",
+            "icon": "groups"
+        })
+    return results
+
+def create_club_proposal(db: Session, prop_in: ClubProposalCreate, user_id: UUID):
+    db_prop = ClubProposal(**prop_in.dict(), requested_by=user_id)
+    db.add(db_prop)
+    db.commit()
+    db.refresh(db_prop)
+    return db_prop
+
+def get_club_proposals(db: Session):
+    props = db.query(ClubProposal).order_by(ClubProposal.created_at.desc()).all()
+    results = []
+    for p in props:
+        results.append({
+            "id": str(p.id),
+            "title": p.title,
+            "user": p.requester.full_name if p.requester else "Ẩn danh",
+            "time": p.created_at.strftime("%d/%m/%Y"),
+            "icon": p.icon or "help",
+            "status": p.status.lower(),
+            "amount": float(p.amount) if p.amount else 0,
+            "description": p.description
+        })
+    return results
+
+def approve_club_proposal(db: Session, prop_id: UUID):
+    db_prop = db.query(ClubProposal).filter(ClubProposal.id == prop_id).first()
+    if not db_prop:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    db_prop.status = "APPROVED"
+    db.commit()
+    return db_prop

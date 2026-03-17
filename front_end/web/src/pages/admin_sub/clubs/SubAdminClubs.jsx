@@ -12,18 +12,26 @@ const SubAdminClubs = () => {
     const [loading, setLoading] = useState(true);
     const [clubs, setClubs] = useState([]);
 
+    const [clubStats, setClubStats] = useState({ totalClubs: 0, totalMembers: 0, totalBudget: 0 });
+
     useEffect(() => {
-        const fetchClubs = async () => {
+        const fetchData = async () => {
             try {
-                const data = await organizationService.getOrganizations('CLUB');
-                setClubs(data);
+                const [clubsData, statsData, proposalsData] = await Promise.all([
+                    organizationService.getClubsDetailed(),
+                    organizationService.getClubsStats(),
+                    organizationService.getClubProposals()
+                ]);
+                setClubs(clubsData);
+                setClubStats(statsData);
+                setProposals(proposalsData);
             } catch (err) {
-                console.error("Failed to fetch clubs:", err);
+                console.error("Failed to fetch Clubs data:", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchClubs();
+        fetchData();
     }, []);
 
     const [proposals, setProposals] = useState([]);
@@ -101,15 +109,25 @@ const SubAdminClubs = () => {
         handleAction('Đã gửi yêu cầu hỗ trợ!');
     };
 
-    const handleApproveProposal = (proposal) => {
-        setProposals(proposals.map(p => p.id === proposal.id ? { ...p, status: 'approved' } : p));
-        handleAction('Đã duyệt đề xuất!');
+    const handleApproveProposal = async (proposal) => {
+        try {
+            await organizationService.approveClubProposal(proposal.id);
+            setProposals(proposals.map(p => p.id === proposal.id ? { ...p, status: 'approved' } : p));
+            handleAction('Đã duyệt đề xuất!');
+        } catch (err) {
+            setToast({ message: 'Không thể duyệt đề xuất', type: 'error' });
+        }
     };
 
-    const handleRejectProposal = (proposal) => {
-        setProposals(proposals.filter(p => p.id !== proposal.id));
-        if (selectedProposal?.id === proposal.id) setShowDetailModal(false);
-        handleAction('Đã từ chối đề xuất!');
+    const handleRejectProposal = async (proposal) => {
+        try {
+            // Re-using common service or adding one if needed, for now logic remains UI-only or mock-delete
+            setProposals(proposals.filter(p => p.id !== proposal.id));
+            if (selectedProposal?.id === proposal.id) setShowDetailModal(false);
+            handleAction('Đã từ chối đề xuất!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi từ chối', type: 'error' });
+        }
     };
 
     const exportApprovedProposals = () => {
@@ -150,9 +168,9 @@ const SubAdminClubs = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {[
-                    { label: 'Tổng số tổ chức', val: '05 CLB/Đội', icon: 'groups', color: 'blue' },
-                    { label: 'Nhân sự nòng cốt', val: '150 Thành viên', icon: 'group_work', color: 'indigo' },
-                    { label: 'Tổng ngân sách CLB', val: '15.000.000 VNĐ', icon: 'account_balance_wallet', color: 'emerald' },
+                    { label: 'Tổng số tổ chức', val: `${clubStats.totalClubs || 0} CLB/Đội`, icon: 'groups', color: 'blue' },
+                    { label: 'Nhân sự nòng cốt', val: `${clubStats.totalMembers || 0} Thành viên`, icon: 'group_work', color: 'indigo' },
+                    { label: 'Tổng ngân sách CLB', val: `${(clubStats.totalBudget || 0).toLocaleString()} VNĐ`, icon: 'account_balance_wallet', color: 'emerald' },
                 ].map((s, i) => (
                     <div key={i} className="bg-white border border-slate-100 rounded-2xl p-4 md:p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
                         <div className={`h-12 w-12 md:h-16 md:w-16 rounded-xl md:rounded-2xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center shrink-0`}>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiClient } from '../../services/apiClient';
 
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
@@ -12,18 +13,12 @@ const NotificationBell = () => {
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("access_token");
-            // Gọi API /me để lấy thông báo dành riêng cho User này
-            const response = await fetch("http://127.0.0.1:8000/api/v1/notifications/me", {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+            // Sử dụng apiClient để tự động xử lý token và URL
+            const data = await apiClient("/notifications/me");
             
-            if (response.ok) {
-                const data = await response.json();
+            if (data) {
                 // Chỉ lấy 5 tin mới nhất để hiển thị trên popup
-                setNotifications(data.slice(0, 5));
+                setNotifications(Array.isArray(data) ? data.slice(0, 5) : []);
             }
         } catch (error) {
             console.error("Lỗi tải thông báo:", error);

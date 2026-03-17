@@ -3,7 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
+from app.models.core import User
 from app.models.notifications import Notification
 from app.schemas.notification_schemas import NotificationCreate, NotificationUpdate, NotificationResponse
 
@@ -28,6 +29,16 @@ def read_notifications(
     db: Session = Depends(get_db)
 ):
     return db.query(Notification).offset(skip).limit(limit).all()
+
+@router.get("/me", response_model=List[NotificationResponse])
+def read_my_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Lấy danh sách thông báo của người dùng hiện tại.
+    """
+    return db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
 
 @router.get("/{notif_id}", response_model=NotificationResponse)
 def read_notification(

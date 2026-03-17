@@ -22,6 +22,23 @@ export const userService = {
     }
   },
 
+  uploadAvatar: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      return await apiClient('/users/me/avatar', {
+        method: 'POST',
+        body: formData,
+        // Let the browser set the Content-Type with boundary for FormData
+        headers: {} 
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      throw error;
+    }
+  },
+
   getDevices: async () => {
     try {
       return await apiClient('/users/me/devices');

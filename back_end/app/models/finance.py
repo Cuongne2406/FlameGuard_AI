@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Enum, ForeignKey, DateTime, Numeric, Text
+from sqlalchemy import Column, String, Integer, Enum, ForeignKey, DateTime, Numeric, Text, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -23,6 +23,15 @@ class AssetLoanStatus(enum.Enum):
     BORROWED = "BORROWED"
     RETURNED = "RETURNED"
     OVERDUE = "OVERDUE"
+
+class TransactionType(enum.Enum):
+    INCOME = "INCOME"
+    EXPENSE = "EXPENSE"
+
+class TransactionStatus(enum.Enum):
+    PENDING = "PENDING"
+    COMPLETED = "COMPLETED"
+    REJECTED = "REJECTED"
 
 class Budget(Base):
     __tablename__ = "budgets"
@@ -85,3 +94,32 @@ class AssetLoan(Base):
     
     asset = relationship("Asset", back_populates="loans")
     borrower = relationship("User", back_populates="asset_loans")
+
+class FinanceTransaction(Base):
+    __tablename__ = "finance_transactions"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    budget_id = Column(UUID(as_uuid=True), ForeignKey("budgets.id"), nullable=False)
+    type = Column(Enum(TransactionType), nullable=False)
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    amount = Column(Numeric(15, 2), nullable=False)
+    performed_by_name = Column(String) # Name of person/source
+    status = Column(Enum(TransactionStatus), default=TransactionStatus.COMPLETED)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    
+    budget = relationship("Budget")
+
+class StudentFee(Base):
+    __tablename__ = "student_fees"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    academic_term_id = Column(UUID(as_uuid=True), ForeignKey("academic_terms.id"), nullable=False)
+    title = Column(String, nullable=False)
+    amount = Column(Numeric(15, 2), nullable=False)
+    status = Column(String, default="PENDING") # PENDING, PAID
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    
+    user = relationship("User")
+    academic_term = relationship("AcademicTerm")

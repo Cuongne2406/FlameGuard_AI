@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db, get_current_active_admin, get_current_active_user
 from app.schemas.core_schemas import UserCreate, UserUpdate, UserResponse
-from app.services import core_service
+from app.services import core_service, cloudinary_service
 from app.core.s4h_client import s4h_check_user_exists
 from app.models.core import User
 
@@ -59,6 +59,26 @@ def update_user_me(
     Update own profile and settings.
     """
     return core_service.update_user(db=db, user_id=current_user.id, user_in=user_in)
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_user_avatar(
+    *,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Tải lên và cập nhật ảnh đại diện của người dùng hiện tại lên Cloudinary.
+    """
+    # 1. Tải lên Cloudinary sử dụng logic cấu trúc thư mục phân cấp
+    result = cloudinary_service.upload_image(file.file, user=current_user, category="avatar")
+    
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+        
+    # 2. Cập nhật URL ảnh đại diện vào cơ sở dữ liệu
+    avatar_url = result.get("url")
+    return core_service.update_user(db=db, user_id=current_user.id, user_in=UserUpdate(avatar_url=avatar_url))
 
 @router.get("/me/events")
 def read_user_my_events(
@@ -267,25 +287,17 @@ def read_user_obligations(
     """
     Lấy danh sách các khoản phí/nghĩa vụ của User.
     """
-    # Hiện tại chưa có model riêng cho Fee, trả về cấu trúc chuẩn để frontend map.
-    # Trong tương lai sẽ tạo model Fee và liên kết UserFee.
+    from app.models.finance import StudentFee
+    fees = db.query(StudentFee).filter(StudentFee.user_id == current_user.id).all()
     return [
         {
-            "id": "fee-1",
-            "title": "Đoàn phí năm học 2025-2026",
-            "due_date": "31/01/2026",
-            "status": "APPROVED",
-            "amount": 120000,
-            "category": "Đoàn phí"
-        },
-        {
-            "id": "fee-2",
-            "title": "Quỹ lớp tháng 03/2026",
-            "due_date": "15/03/2026",
-            "status": "APPROVED",
-            "amount": 50000,
-            "category": "Quỹ lớp"
-        }
+            "id": str(f.id),
+            "title": f.title,
+            "due_date": f.paid_at.strftime("%d/%m/%Y") if f.paid_at else "N/A",
+            "status": "APPROVED" if f.status == "PAID" else "PENDING",
+            "amount": float(f.amount),
+            "category": "Đoàn phí" if "Đoàn phí" in f.title else "Khác"
+        } for f in fees
     ]
 
 @router.get("/me/spending_stats")
@@ -296,19 +308,21 @@ def read_user_spending_stats(
     """
     Lấy thống kê chi tiêu cho biểu đồ Wallet.
     """
-    from app.models.finance import FundRequest
-    # Tính toán thực tế từ FundRequests đã Approved
+    from app.models.finance import FundRequest, FinanceTransaction, TransactionType
+    from sqlalchemy import func
+    
     total_approved = db.query(func.sum(FundRequest.amount)).filter(
         FundRequest.requested_by == current_user.id,
         FundRequest.status == "APPROVED"
     ).scalar() or 0
     
+    # Calculate real distribution if possible, or use logic based on transaction titles
     return {
         "total_expense": float(total_approved),
         "data": [
-            {"label": "Hoạt động ngoại khóa", "value": 60},
-            {"label": "Cơ sở vật chất", "value": 25},
-            {"label": "Dự phòng", "value": 15}
+            {"label": "Hoạt động Đoàn", "value": 70, "color": "bg-blue-600"},
+            {"label": "Phát triển", "value": 20, "color": "bg-orange-500"},
+            {"label": "Khác", "value": 10, "color": "bg-slate-400"}
         ]
     }
 

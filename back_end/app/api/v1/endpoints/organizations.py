@@ -2,12 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+from sqlalchemy import func
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse, UserOrganizationCreate, UserOrganizationResponse
 from app.services import core_service
-
-from sqlalchemy import func
 from app.models.core import UserOrganization, Organization
 from app.models.events import Event
 from app.models.finance import Budget
@@ -35,6 +34,38 @@ def get_organization_stats(db: Session = Depends(get_db)):
         "totalMembers": member_count,
         "subInfo": f"Tăng {member_count - 10} so với tháng trước"
     }
+
+@router.get("/clubs/stats")
+def get_clubs_stats(db: Session = Depends(get_db)):
+    """
+    Lấy thống kê riêng cho khối Câu lạc bộ.
+    """
+    return core_service.get_clubs_detailed_stats(db)
+
+@router.get("/clubs")
+def get_clubs_list(db: Session = Depends(get_db)):
+    """
+    Lấy danh sách CLB kèm chi tiết trạng thái, nhân sự, ngân sách.
+    """
+    return core_service.get_clubs_list_detailed(db)
+
+@router.get("/clubs/proposals")
+def get_club_proposals(db: Session = Depends(get_db)):
+    """
+    Lấy danh sách đề xuất từ các CLB.
+    """
+    return core_service.get_club_proposals(db)
+
+@router.put("/clubs/proposals/{prop_id}/approve")
+def approve_club_proposal(
+    prop_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Duyệt đề xuất.
+    """
+    return core_service.approve_club_proposal(db, prop_id)
 
 @router.post("/", response_model=OrganizationResponse)
 def create_organization(

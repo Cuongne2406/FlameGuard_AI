@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Boolean, Enum, ForeignKey, Date, Table
+from sqlalchemy import Column, String, Integer, Boolean, Enum, ForeignKey, Date, Table, Text, Numeric, DateTime, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -154,3 +154,19 @@ class AcademicTerm(Base):
     
     campaigns = relationship("Campaign", back_populates="academic_term")
     budgets = relationship("Budget", back_populates="academic_term")
+
+class ClubProposal(Base):
+    __tablename__ = "club_proposals"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True) # Linked club if already exists
+    title = Column(String, nullable=False)
+    description = Column(Text)
+    amount = Column(Numeric(15, 2), nullable=True)
+    requested_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status = Column(String, default="PENDING") # PENDING, APPROVED, REJECTED
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    icon = Column(String, default="help")
+    
+    organization = relationship("Organization")
+    requester = relationship("User")
