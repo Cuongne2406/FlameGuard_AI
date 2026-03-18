@@ -14,33 +14,42 @@ cloudinary.config(
 def get_cloudinary_folder(user=None, category="avatar"):
     """
     Generate a hierarchical folder path for Cloudinary.
-    Structure: {category} / {role} / Khóa {batch} / {class}
-    
-    :param user: User model instance
-    :param category: The top-level category (e.g., 'avatar', 'documents')
-    :return: Folder path string
+    Structure:
+    - Admin: {category}/admin/System
+    - SubAdmin: {category}/subadmin/{FacultyName}/Staff
+    - Students: {category}/user/Khóa {batch}/{className}
     """
     if not user:
         return category
 
-    # 1. Determine Role
     role_names = [r.name.upper() for r in user.roles]
+    
+    # 1. Admin Logic
     if "ADMIN" in role_names:
-        role_folder = "admin"
-    elif any(r in role_names for r in ["UNIVERSITY_ADMIN", "FACULTY_ADMIN"]):
-        role_folder = "subadmin"
-    else:
-        role_folder = "user"
+        return f"{category}/admin/System"
 
-    # 2. Determine Batch (Khóa) - Assume first 2 digits of student_id
-    batch_folder = "Unknown"
+    # 2. SubAdmin Logic (Faculty Staff)
+    if any(r in role_names for r in ["UNIVERSITY_ADMIN", "FACULTY_ADMIN"]):
+        faculty_name = "General"
+        if user.organizations:
+            for uo in user.organizations:
+                if uo.organization and uo.organization.type.value == "FACULTY":
+                    faculty_name = uo.organization.name
+                    break
+        return f"{category}/subadmin/{faculty_name}/Staff"
+
+    # 3. Student/Standard User Logic
+    role_folder = "user"
+    
+    # Determine Batch (Khóa)
+    batch_folder = "VangLai"
     if user.student_id and len(user.student_id) >= 2:
         batch_digits = user.student_id[:2]
         if batch_digits.isdigit():
-            batch_folder = f"Khóa {batch_digits}"
+            batch_folder = f"K{batch_digits}"
 
-    # 3. Determine Class (Lớp)
-    class_folder = "Chưa xếp lớp"
+    # Determine Class (Lớp)
+    class_folder = "NoClass"
     if user.organizations:
         for uo in user.organizations:
             if uo.organization and uo.organization.type.value == "CLASS":

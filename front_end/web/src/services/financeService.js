@@ -61,20 +61,20 @@ export const financeService = {
 
   getBudgets: async () => {
     try {
-      const res = await apiClient('/budgets');
+      const res = await apiClient('/budgets/');
       return Array.isArray(res) ? res : [];
     } catch { return []; }
   },
 
   getAssets: async () => {
     try {
-      const res = await apiClient('/assets');
+      const res = await apiClient('/assets/');
       return Array.isArray(res) ? res : [];
     } catch { return []; }
   },
 
   createAsset: async (data) => {
-    return apiClient('/assets', {
+    return apiClient('/assets/', {
       method: 'POST',
       body: JSON.stringify(data)
     });

@@ -34,7 +34,7 @@ const SubAdminAIAnalysis = () => {
       ['Tháng', 'Doanh thu', 'Chi phí', 'Lợi nhuận', 'Trạng thái'],
       ...financeReports.map(r => [r.month, r.revenue, r.expense, r.profit, r.status])
     ];
-    const ws = XLSX.utils.aoa_to_sheet(data);
+    const ws = XLSX.utils.aoa_to_sheet(reportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'BaoCaoTaiChinh');
     const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });

@@ -3,7 +3,7 @@ import { apiClient } from './apiClient';
 export const eventService = {
   getEvents: (params) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : '';
-    return apiClient(`/events${query}`, { method: 'GET' });
+    return apiClient(`/events/${query}`, { method: 'GET' });
   },
   getUserEvents: () => apiClient('/users/me/events', { method: 'GET' }),
   getEvent: (id) => apiClient(`/events/${id}`, { method: 'GET' }),

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
+import { apiClient } from '../../../services/apiClient';
 
 const EventFeedbackAnalysis = () => {
     const { id } = useParams();
