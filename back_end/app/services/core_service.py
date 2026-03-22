@@ -348,6 +348,7 @@ def format_user_dict(db: Session, user: User):
         "phone_number": user.phone_number,
         "status": user.status.value if user.status else "ACTIVE",
         "avatar_url": user.avatar_url,
+        "is_2fa_enabled": user.is_2fa_enabled,
         "level": user.level,
         "training_score": user.training_score,
         "university": user.university,

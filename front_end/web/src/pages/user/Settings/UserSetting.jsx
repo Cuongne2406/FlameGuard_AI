@@ -23,11 +23,12 @@ import {
   EyeOff,
   Loader2,
 } from "lucide-react";
+import { Toggle } from "../../../components/admin/ui/Toggle";
 
 const UserSetting = () => {
   const { user, checkUserLogged } = useContext(AuthContext);
 
-  const [twoFactor, setTwoFactor] = useState(true);
+  const [twoFactor, setTwoFactor] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
   // Form states
@@ -41,6 +42,7 @@ const UserSetting = () => {
     if (user) {
       setFullName(user.full_name || "");
       setEmail(user.email || "");
+      setTwoFactor(user.is_2fa_enabled || false);
     }
   }, [user]);
 
@@ -85,9 +87,10 @@ const UserSetting = () => {
     setIsSaving(true);
     setSaveMessage({ type: '', text: '' });
     try {
-      await userService.updateUser(user.id, {
+      await userService.updateMe({
         full_name: fullName,
-        email: email
+        email: email,
+        is_2fa_enabled: twoFactor
       });
       setSaveMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
       await checkUserLogged(); // Refresh global user state
@@ -351,14 +354,10 @@ const UserSetting = () => {
                     Tăng cường bảo mật cho tài khoản của bạn
                   </p>
                 </div>
-                <button
-                  onClick={() => setTwoFactor(!twoFactor)}
-                  className={`w-12 h-6 rounded-full transition-all relative ${twoFactor ? "bg-blue-600" : "bg-slate-200"}`}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${twoFactor ? "left-7" : "left-1"}`}
-                  ></div>
-                </button>
+                <Toggle 
+                  checked={twoFactor}
+                  onChange={(val) => setTwoFactor(val)}
+                />
               </div>
             </div>
           </div>
