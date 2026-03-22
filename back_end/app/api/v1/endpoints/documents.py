@@ -38,7 +38,8 @@ def read_documents(
     query = db.query(DigitalDocument)
     # Check if user has administrative role (Simple check: if not a regular student)
     # Note: In a real app, use permission-based checks.
-    if current_user.role.name not in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"]:
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin:
         query = query.filter(DigitalDocument.user_id == current_user.id)
         
     return query.order_by(DigitalDocument.request_date.desc()).offset(skip).limit(limit).all()
@@ -51,8 +52,9 @@ def get_document_stats(
     """
     Get stats for documents.
     """
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
     query = db.query(DigitalDocument)
-    if current_user.role.name not in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"]:
+    if not is_admin:
         query = query.filter(DigitalDocument.user_id == current_user.id)
     
     incoming = query.filter(DigitalDocument.status == "APPROVED").count()

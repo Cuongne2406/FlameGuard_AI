@@ -1,6 +1,7 @@
 import React, { useState, useContext } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import { Popover, Transition } from "@headlessui/react";
 import {
   Home,
@@ -19,6 +20,7 @@ import {
 
 const UserSidebar = ({ isOpen, setIsOpen }) => {
   const { user, logout } = useContext(AuthContext);
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   // Thêm props từ UserLayout truyền xuống
   const menuItems = [
@@ -64,7 +66,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
       <aside
         className={`
           fixed md:relative inset-y-0 left-0 z-[60]
-          flex flex-col h-screen w-72 bg-white border-r border-slate-100 shrink-0 shadow-sm
+          flex flex-col h-screen w-72 bg-white dark:bg-surface-dark border-r border-slate-100 dark:border-slate-800 shrink-0 shadow-sm
           transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
@@ -76,14 +78,14 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
               <span className="text-white font-bold text-xl">D</span>
             </div>
             <h1 className="text-xl font-bold truncate">
-              <span className="text-blue-600">DYUS</span>
+              <span className="text-blue-600 dark:text-blue-400">DYUS</span>
               <span className="text-orange-500 ml-1 text-lg">Portal</span>
             </h1>
           </div>
           {/* Nút X đóng menu chỉ hiện trên mobile */}
           <button
             onClick={() => setIsOpen(false)}
-            className="md:hidden p-1 text-slate-400"
+            className="md:hidden p-1 text-slate-400 dark:text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded"
           >
             <X size={20} />
           </button>
@@ -99,7 +101,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
               onClick={() => setIsOpen(false)}
               className={({ isActive }) => `
                 flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group
-                ${isActive ? "bg-blue-50 text-blue-600 font-semibold" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}
+                ${isActive ? "bg-blue-50 text-blue-600 font-semibold dark:bg-blue-900/30 dark:text-blue-400" : "text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"}
               `}
             >
               <div className="flex items-center gap-4">
@@ -118,14 +120,14 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
             </NavLink>
           ))}
 
-          <div className="my-4 border-t border-slate-50 mx-4"></div>
+          <div className="my-4 border-t border-slate-50 dark:border-slate-800/50 mx-4"></div>
 
           <NavLink
             to="/user/settings"
             onClick={() => setIsOpen(false)}
             className={({ isActive }) => `
               flex items-center gap-4 px-4 py-3 rounded-xl transition-all
-              ${isActive ? "bg-slate-100 text-slate-900 font-semibold" : "text-slate-500 hover:bg-slate-50"}
+              ${isActive ? "bg-slate-100 text-slate-900 font-semibold dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-200"}
             `}
           >
             <Settings size={22} className="shrink-0" />
@@ -134,29 +136,29 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
         </nav>
 
         {/* --- PHẦN POPOVER PROFILE (GIỮ NGUYÊN LOGIC CỦA BẠN) --- */}
-        <div className="p-4 border-t border-slate-50 bg-white">
+        <div className="p-4 border-t border-slate-50 dark:border-slate-800/50 bg-white dark:bg-surface-dark">
           <Popover className="relative">
             {({ open }) => (
               <>
                 <Popover.Button
                   className={`
                     w-full flex items-center gap-3 p-2 rounded-2xl transition-all outline-none
-                    ${open ? "bg-slate-100 shadow-inner" : "hover:bg-slate-50"}
+                    ${open ? "bg-slate-100 dark:bg-slate-800 shadow-inner" : "hover:bg-slate-50 dark:hover:bg-slate-800/50"}
                   `}
                 >
                   <div className="relative shrink-0">
                     <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
+                      src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                       alt="Avatar"
                       className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover bg-blue-100"
                     />
                     <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
                   </div>
                   <div className="flex flex-col text-left min-w-0">
-                    <span className="text-sm font-bold text-slate-800 truncate">
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">
                       {user?.full_name || 'Sinh viên'}
                     </span>
-                    <span className="text-[11px] text-slate-500 font-medium">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                       {"Sinh viên"}
                     </span>
                   </div>
@@ -172,17 +174,17 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                   leaveTo="opacity-0 translate-y-1 scale-95"
                 >
                   <Popover.Panel className="absolute bottom-full left-0 mb-4 w-[280px] z-[70]">
-                    <div className="bg-white rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-slate-100 overflow-hidden w-64">
+                    <div className="bg-white dark:bg-surface-dark rounded-[1.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden w-64">
                       {/* Header Popover */}
-                      <div className="p-4 border-b border-slate-50 flex items-center gap-4 bg-slate-50/30">
+                      <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex items-center gap-4 bg-slate-50/30 dark:bg-slate-800/30">
                         <img
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
-                          className="w-12 h-12 rounded-full border border-white shadow-sm"
+                          src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
+                          className="w-12 h-12 rounded-full border border-white shadow-sm object-cover"
                           alt="avatar"
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <h4 className="text-[13px] font-black text-slate-800 truncate">
+                            <h4 className="text-[13px] font-black text-slate-800 dark:text-slate-200 truncate">
                               {user?.full_name || 'Sinh viên'}
                             </h4>
                             <CheckCircle2
@@ -190,7 +192,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                               className="text-emerald-500 shrink-0"
                             />
                           </div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">
                             MSSV: {user?.student_id || ''}
                           </p>
                         </div>
@@ -214,29 +216,34 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                         </button> */}
 
                         {/* Chế độ tối */}
-                        <div className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 transition-colors group">
+                        <div className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
                           <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+                            <div className="p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-slate-400 dark:text-slate-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/40 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                               <Moon size={16} />
                             </div>
-                            <p className="text-[11px] font-black text-slate-700">
+                            <p className="text-[11px] font-black text-slate-700 dark:text-slate-300">
                               Chế độ tối
                             </p>
                           </div>
                           {/* Toggle Switch */}
                           <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" />
+                            <input 
+                              type="checkbox" 
+                              className="sr-only peer" 
+                              checked={theme === 'dark'}
+                              onChange={toggleTheme}
+                            />
                             <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
                           </label>
                         </div>
 
                         {/* Phản hồi & Góp ý */}
-                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left group">
-                          <div className="p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-600">
+                        <button className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-left group">
+                          <div className="p-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg text-slate-400 dark:text-slate-400 group-hover:bg-amber-50 dark:group-hover:bg-amber-900/40 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                             <MessageSquare size={16} />
                           </div>
                           <div>
-                            <p className="text-[11px] font-black text-slate-700">
+                            <p className="text-[11px] font-black text-slate-700 dark:text-slate-300">
                               Phản hồi & Góp ý
                             </p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase">
@@ -246,13 +253,13 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                         </button>
 
                         {/* Logout */}
-                        <div className="p-1 mt-1 bg-slate-50/50 rounded-xl">
+                        <div className="p-1 mt-1 bg-slate-50/50 dark:bg-slate-800/50 rounded-xl">
                           <button 
                             onClick={() => {
                               logout();
                               navigate('/login');
                             }}
-                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 text-red-500 transition-all group"
+                            className="w-full flex items-center gap-3 p-2.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 dark:text-red-400 transition-all group"
                           >
                             <LogOut size={16} />
                             <span className="text-[10px] font-black uppercase tracking-widest">
@@ -263,7 +270,7 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
                       </div>
                     </div>
                     {/* Mũi tên nhỏ */}
-                    <div className="absolute -bottom-1 left-8 w-3 h-3 bg-white border-r border-b border-slate-100 rotate-45"></div>
+                    <div className="absolute -bottom-1 left-8 w-3 h-3 bg-white dark:bg-surface-dark border-r border-b border-slate-100 dark:border-slate-700 rotate-45"></div>
                   </Popover.Panel>
                 </Transition>
               </>

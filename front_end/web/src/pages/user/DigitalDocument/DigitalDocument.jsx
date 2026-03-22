@@ -12,28 +12,15 @@ import {
   Filter,
   MessageSquare,
   ChevronRight,
+  Printer,
+  X,
+  CheckCircle,
 } from "lucide-react";
 
 const DigitalDocument = () => {
   const quickServices = [
     {
       id: 1,
-      title: "Giấy xác nhận Sinh viên",
-      desc: "Vay vốn, tạm hoãn nghĩa vụ, bổ sung hồ sơ...",
-      icon: <FileText className="text-blue-600" size={24} />,
-      buttonText: "Yêu cầu cấp ngay",
-      primary: true,
-    },
-    {
-      id: 2,
-      title: "Bảng điểm Rèn luyện",
-      desc: "Xuất file PDF có mộc số xác thực điện tử.",
-      icon: <BarChart2 className="text-orange-500" size={24} />,
-      buttonText: "Tải về",
-      primary: false,
-    },
-    {
-      id: 3,
       title: "Cấp lại thẻ Đoàn/Hội",
       desc: "Tích hợp mã QR điện tử, không cần thẻ cứng.",
       icon: <CreditCard className="text-purple-600" size={24} />,
@@ -45,13 +32,14 @@ const DigitalDocument = () => {
   const [requests, setRequests] = useState([]);
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDoc, setSelectedDoc] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [reqData, docData] = await Promise.all([
-           documentService.getRequests(),
-           documentService.getDocuments()
+          documentService.getRequests(),
+          documentService.getDocuments()
         ]);
         setRequests(reqData);
         setDocs(docData);
@@ -66,11 +54,11 @@ const DigitalDocument = () => {
 
   const handleCreateRequest = async (type) => {
     try {
-       const newReq = await documentService.createRequest(type);
-       setRequests([newReq, ...requests]);
-       alert("Đã gửi yêu cầu thành công!");
+      const newReq = await documentService.createRequest(type);
+      setRequests([newReq, ...requests]);
+      alert("Đã gửi yêu cầu thành công!");
     } catch (err) {
-       alert("Lỗi khi gửi yêu cầu.");
+      alert("Lỗi khi gửi yêu cầu.");
     }
   };
 
@@ -130,11 +118,10 @@ const DigitalDocument = () => {
               <button
                 onClick={() => handleCreateRequest(service.title)}
                 className={`w-full py-3.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all
-                ${
-                  service.primary
+                ${service.primary
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
                     : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                }
+                  }
               `}
               >
                 {service.buttonText}{" "}
@@ -165,42 +152,53 @@ const DigitalDocument = () => {
 
             <div className="space-y-6">
               {loading ? (
-                 <p className="text-xs text-slate-400 font-bold">Đang tải yêu cầu...</p>
+                <p className="text-xs text-slate-400 font-bold">Đang tải yêu cầu...</p>
               ) : requests.length === 0 ? (
-                 <p className="text-xs text-slate-400 font-bold">Chưa có thủ tục nào đang xử lý.</p>
+                <p className="text-xs text-slate-400 font-bold">Chưa có thủ tục nào đang xử lý.</p>
               ) : (
-                requests.map(req => (
-                  <div key={req.id} className="space-y-6 border-b border-slate-100 pb-6 mb-6 last:border-0 last:pb-0 last:mb-0">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        Mã HS: #{req.id}
-                      </span>
-                      <h5 className="font-black text-slate-800 text-base mt-1">
-                        {req.title}
-                      </h5>
-                    </div>
+                requests.map(req => {
+                  // Logic mapping trạng thái
+                  const statusMap = {
+                    'PENDING': { text: 'Chờ tiếp nhận', progress: 20, time: 'Dự kiến: 24h' },
+                    'PROCESSING': { text: 'Đang xử lý', progress: 60, time: 'Dự kiến: 4h' },
+                    'APPROVED': { text: 'Đã hoàn tất', progress: 100, time: 'Đã xử lý xong' },
+                    'REJECTED': { text: 'Đã từ chối', progress: 0, time: 'Vui lòng kiểm tra lý do' }
+                  };
+                  const s = statusMap[req.status] || statusMap['PENDING'];
 
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-end">
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded">
-                          {req.statusText}
+                  return (
+                    <div key={req.id} className="space-y-6 border-b border-slate-100 pb-6 mb-6 last:border-0 last:pb-0 last:mb-0">
+                      <div>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                          Mã HS: #{req.id.toString().slice(0, 8)}
                         </span>
-                        <span className="text-blue-600 font-black text-sm">{req.progress}%</span>
+                        <h5 className="font-black text-slate-800 text-base mt-1">
+                          {req.title || req.document_type}
+                        </h5>
                       </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div className={`bg-blue-600 h-full rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]`} style={{ width: `${req.progress}%` }}></div>
+
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-end">
+                          <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded">
+                            {s.text}
+                          </span>
+                          <span className="text-blue-600 font-black text-sm">{s.progress}%</span>
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                          <div className={`bg-blue-600 h-full rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]`} style={{ width: `${s.progress}%` }}></div>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
-                      <Clock size={14} /> {req.estimatedTime}
-                    </div>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
+                        <Clock size={14} /> {s.time}
+                      </div>
 
-                    <button className="w-full py-3 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black border border-slate-100 hover:bg-slate-100 transition-colors">
-                      XEM CHI TIẾT TIẾN ĐỘ
-                    </button>
-                  </div>
-                ))
+                      <button className="w-full py-3 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black border border-slate-100 hover:bg-slate-100 transition-colors">
+                        XEM CHI TIẾT TIẾN ĐỘ
+                      </button>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
@@ -234,32 +232,37 @@ const DigitalDocument = () => {
                 docs.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-slate-100"
+                    onClick={() => setSelectedDoc(doc)}
+                    className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-blue-100 hover:shadow-sm"
                   >
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-[10px]
-                      ${doc.type === "pdf" ? "bg-red-50 text-red-500" : doc.type === "doc" ? "bg-blue-50 text-blue-600" : "bg-orange-50 text-orange-600"}
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-[12px] shrink-0 shadow-sm
+                      ${(doc.document_type || "pdf").toLowerCase().includes("pdf") ? "bg-red-50 text-red-500" : (doc.document_type || "doc").toLowerCase().includes("doc") ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"}
                     `}
                     >
-                      {doc.type.toUpperCase()}
+                      {doc.document_type && doc.document_type.toLowerCase().includes("pdf") 
+                          ? "PDF" 
+                          : doc.document_type && doc.document_type.toLowerCase().includes("doc") 
+                            ? "DOC" 
+                            : "TXT"}
                     </div>
-                    <div className="flex-1">
-                      <h5 className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors">
-                        {doc.name}
+                    <div className="flex-1 min-w-0">
+                      <h5 className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors truncate">
+                        {doc.title || "Tài liệu không tên"}
                       </h5>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase">
-                          {doc.code}
+                        <span className="text-[10px] text-slate-400 font-bold uppercase truncate">
+                          Mã: {doc.document_code || "CHƯA CÓ MÃ"}
                         </span>
-                        <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
-                        <span className="text-[10px] text-slate-400 font-bold">
-                          {doc.time}
+                        <span className="w-1 h-1 bg-slate-200 rounded-full shrink-0"></span>
+                        <span className="text-[10px] text-slate-400 font-bold shrink-0">
+                          {doc.request_date ? new Date(doc.request_date).toLocaleDateString('vi-VN') : "N/A"}
                         </span>
                       </div>
                     </div>
                     <ChevronRight
                       size={18}
-                      className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all"
+                      className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0"
                     />
                   </div>
                 ))
@@ -282,6 +285,89 @@ const DigitalDocument = () => {
           <MessageSquare size={20} fill="currentColor" />
         </div>
       </button> */}
+
+      {/* DOCUMENT VIEWER MODAL */}
+      {selectedDoc && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" 
+            onClick={() => setSelectedDoc(null)}
+          ></div>
+
+          {/* Modal Container */}
+          <div className="relative bg-white w-full max-w-4xl h-full max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-slate-100">
+            {/* Header Toolbar */}
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 backdrop-blur-md z-10">
+              <div className="flex items-center gap-3">
+                <div className="bg-red-50 text-red-600 p-2 rounded-xl shrink-0">
+                  <FileText size={16} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-800 tracking-wide">TRÍCH XUẤT VĂN BẢN</h4>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">
+                    Số hiệu: {selectedDoc.document_code || 'N/A'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-xl text-slate-500 text-[10px] font-bold shadow-sm transition-all border border-transparent hover:border-slate-200">
+                  <Download size={14} /> TẢI VỀ
+                </button>
+                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-xl text-slate-500 text-[10px] font-bold shadow-sm transition-all border border-transparent hover:border-slate-200">
+                  <Printer size={14} /> IN (PDF)
+                </button>
+                <div className="w-px h-6 bg-slate-200 mx-1"></div>
+                <button 
+                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 transition-all cursor-pointer" 
+                  onClick={() => setSelectedDoc(null)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Viewer Pane (Giấy A4) */}
+            <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50 custom-scrollbar">
+              <div className="bg-white mx-auto w-full max-w-2xl min-h-[800px] shadow-lg md:p-12 p-6 flex flex-col gap-6 relative">
+                {/* Quốc hiệu Tiêu ngữ */}
+                <div className="flex justify-between items-start text-[10px] md:text-xs font-bold text-slate-800">
+                  <div className="text-center">ĐOÀN TNCS HỒ CHÍ MINH<br />TRƯỜNG ĐH KỸ THUẬT<br />***</div>
+                  <div className="text-center">
+                    <span className="font-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</span><br />
+                    <span className="underline underline-offset-4">Độc lập - Tự do - Hạnh phúc</span>
+                  </div>
+                </div>
+
+                {/* Tiêu đề văn bản */}
+                <div className="text-center mt-12 mb-8 space-y-2">
+                  <h3 className="text-base md:text-lg font-black text-slate-900 uppercase">
+                    {selectedDoc.document_type || "VĂN BẢN LƯU HÀNH NỘI BỘ"}
+                  </h3>
+                  <p className="text-xs md:text-sm font-bold text-slate-700 w-3/4 mx-auto leading-relaxed">
+                    V/v {selectedDoc.title || 'Không có tiêu đề trích yếu'}
+                  </p>
+                </div>
+
+                {/* Nội dung */}
+                <div className="space-y-4 text-xs md:text-sm leading-8 text-slate-800 text-justify">
+                  <p className="whitespace-pre-wrap">{selectedDoc.purpose || "Chưa có nội dung chi tiết được soạn thảo trong văn bản này."}</p>
+                </div>
+
+                {/* Chữ ký số điện tử */}
+                <div className="absolute bottom-16 md:bottom-24 right-8 md:right-16 rotate-[-10deg] opacity-90 border-4 border-red-600 p-3 md:p-4 rounded-xl text-center select-none pointer-events-none">
+                  <div className="text-red-600 font-black text-[10px] md:text-xs uppercase tracking-widest">Ký bởi: ADMIN HỆ THỐNG</div>
+                  <div className="text-red-600 font-bold text-[9px] md:text-[10px] mt-1">
+                    Ngày phê duyệt: {new Date(selectedDoc.request_date).toLocaleDateString('vi-VN')}
+                  </div>
+                  <CheckCircle className="mx-auto mt-2 text-red-600" size={24} />
+                  <div className="text-red-600 font-black text-[7px] mt-1 opacity-50 uppercase">Digital Signature Verified</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FOOTER CỦA HỆ THỐNG */}
       <footer className="text-center py-4 text-[9px] text-slate-400 font-bold uppercase tracking-widest opacity-50">

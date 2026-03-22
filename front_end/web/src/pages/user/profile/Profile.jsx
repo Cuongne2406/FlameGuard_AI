@@ -82,7 +82,7 @@ const Profile = () => {
           <div className="px-5 md:px-8 pb-6 md:pb-8 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 -mt-10 md:-mt-12 relative z-10">
             <div className="relative group">
               <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
+                src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                 alt="Avatar"
                 className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-xl bg-slate-100 object-cover"
               />

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useRef } from "react";
 import { AuthContext } from "../../../context/AuthContext";
 import { userService } from "../../../services/userService";
 import {
@@ -21,6 +21,7 @@ import {
   X,
   Eye,
   EyeOff,
+  Loader2,
 } from "lucide-react";
 
 const UserSetting = () => {
@@ -42,6 +43,41 @@ const UserSetting = () => {
       setEmail(user.email || "");
     }
   }, [user]);
+
+  // Handle Avatar Upload
+  const fileInputRef = useRef(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const handleAvatarClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+       setSaveMessage({ type: 'error', text: 'Kích thước ảnh không vượt quá 5MB' });
+       return;
+    }
+
+    setIsUploadingAvatar(true);
+    setSaveMessage({ type: '', text: '' });
+    
+    try {
+      await userService.uploadAvatar(file);
+      await checkUserLogged(); // Làm mới Context để đồng bộ Avatar
+      setSaveMessage({ type: 'success', text: 'Cập nhật ảnh đại diện thành công!' });
+    } catch (error) {
+       setSaveMessage({ type: 'error', text: error.message || 'Lỗi khi tải ảnh lên' });
+    } finally {
+      setIsUploadingAvatar(false);
+      setTimeout(() => setSaveMessage({ type: '', text: '' }), 3000);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Handle Profile Save
   const handleSaveProfile = async () => {
@@ -200,14 +236,26 @@ const UserSetting = () => {
         {/* LEFT COLUMN: PROFILE CARD */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm text-center relative overflow-hidden">
-            <div className="relative w-32 h-32 mx-auto mb-6">
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
-                alt="Avatar"
-                className="w-full h-full rounded-full border-4 border-slate-50 bg-slate-100 object-cover shadow-inner"
+            <div className="relative w-32 h-32 mx-auto mb-6 group">
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+                accept="image/*" 
               />
-              <button className="absolute bottom-0 right-0 p-2.5 bg-blue-600 text-white rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform">
-                <Camera size={16} />
+              <img
+                src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
+                alt="Avatar"
+                className="w-full h-full rounded-full border-4 border-slate-50 bg-slate-100 object-cover shadow-inner cursor-pointer"
+                onClick={handleAvatarClick}
+              />
+              <button 
+                onClick={handleAvatarClick}
+                disabled={isUploadingAvatar}
+                className="absolute bottom-0 right-0 p-2.5 bg-blue-600 text-white rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isUploadingAvatar ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               </button>
             </div>
 

@@ -83,8 +83,9 @@ const UserDashboard = () => {
             <div className="relative mb-4">
               <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
                 <img
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+                  src={user?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
                   alt="avatar"
+                  className="w-full h-full object-cover"
                 />
               </div>
               <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center text-white">
