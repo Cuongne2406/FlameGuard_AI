@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import Column, String, ForeignKey, DateTime, Enum, Text
+from sqlalchemy import Column, String, ForeignKey, DateTime, Enum, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -22,6 +22,7 @@ class DigitalDocument(Base):
     title = Column(String, nullable=True) # Trích yếu
     purpose = Column(Text, nullable=True)
     status = Column(Enum(DocumentStatus), default=DocumentStatus.PENDING)
+    is_public = Column(Boolean, default=False)
     file_url = Column(String, nullable=True)
     rejection_reason = Column(String, nullable=True)
     request_date = Column(DateTime, default=datetime.utcnow)

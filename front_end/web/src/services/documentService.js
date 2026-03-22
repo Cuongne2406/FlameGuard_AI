@@ -28,5 +28,18 @@ export const documentService = {
     } catch {
       return { incoming: 0, outgoing: 0, pending: 0 };
     }
+  },
+
+  updateDocument: async (id, data) => {
+    return apiClient(`/digital-documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
+  deleteDocument: async (id) => {
+    return apiClient(`/digital-documents/${id}`, {
+      method: 'DELETE'
+    });
   }
 };

@@ -18,6 +18,10 @@ const TabAuditLog = () => {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [roleFilter, setRoleFilter] = useState("Tất cả vai trò");
+  const [isExporting, setIsExporting] = useState(false);
   const pageSize = 20;
 
   const fetchLogs = async () => {
@@ -25,7 +29,10 @@ const TabAuditLog = () => {
     try {
       const data = await activityLogService.getLogs({
         skip: (page - 1) * pageSize,
-        limit: pageSize
+        limit: pageSize,
+        date_from: dateFrom,
+        date_to: dateTo,
+        role: roleFilter
       });
       setLogs(data.items || []);
       setTotal(data.total || 0);
@@ -39,6 +46,21 @@ const TabAuditLog = () => {
   useEffect(() => {
     fetchLogs();
   }, [page]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await activityLogService.exportLogs({
+        date_from: dateFrom,
+        date_to: dateTo,
+        role: roleFilter
+      });
+    } catch (err) {
+      alert("Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -56,29 +78,52 @@ const TabAuditLog = () => {
       {/* Bộ lọc và Công cụ (Giữ nguyên giao diện) */}
       <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <input
-              type="text"
-              defaultValue="25/10/2023 - 26/10/2023"
-              className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
-            />
-            <Search
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
-              size={14}
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="pl-4 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-sans"
+              />
+            </div>
+            <span className="text-slate-400 font-bold text-xs">-</span>
+            <div className="relative">
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="pl-4 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-sans"
+              />
+            </div>
           </div>
-          <select className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none">
-            <option>Mọi Vai trò</option>
-            <option>Super Admin</option>
-            <option>Bí thư Khoa</option>
+          <select 
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none font-sans"
+          >
+            <option>Tất cả vai trò</option>
+            <option>System</option>
+            <option>SUPER_ADMIN</option>
+            <option>GLOBAL_ADMIN</option>
+            <option>UNIVERSITY_ADMIN</option>
+            <option>FACULTY_ADMIN</option>
           </select>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+          <button 
+            onClick={() => { setPage(1); fetchLogs(); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all font-sans"
+          >
             <Filter size={14} /> Lọc
           </button>
         </div>
         <div className="flex items-center gap-4">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all">
-            <Download size={14} /> Xuất báo cáo
+          <button 
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 font-sans"
+          >
+            {isExporting ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />} 
+            {isExporting ? "Đang xuất..." : "Xuất báo cáo"}
           </button>
         </div>
       </div>

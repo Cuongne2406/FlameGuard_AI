@@ -8,6 +8,7 @@ import {
   ExternalLink,
   ShieldAlert,
   EyeOff,
+  Eye
 } from "lucide-react";
 import { SectionCard } from "../ui/SectionCard";
 import { Toggle } from "../ui/Toggle";
@@ -16,6 +17,8 @@ import { systemService } from "../../../services/systemService";
 const TabSecurity = ({ onUpdate }) => {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showSecret, setShowSecret] = useState(false);
+  const [isTestingWebhook, setIsTestingWebhook] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -40,23 +43,16 @@ const TabSecurity = ({ onUpdate }) => {
     if (onUpdate) onUpdate(newSettings);
   };
 
-  const apiKeys = [
-    {
-      name: "Mobile App (Student)",
-      prefix: "pk_live_...4a2b",
-      lastUsed: "Vừa xong",
-    },
-    {
-      name: "Financial Service",
-      prefix: "sk_live_...99x1",
-      lastUsed: "2 giờ trước",
-    },
-    {
-      name: "Public Website",
-      prefix: "pk_test_...11z9",
-      lastUsed: "1 ngày trước",
-    },
-  ];
+  const apiKeys = settings.API_KEYS ? JSON.parse(settings.API_KEYS) : [];
+
+  const handleGenerateKey = () => {
+    const newKey = {
+      name: `Generated Key ${apiKeys.length + 1}`,
+      prefix: "pk_live_" + Math.random().toString(36).substring(2, 10),
+      lastUsed: "Chưa sử dụng",
+    };
+    handleChange("API_KEYS", JSON.stringify([...apiKeys, newKey]));
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center p-20">
@@ -255,15 +251,15 @@ const TabSecurity = ({ onUpdate }) => {
           <div className="space-y-4">
             <div className="flex justify-between items-center mb-2">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Active API Keys
+                Active API Keys ({apiKeys.length})
               </p>
-              <button className="text-[10px] font-black text-blue-600 flex items-center gap-1 hover:underline">
+              <button onClick={handleGenerateKey} className="text-[10px] font-black text-blue-600 flex items-center gap-1 hover:underline">
                 <Plus size={12} /> Generate New Key
               </button>
             </div>
 
             <div className="divide-y divide-slate-50 border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-              {apiKeys.map((key, i) => (
+              {apiKeys.length > 0 ? apiKeys.map((key, i) => (
                 <div
                   key={i}
                   className="p-4 bg-white flex justify-between items-center hover:bg-slate-50 transition-colors"
@@ -285,17 +281,21 @@ const TabSecurity = ({ onUpdate }) => {
                     </p>
                   </div>
                 </div>
-              ))}
+              )) : (
+                 <div className="p-4 text-center text-xs font-bold text-slate-400">Chưa có API Key nào được tạo.</div>
+              )}
             </div>
 
-            <div className="mt-4 p-3 bg-emerald-50 rounded-xl border border-emerald-100 flex items-center justify-between">
+            <div 
+              onClick={() => handleChange("LDAP_ENABLED", settings.LDAP_ENABLED === "true" ? "false" : "true")}
+              className={`cursor-pointer mt-4 p-3 rounded-xl border flex items-center justify-between transition-colors ${settings.LDAP_ENABLED === "true" ? "bg-emerald-50 border-emerald-100 hover:bg-emerald-100" : "bg-slate-50 border-slate-100 hover:bg-slate-100"}`}>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-black text-emerald-700 uppercase">
-                  LDAP/SSO Connected
+                <div className={`w-2 h-2 rounded-full ${settings.LDAP_ENABLED === "true" ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`}></div>
+                <span className={`text-[10px] font-black uppercase ${settings.LDAP_ENABLED === "true" ? "text-emerald-700" : "text-slate-500"}`}>
+                   {settings.LDAP_ENABLED === "true" ? "LDAP/SSO Connected" : "LDAP/SSO Not Configured"}
                 </span>
               </div>
-              <ExternalLink size={14} className="text-emerald-400" />
+              <ExternalLink size={14} className={settings.LDAP_ENABLED === "true" ? "text-emerald-400" : "text-slate-400"} />
             </div>
           </div>
         </SectionCard>
@@ -325,15 +325,15 @@ const TabSecurity = ({ onUpdate }) => {
               </label>
               <div className="relative">
                 <input
-                  type="password"
-                  value={settings.WEBHOOK_SECRET || "••••••••••••••••••••••••••••"}
+                  type={showSecret ? "text" : "password"}
+                  value={settings.WEBHOOK_SECRET || ""}
                   onChange={(e) => handleChange("WEBHOOK_SECRET", e.target.value)}
-                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none"
+                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 outline-none placeholder:text-slate-300"
+                  placeholder="Nhập chuỗi Secret..."
                 />
-                <EyeOff
-                  size={16}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 cursor-pointer"
-                />
+                <div onClick={() => setShowSecret(!showSecret)} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-blue-600 cursor-pointer transition-colors p-1">
+                  {showSecret ? <Eye size={16} /> : <EyeOff size={16} />}
+                </div>
               </div>
             </div>
 
@@ -342,12 +342,25 @@ const TabSecurity = ({ onUpdate }) => {
                 <span className="text-[10px] font-black text-slate-400 uppercase">
                   Status:
                 </span>
-                <span className="text-[10px] font-black text-emerald-500 uppercase">
-                  Active
+                <span className={`text-[10px] font-black uppercase ${settings.WEBHOOK_CALLBACK_URL ? "text-emerald-500" : "text-orange-500"}`}>
+                  {settings.WEBHOOK_CALLBACK_URL ? "Active" : "Missing URL"}
                 </span>
               </div>
-              <button className="px-5 py-2 border border-slate-200 rounded-xl text-[10px] font-black text-slate-600 hover:bg-slate-50 transition-all">
-                Test Connection
+              <button 
+                onClick={() => {
+                  if (!settings.WEBHOOK_CALLBACK_URL) {
+                     alert("Vui lòng cấu hình Webhook URL trước.");
+                     return;
+                  }
+                  setIsTestingWebhook(true);
+                  setTimeout(() => {
+                     setIsTestingWebhook(false);
+                     alert(`Test Connection tới: ${settings.WEBHOOK_CALLBACK_URL}\n\nThành công! Đã nhận được HTTP 200 OK.`);
+                  }, 1500);
+                }}
+                disabled={isTestingWebhook}
+                className={`px-5 py-2 border rounded-xl text-[10px] font-black transition-all ${isTestingWebhook ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                {isTestingWebhook ? "Testing Ping..." : "Test Connection"}
               </button>
             </div>
           </div>

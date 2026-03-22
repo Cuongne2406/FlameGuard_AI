@@ -75,7 +75,7 @@ const SystemSettings = () => {
       {/* Tab Content Rendering */}
       <div className="animate-in fade-in duration-300">
         {activeTab === "general" && <TabGeneral onUpdate={(changes) => setPendingChanges(prev => ({ ...prev, ...changes }))} />}
-        {activeTab === "rbac" && <TabRBAC />}
+        {activeTab === "rbac" && <TabRBAC onNavigateToLogs={() => setActiveTab("audit")} />}
         {activeTab === "audit" && <TabAuditLog />}
         {activeTab === "security" && <TabSecurity onUpdate={(changes) => setPendingChanges(prev => ({ ...prev, ...changes }))} />}
       </div>

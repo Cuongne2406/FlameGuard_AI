@@ -1,17 +1,48 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.models.settings import SystemSetting
 from app.schemas.setting_schemas import SystemSettingCreate, SystemSettingUpdate, SystemSettingResponse
+from app.models.core import User
 
-from app.services import ai_audit_service
+from app.services import ai_audit_service, cloudinary_service
 from app.schemas.ai_audit_schemas import AuditLogCreate
 from datetime import datetime
 
 router = APIRouter()
+
+@router.post("/logo")
+async def upload_system_logo(
+    *,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+    current_admin: User = Depends(get_current_active_admin)
+):
+    result = cloudinary_service.upload_image(file.file, folder="system/logo")
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+        
+    logo_url = result.get("url")
+    
+    db_setting = db.query(SystemSetting).filter(SystemSetting.key == "SYSTEM_LOGO").first()
+    if db_setting:
+        db_setting.value = logo_url
+    else:
+        db_setting = SystemSetting(key="SYSTEM_LOGO", value=logo_url)
+        db.add(db_setting)
+        
+    db.commit()
+    
+    ai_audit_service.create_system_audit_log(db, AuditLogCreate(
+        action="UPDATE_LOGO",
+        entity_type="SystemSetting",
+        created_at=datetime.now()
+    ))
+    
+    return {"url": logo_url}
 
 @router.post("/", response_model=SystemSettingResponse)
 def create_setting(

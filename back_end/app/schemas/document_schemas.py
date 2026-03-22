@@ -11,6 +11,7 @@ class DigitalDocumentBase(BaseModel):
     title: Optional[str] = None
     purpose: Optional[str] = None
     status: DocumentStatus = DocumentStatus.PENDING
+    is_public: bool = False
     file_url: Optional[str] = None
     rejection_reason: Optional[str] = None
     request_date: Optional[datetime] = None
@@ -22,8 +23,14 @@ class DigitalDocumentCreate(BaseModel):
     document_type: str
     title: Optional[str] = None
     purpose: Optional[str] = None
+    is_public: bool = False
 
 class DigitalDocumentUpdate(BaseModel):
+    document_code: Optional[str] = None
+    document_type: Optional[str] = None
+    title: Optional[str] = None
+    purpose: Optional[str] = None
+    is_public: Optional[bool] = None
     status: Optional[DocumentStatus] = None
     file_url: Optional[str] = None
     rejection_reason: Optional[str] = None

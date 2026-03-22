@@ -39,6 +39,23 @@ const TabGeneral = ({ onUpdate }) => {
     if (onUpdate) onUpdate(newSettings);
   };
 
+  const handleUploadLogo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setLoading(true);
+    try {
+      const result = await systemService.uploadSystemLogo(file);
+      handleChange("SYSTEM_LOGO", result.url);
+      alert("Tải lên Logo thành công! Hãy bấm Lưu Thay Đổi để áp dụng cho cả hệ thống.");
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Lỗi tải lên logo. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center p-20">
       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -60,11 +77,31 @@ const TabGeneral = ({ onUpdate }) => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 School Logo
               </label>
-              <div className="aspect-square border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-500 cursor-pointer transition-all group">
-                <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-white shadow-sm transition-all">
-                  <Upload size={24} />
-                </div>
-                <span className="text-[11px] font-black uppercase">Upload</span>
+              <div className="aspect-square border-2 border-dashed border-slate-200 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400 hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-500 cursor-pointer transition-all group relative overflow-hidden bg-white">
+                {settings.SYSTEM_LOGO ? (
+                  <>
+                    <img src={settings.SYSTEM_LOGO} alt="System Logo" className="absolute inset-0 w-full h-full object-contain p-4 transition-all group-hover:scale-95 group-hover:opacity-50" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all font-sans">
+                      <div className="p-3 bg-blue-600/90 text-white rounded-2xl shadow-lg backdrop-blur-sm">
+                        <Upload size={24} />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 bg-slate-50 rounded-2xl group-hover:bg-white shadow-sm transition-all">
+                      <Upload size={24} />
+                    </div>
+                    <span className="text-[11px] font-black uppercase tracking-wider">Upload Logo</span>
+                  </>
+                )}
+                <input 
+                  type="file" 
+                  id="logoUpload" 
+                  accept="image/*" 
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10" 
+                  onChange={handleUploadLogo} 
+                />
               </div>
             </div>
 

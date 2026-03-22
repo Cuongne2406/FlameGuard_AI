@@ -20,6 +20,8 @@ const ListView = () => {
 
   // 2. State quản lý tìm kiếm và dữ liệu
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [unitFilter, setUnitFilter] = useState("ALL");
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [organizations, setOrganizations] = useState([]);
@@ -91,12 +93,21 @@ const ListView = () => {
 
   // 4. Logic lọc dữ liệu
   const filteredActivities = useMemo(() => {
-    return activities.filter(
-      (activity) =>
-        activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        activity.unit.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-  }, [searchQuery, activities]);
+    return activities.filter((activity) => {
+      // Điều kiện Tìm kiếm văn bản
+      const matchSearch = activity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          activity.unit.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Điều kiện Trạng thái (Xử lý trường hợp API Backend trả về RUNNING thay cho ONGOING)
+      const normalizedStatus = activity.status === "RUNNING" ? "ONGOING" : activity.status;
+      const matchStatus = statusFilter === "ALL" || normalizedStatus === statusFilter;
+      
+      // Điều kiện Đơn vị
+      const matchUnit = unitFilter === "ALL" || activity.unit === unitFilter;
+
+      return matchSearch && matchStatus && matchUnit;
+    });
+  }, [searchQuery, statusFilter, unitFilter, activities]);
 
   // 5. Handlers
   const handleSave = async () => {
@@ -165,8 +176,34 @@ const ListView = () => {
           />
         </div>
 
-        <FilterDropdown label="Trạng thái: Tất cả" />
-        <FilterDropdown label="Đơn vị: Tất cả" />
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="appearance-none flex items-center justify-between gap-4 px-4 py-2 pr-8 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white hover:border-slate-300 transition-all font-bold min-w-[150px] outline-none cursor-pointer"
+          >
+            <option value="ALL">Trạng thái: Tất cả</option>
+            <option value="PLANNING">Đang lên kế hoạch</option>
+            <option value="ONGOING">Đang diễn ra</option>
+            <option value="COMPLETED">Đã hoàn thành</option>
+            <option value="CANCELLED">Đã hủy</option>
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </div>
+
+        <div className="relative">
+          <select
+            value={unitFilter}
+            onChange={(e) => setUnitFilter(e.target.value)}
+            className="appearance-none flex items-center justify-between gap-4 px-4 py-2 pr-8 border border-slate-200 rounded-lg text-sm text-slate-600 bg-white hover:border-slate-300 transition-all font-bold min-w-[150px] outline-none cursor-pointer max-w-[200px] truncate"
+          >
+            <option value="ALL">Đơn vị: Tất cả</option>
+            {organizations.map(org => (
+              <option key={org.id} value={org.name}>{org.name}</option>
+            ))}
+          </select>
+          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        </div>
 
         <button
           onClick={() => setModalMode({ open: true, type: "create", data: null })}

@@ -22,7 +22,7 @@ import { Trash2 } from "lucide-react";
 
 const PROTECTED_ROLES = ["STUDENT", "FACULTY_ADMIN", "UNIVERSITY_ADMIN"];
 
-const TabRBAC = () => {
+const TabRBAC = ({ onNavigateToLogs }) => {
   const [auditLogs, setAuditLogs] = useState([]);
   const [roles, setRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -449,7 +449,10 @@ const TabRBAC = () => {
             ))}
           </div>
 
-          <button className="w-full mt-6 py-3 text-[10px] font-black text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 transition-all font-sans font-sans">
+          <button 
+            onClick={onNavigateToLogs}
+            className="w-full mt-6 py-3 text-[10px] font-black text-blue-600 border border-blue-100 rounded-xl hover:bg-blue-50 transition-all font-sans font-sans"
+          >
             View Full Logs →
           </button>
         </div>

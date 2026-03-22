@@ -13,6 +13,15 @@ from app.schemas.ai_audit_schemas import AuditLogCreate
 from app.services import ai_audit_service, core_service
 from app.core.s4h_client import s4h_login, s4h_get_user_info
 from datetime import datetime
+from app.models.settings import SystemSetting
+from app.services import email_service
+from app.schemas.core_schemas import VerifyOTP
+
+def get_session_timeout(db: Session) -> int:
+    setting = db.query(SystemSetting).filter(SystemSetting.key == "SESSION_TIMEOUT").first()
+    if setting and setting.value.isdigit():
+        return int(setting.value)
+    return settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter()
 
@@ -77,8 +86,27 @@ async def login_access_token(
                 created_at=datetime.now()
             ))
 
+            # 2FA Check
+            is_2fa_required_globally = db.query(SystemSetting).filter(SystemSetting.key == "TWO_FACTOR_REQUIRED").first()
+            if (is_2fa_required_globally and is_2fa_required_globally.value == "true") or user.is_2fa_enabled:
+                otp = email_service.generate_otp()
+                user.otp_code = otp
+                user.otp_expires_at = datetime.now() + timedelta(minutes=5)
+                db.commit()
+                
+                # Gửi email (Chạy sync cho demo hoặc dùng background task)
+                await email_service.send_otp_email(user.email, otp)
+                
+                return {
+                    "access_token": "",
+                    "token_type": "bearer",
+                    "requires_2fa": True,
+                    "user_id": user.id
+                }
+
             # Cấp phát Token nội bộ FlameGuard
-            access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+            timeout_minutes = get_session_timeout(db)
+            access_token_expires = timedelta(minutes=timeout_minutes)
             return {
                 "access_token": security.create_access_token(
                     user.id, expires_delta=access_token_expires
@@ -104,7 +132,57 @@ async def login_access_token(
         created_at=datetime.now()
     ))
 
-    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # 2FA Check cho Local
+    is_2fa_required_globally = db.query(SystemSetting).filter(SystemSetting.key == "TWO_FACTOR_REQUIRED").first()
+    if (is_2fa_required_globally and is_2fa_required_globally.value == "true") or user.is_2fa_enabled:
+        otp = email_service.generate_otp()
+        user.otp_code = otp
+        user.otp_expires_at = datetime.now() + timedelta(minutes=5)
+        db.commit()
+        await email_service.send_otp_email(user.email, otp)
+        return {
+            "access_token": "",
+            "token_type": "bearer",
+            "requires_2fa": True,
+            "user_id": user.id
+        }
+
+    timeout_minutes = get_session_timeout(db)
+    access_token_expires = timedelta(minutes=timeout_minutes)
+    return {
+        "access_token": security.create_access_token(
+            user.id, expires_delta=access_token_expires
+        ),
+        "token_type": "bearer",
+    }
+
+@router.post("/verify-2fa", response_model=Token)
+async def verify_2fa_otp(
+    *,
+    db: Session = Depends(deps.get_db),
+    verify_in: VerifyOTP
+) -> Any:
+    """
+    Xác thực mã OTP 2 lớp và cấp Token chính thức.
+    """
+    user = db.query(User).filter(User.id == verify_in.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not user.otp_code or user.otp_code != verify_in.otp_code:
+        raise HTTPException(status_code=400, detail="Mã xác thực không đúng")
+        
+    if not user.otp_expires_at or user.otp_expires_at < datetime.now():
+        raise HTTPException(status_code=400, detail="Mã xác thực đã hết hạn")
+        
+    # Reset OTP sau khi dùng thành công
+    user.otp_code = None
+    user.otp_expires_at = None
+    db.commit()
+    
+    # Cấp Token
+    timeout_minutes = get_session_timeout(db)
+    access_token_expires = timedelta(minutes=timeout_minutes)
     return {
         "access_token": security.create_access_token(
             user.id, expires_delta=access_token_expires

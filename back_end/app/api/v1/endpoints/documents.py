@@ -40,7 +40,7 @@ def read_documents(
     # Note: In a real app, use permission-based checks.
     is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
     if not is_admin:
-        query = query.filter(DigitalDocument.user_id == current_user.id)
+        query = query.filter(DigitalDocument.is_public == True)
         
     return query.order_by(DigitalDocument.request_date.desc()).offset(skip).limit(limit).all()
 
@@ -55,7 +55,7 @@ def get_document_stats(
     is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
     query = db.query(DigitalDocument)
     if not is_admin:
-        query = query.filter(DigitalDocument.user_id == current_user.id)
+        query = query.filter(DigitalDocument.is_public == True)
     
     incoming = query.filter(DigitalDocument.status == "APPROVED").count()
     pending = query.filter(DigitalDocument.status == "PENDING").count()

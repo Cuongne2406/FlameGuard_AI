@@ -17,17 +17,20 @@ import {
 
 const DigitalDocument = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('create');
   const [docs, setDocs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({ incoming: '0', outgoing: '0', pending: '0' });
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [activeCategory, setActiveCategory] = useState('ALL');
 
   // State cho Form
   const [formData, setFormData] = useState({
     document_code: '',
     document_type: 'Kế hoạch',
     title: '',
-    purpose: ''
+    purpose: '',
+    is_public: false
   });
 
   const fetchData = async () => {
@@ -46,21 +49,71 @@ const DigitalDocument = () => {
     fetchData();
   }, []);
 
-  const filteredDocs = docs.filter(doc => 
-    (doc.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc.document_code || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDocs = docs.filter(doc => {
+    const searchMatch = (doc.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (doc.document_code || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // So khớp theo tab
+    const isCongVan = doc.document_type === 'Công văn';
+    let categoryMatch = true;
+    if (activeCategory === 'CONGVAN') categoryMatch = isCongVan;
+    if (activeCategory === 'NOIBO') categoryMatch = !isCongVan;
 
-  const handleCreate = async (e) => {
+    return searchMatch && categoryMatch;
+  });
+
+  const handleSave = async (e) => {
      e.preventDefault();
      try {
-       await documentService.createRequest(formData);
+       if (modalMode === 'create') {
+         await documentService.createRequest(formData);
+       } else {
+         await documentService.updateDocument(formData.id, formData);
+         if (selectedDoc?.id === formData.id) setSelectedDoc({ ...selectedDoc, ...formData });
+       }
        setIsModalOpen(false);
-       setFormData({ document_code: '', document_type: 'Kế hoạch', title: '', purpose: '' });
+       setFormData({ document_code: '', document_type: 'Kế hoạch', title: '', purpose: '', is_public: false });
        fetchData();
      } catch (err) { 
-       alert('Lỗi ban hành văn bản. Vui lòng thử lại.'); 
+       alert('Lỗi dữ liệu. Vui lòng thử lại.'); 
      }
+  };
+
+  const handleEditClick = (doc) => {
+    setFormData({
+      id: doc.id,
+      document_code: doc.document_code || '',
+      document_type: doc.document_type || 'Kế hoạch',
+      title: doc.title || '',
+      purpose: doc.purpose || '',
+      is_public: doc.is_public || false
+    });
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa văn bản này?")) return;
+    try {
+      await documentService.deleteDocument(id);
+      if (selectedDoc?.id === id) setSelectedDoc(null);
+      fetchData();
+    } catch (err) {
+      alert("Lỗi khi xóa văn bản.");
+    }
+  };
+
+  const handleTogglePublic = async (doc) => {
+    try {
+      const newStatus = !doc.is_public;
+      await documentService.updateDocument(doc.id, { is_public: newStatus });
+      fetchData();
+      if (selectedDoc?.id === doc.id) {
+         setSelectedDoc({ ...selectedDoc, is_public: newStatus });
+      }
+    } catch (err) {
+      alert("Lỗi khi thay đổi trạng thái công khai.");
+    }
   };
 
   return (
@@ -75,7 +128,11 @@ const DigitalDocument = () => {
           </h2>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setFormData({ document_code: '', document_type: 'Kế hoạch', title: '', purpose: '', is_public: false });
+              setModalMode('create');
+              setIsModalOpen(true);
+            }}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95"
           >
             <Plus size={16} /> Ban hành Văn bản mới
@@ -92,9 +149,15 @@ const DigitalDocument = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="p-4 border-b border-slate-50 flex items-center justify-between gap-4 bg-slate-50/30">
             <div className="flex bg-white p-1 rounded-xl border border-slate-200">
-              <button className="px-4 py-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-600">Tất cả</button>
-              <button className="px-4 py-1.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-lg shadow-sm">Công văn Đi</button>
-              <button className="px-4 py-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-600">Văn bản nội bộ</button>
+              <button 
+                onClick={() => setActiveCategory('ALL')}
+                className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${activeCategory === 'ALL' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Tất cả</button>
+              <button 
+                onClick={() => setActiveCategory('CONGVAN')}
+                className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${activeCategory === 'CONGVAN' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Công văn Đi</button>
+              <button 
+                onClick={() => setActiveCategory('NOIBO')}
+                className={`px-4 py-1.5 text-[10px] font-bold rounded-lg transition-all ${activeCategory === 'NOIBO' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Văn bản nội bộ</button>
             </div>
             <div className="relative flex-1 max-w-xs">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -125,7 +188,7 @@ const DigitalDocument = () => {
                       id={doc.document_code || 'N/A'}
                       date={new Date(doc.request_date || Date.now()).toLocaleDateString()}
                       title={doc.title || 'Văn bản không tên'}
-                      target={doc.target || 'Toàn trường'}
+                      target={doc.is_public ? 'Toàn trường' : 'Nội bộ'}
                       active={selectedDoc?.id === doc.id}
                       onClick={() => setSelectedDoc(doc)}
                     />
@@ -196,10 +259,15 @@ const DigitalDocument = () => {
           </div>
         )}
 
-        <div className="p-4 border-t border-slate-100 flex gap-2">
-          <button className="flex-1 py-2 rounded-xl text-[11px] font-bold text-slate-600 bg-slate-50 hover:bg-slate-100">Thu hồi</button>
-          <button className="flex-[2] py-2 rounded-xl text-[11px] font-bold text-white bg-blue-600 shadow-md shadow-blue-100 hover:bg-blue-700">Gửi nhắc nhở</button>
-        </div>
+        {selectedDoc && (
+          <div className="p-4 border-t border-slate-100 flex gap-2">
+            <button onClick={() => handleDelete(selectedDoc.id)} className="flex-1 py-2 rounded-xl text-[11px] font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors">Xóa</button>
+            <button onClick={() => handleEditClick(selectedDoc)} className="flex-[2] py-2 rounded-xl text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors">Chỉnh sửa</button>
+            <button onClick={() => handleTogglePublic(selectedDoc)} className={`flex-[2] py-2 rounded-xl text-[11px] font-bold text-white shadow-md transition-all ${selectedDoc.is_public ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-100'}`}>
+              {selectedDoc.is_public ? "Thu hồi Nội bộ" : "Public Toàn Trường"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MODAL BAN HÀNH VĂN BẢN */}
@@ -211,14 +279,14 @@ const DigitalDocument = () => {
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Plus size={20} /></div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-800 leading-none">Ban hành Văn bản mới</h3>
+                  <h3 className="text-lg font-black text-slate-800 leading-none">{modalMode === 'create' ? 'Ban hành Văn bản mới' : 'Cập nhật Văn bản'}</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Cung cấp thông tin văn bản điện tử</p>
                 </div>
               </div>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={20} className="text-slate-400" /></button>
             </div>
 
-            <form className="space-y-4" onSubmit={handleCreate}>
+            <form className="space-y-4" onSubmit={handleSave}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Số hiệu văn bản</label>
@@ -272,9 +340,23 @@ const DigitalDocument = () => {
                 </div>
               </div>
 
+              <div className="flex items-center gap-3 px-2 mt-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                <input 
+                  type="checkbox" 
+                  id="is_public" 
+                  checked={formData.is_public}
+                  onChange={e => setFormData({...formData, is_public: e.target.checked})}
+                  className="w-4 h-4 text-blue-600 bg-white border-slate-300 rounded cursor-pointer mt-0.5"
+                />
+                <div>
+                  <label htmlFor="is_public" className="text-xs font-black text-blue-800 cursor-pointer block">Phát hành công khai cho toàn trường</label>
+                  <p className="text-[10px] text-blue-600 font-medium">Bật tuỳ chọn này, toàn bộ tài khoản Sinh viên sẽ xem được Công văn này.</p>
+                </div>
+              </div>
+
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors">Hủy bỏ</button>
-                <button type="submit" className="flex-[2] py-3 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2">Xác nhận ban hành <Send size={14} /></button>
+                <button type="submit" className="flex-[2] py-3 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all flex items-center justify-center gap-2">{modalMode === 'create' ? 'Xác nhận ban hành' : 'Lưu thay đổi'} <Send size={14} /></button>
               </div>
             </form>
           </div>

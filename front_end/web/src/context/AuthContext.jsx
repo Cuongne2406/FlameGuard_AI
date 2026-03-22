@@ -40,19 +40,39 @@ export const AuthProvider = ({ children }) => {
   const login = async (username, password) => {
     setError(null);
     try {
-      // Gửi request lấy jwt (Backend đã gộp cả S4H và Local check vào 1 endpoint /auth/login)
       const res = await authService.login({ username, password });
       
+      // Nếu Backend yêu cầu 2FA
+      if (res.requires_2fa) {
+        return { requires2fa: true, userId: res.user_id };
+      }
+
       // Lưu token vào Storage
       localStorage.setItem('accessToken', res.access_token);
       
       // Fetch dữ liệu profile
       await checkUserLogged();
       
-      return true; // Login thành công
+      return { success: true };
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại.');
-      return false;
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Hàm Xác thực mã OTP
+  const verifyOtp = async (userId, otpCode) => {
+    setError(null);
+    try {
+      const res = await authService.verify2fa({ user_id: userId, otp_code: otpCode });
+      
+      localStorage.setItem('accessToken', res.access_token);
+      await checkUserLogged();
+      
+      return { success: true };
+    } catch (err) {
+      setError(err.message || 'Mã xác thực không hợp lệ.');
+      return { success: false, error: err.message };
     }
   };
 
@@ -70,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, roles, loading, error, login, logout, hasRole, checkUserLogged }}>
+    <AuthContext.Provider value={{ user, roles, loading, error, login, verifyOtp, logout, hasRole, checkUserLogged }}>
       {children}
     </AuthContext.Provider>
   );

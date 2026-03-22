@@ -59,6 +59,8 @@ class User(Base):
     
     # Settings & Profile
     is_2fa_enabled = Column(Boolean, default=False)
+    otp_code = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime, nullable=True)
     email_alerts_enabled = Column(Boolean, default=True)
     zalo_alerts_enabled = Column(Boolean, default=True)
     daily_digest_enabled = Column(Boolean, default=False)

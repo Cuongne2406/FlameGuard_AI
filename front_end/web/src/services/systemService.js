@@ -61,5 +61,14 @@ export const systemService = {
       const res = await apiClient('/academic-terms');
       return Array.isArray(res) ? res : [];
     } catch { return []; }
+  },
+
+  uploadSystemLogo: async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient('/settings/logo', {
+      method: 'POST',
+      body: formData
+    });
   }
 };

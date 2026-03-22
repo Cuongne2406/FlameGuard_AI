@@ -255,7 +255,37 @@ def delete_academic_term(db: Session, term_id: UUID):
 # ==========================================
 # User Services
 # ==========================================
+import re
+from app.models.settings import SystemSetting
+
+def validate_password_policy(db: Session, password: str):
+    if not password:
+        return
+        
+    settings_dict = {}
+    db_settings = db.query(SystemSetting).filter(SystemSetting.key.in_([
+        "PW_MIN_LENGTH", 
+        "PW_REQUIRE_UPPERCASE", 
+        "PW_REQUIRE_SYMBOLS"
+    ])).all()
+    for s in db_settings:
+        settings_dict[s.key] = s.value
+
+    min_length = int(settings_dict.get("PW_MIN_LENGTH", "8"))
+    require_upper = settings_dict.get("PW_REQUIRE_UPPERCASE", "false") == "true"
+    require_symbol = settings_dict.get("PW_REQUIRE_SYMBOLS", "false") == "true"
+
+    if len(password) < min_length:
+        raise HTTPException(status_code=400, detail=f"Mật khẩu phải dài ít nhất {min_length} ký tự.")
+    if require_upper and not any(char.isupper() for char in password):
+        raise HTTPException(status_code=400, detail="Mật khẩu phải chứa ít nhất một chữ viết hoa.")
+    if require_symbol and not re.search(r"[\W_]", password):
+        raise HTTPException(status_code=400, detail="Mật khẩu phải chứa ít nhất một ký tự đặc biệt.")
+
 def create_user(db: Session, user_in: UserCreate):
+    if user_in.password:
+        validate_password_policy(db, user_in.password)
+        
     # Check if email exists
     if db.query(User).filter(User.email == user_in.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -352,6 +382,7 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
         db_user.roles = roles
         
     if "password" in update_data:
+        validate_password_policy(db, update_data["password"])
         db_user.password_hash = get_password_hash(update_data.pop("password"))
 
     for key, value in update_data.items():

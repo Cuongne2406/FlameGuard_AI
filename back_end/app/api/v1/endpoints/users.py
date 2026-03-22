@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -8,6 +8,8 @@ from app.schemas.core_schemas import UserCreate, UserUpdate, UserResponse
 from app.services import core_service, cloudinary_service
 from app.core.s4h_client import s4h_check_user_exists
 from app.models.core import User
+from app.models.settings import SystemSetting
+from app.services.webhook_service import send_webhook_event
 
 router = APIRouter()
 
@@ -17,6 +19,7 @@ async def create_user(
     db: Session = Depends(get_db),
     user_in: UserCreate,
     current_admin: User = Depends(get_current_active_admin),
+    background_tasks: BackgroundTasks,
 ):
     """
     Create new user (Admin Provisioning only).
@@ -30,13 +33,32 @@ async def create_user(
                 detail="Mã số sinh viên này đã tồn tại trên hệ thống S4H. Hãy yêu cầu sinh viên đăng nhập bằng mật khẩu S4H."
             )
             
-    # 2. Force Default Password
-    user_in.password = "123456"
+    # 2. Force Default Password with High Complexity to pass any DB Policy
+    user_in.password = "Fl@meGuard2026!"
     
     # 3. Handle local database checks & creation via service
-    # core_service.create_user already checks for local email and student_id duplicates.
-    # It also handles auth_provider=LOCAL natively.
-    return core_service.create_user(db=db, user_in=user_in)
+    user = core_service.create_user(db=db, user_in=user_in)
+    
+    # 4. Webhook Trigger (USER.CREATED)
+    settings = db.query(SystemSetting).filter(
+        SystemSetting.key.in_(["WEBHOOK_CALLBACK_URL", "WEBHOOK_SECRET"])
+    ).all()
+    
+    settings_dict = {s.key: s.value for s in settings}
+    webhook_url = settings_dict.get("WEBHOOK_CALLBACK_URL")
+    webhook_secret = settings_dict.get("WEBHOOK_SECRET", "")
+    
+    if webhook_url:
+        payload_data = {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "student_id": user.student_id,
+            "status": user.status.value if user.status else "ACTIVE"
+        }
+        background_tasks.add_task(send_webhook_event, webhook_url, webhook_secret, "USER.CREATED", payload_data)
+        
+    return user
 
 @router.get("/me")
 def read_users_me(

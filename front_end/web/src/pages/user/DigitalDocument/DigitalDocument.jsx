@@ -18,16 +18,8 @@ import {
 } from "lucide-react";
 
 const DigitalDocument = () => {
-  const quickServices = [
-    {
-      id: 1,
-      title: "Cấp lại thẻ Đoàn/Hội",
-      desc: "Tích hợp mã QR điện tử, không cần thẻ cứng.",
-      icon: <CreditCard className="text-purple-600" size={24} />,
-      buttonText: "Đăng ký cấp lại",
-      primary: false,
-    },
-  ];
+  const SHOW_PENDING = false; // Tạm thời ẩn mục Thủ tục đang xử lý
+
 
   const [requests, setRequests] = useState([]);
   const [docs, setDocs] = useState([]);
@@ -93,52 +85,12 @@ const DigitalDocument = () => {
       </div>
 
       {/* 2. QUICK SERVICES (1-CLICK) */}
-      <div className="space-y-4">
-        <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em] flex items-center gap-2">
-          ⚡ Thủ tục nhanh (1-Click)
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {quickServices.map((service) => (
-            <div
-              key={service.id}
-              className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm hover:shadow-md transition-all group"
-            >
-              <div className="flex justify-between items-start mb-6">
-                <div className="p-4 bg-slate-50 rounded-2xl group-hover:scale-110 transition-transform">
-                  {service.icon}
-                </div>
-                <FileCheck className="text-slate-100" size={32} />
-              </div>
-              <h5 className="text-lg font-black text-slate-800 mb-2">
-                {service.title}
-              </h5>
-              <p className="text-xs text-slate-400 font-medium leading-relaxed mb-8 h-10">
-                {service.desc}
-              </p>
-              <button
-                onClick={() => handleCreateRequest(service.title)}
-                className={`w-full py-3.5 rounded-xl text-[11px] font-black flex items-center justify-center gap-2 transition-all
-                ${service.primary
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-100 hover:bg-blue-700"
-                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-                  }
-              `}
-              >
-                {service.buttonText}{" "}
-                {service.primary ? (
-                  <ArrowRight size={14} />
-                ) : (
-                  <Download size={14} />
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* 3. TRẠNG THÁI ĐANG XỬ LÝ (4/12) */}
-        <div className="lg:col-span-4">
+        {SHOW_PENDING && (
+          <div className="lg:col-span-4">
           <div className="bg-white rounded-[2rem] border-2 border-blue-100 p-8 shadow-sm relative overflow-hidden">
             <div className="flex items-center gap-3 mb-8">
               <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
@@ -203,9 +155,10 @@ const DigitalDocument = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* 4. DANH SÁCH VĂN BẢN (8/12) */}
-        <div className="lg:col-span-8">
+        <div className={SHOW_PENDING ? "lg:col-span-8" : "lg:col-span-12"}>
           <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
               <div className="flex gap-4 border-b border-slate-50">

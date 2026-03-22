@@ -237,8 +237,14 @@ class UserResponse(UserBase):
 # Auth Schemas
 # ==========================================
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
+    requires_2fa: bool = False
+    user_id: Optional[UUID] = None
+
+class VerifyOTP(BaseModel):
+    user_id: UUID
+    otp_code: str
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
