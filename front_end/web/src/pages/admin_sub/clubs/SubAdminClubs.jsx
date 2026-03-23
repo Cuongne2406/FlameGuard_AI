@@ -61,37 +61,45 @@ const SubAdminClubs = () => {
 
     const handleAction = (msg) => setToast({ message: msg, type: 'success' });
 
-    const handleCreateClub = () => {
+    const handleCreateClub = async () => {
         if (!newClub.name) {
             setToast({ message: 'Vui lòng nhập tên CLB', type: 'error' });
             return;
         }
-        const club = {
-            id: `club-${Date.now()}`,
-            name: newClub.name,
-            leader: newClub.leader || 'Chưa có',
-            members: newClub.members || '0',
-            nextEvent: newClub.nextEvent || null,
-            activity: newClub.activity || 0,
-            budget: newClub.budget || 0,
-            status: 'active',
-            borderColor: 'blue',
-            statusText: 'Mới thành lập',
-            statusColor: 'emerald',
-            icon: 'groups',
-        };
-        setClubs([...clubs, club]);
-        setShowCreateModal(false);
-        setNewClub({ name: '', leader: '', members: '', nextEvent: '', activity: 0, budget: 0 });
-        handleAction('Thành lập CLB thành công!');
+        try {
+            const apiData = {
+                name: newClub.name,
+                type: 'CLUB',
+                description: `Chủ nhiệm: ${newClub.leader || 'Chưa có'}`,
+                status: 'ACTIVE'
+            };
+            const result = await organizationService.createOrganization(apiData);
+            setClubs([...clubs, result]);
+            setShowCreateModal(false);
+            setNewClub({ name: '', leader: '', members: '', nextEvent: '', activity: 0, budget: 0 });
+            handleAction('Thành lập CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi thành lập CLB', type: 'error' });
+        }
     };
 
-    const handleManageClub = () => {
+    const handleManageClub = async () => {
         if (!selectedClub) return;
-        setClubs(clubs.map(c => c.id === selectedClub.id ? selectedClub : c));
-        setShowManageModal(false);
-        setSelectedClub(null);
-        handleAction('Cập nhật CLB thành công!');
+        try {
+            const apiData = {
+                name: selectedClub.name,
+                activity_points: selectedClub.activity,
+                fee_percentage: selectedClub.budget,
+                classification: selectedClub.statusText
+            };
+            const result = await organizationService.updateOrganization(selectedClub.id, apiData);
+            setClubs(clubs.map(c => c.id === selectedClub.id ? { ...c, ...result } : c));
+            setShowManageModal(false);
+            setSelectedClub(null);
+            handleAction('Cập nhật CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi cập nhật CLB', type: 'error' });
+        }
     };
 
     const handleSupportRequest = () => {

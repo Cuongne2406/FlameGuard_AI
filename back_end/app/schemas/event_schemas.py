@@ -21,6 +21,7 @@ class EventStatusEnum(str, Enum):
     ENDED = "ENDED"
 
 class EventRegistrationStatusEnum(str, Enum):
+    PENDING = "PENDING"
     REGISTERED = "REGISTERED"
     ATTENDED = "ATTENDED"
     CANCELLED = "CANCELLED"
@@ -88,6 +89,52 @@ class EventUpdate(BaseModel):
 class EventResponse(EventBase):
     id: UUID
     campaign_id: Optional[UUID] = None
+    qa_sessions: List['EventQAResponse'] = []
+    incidents: List['EventIncidentResponse'] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# Event QA Schemas
+# ==========================================
+class EventQABase(BaseModel):
+    question: str
+    answer: Optional[str] = None
+    is_answered: bool = False
+
+class EventQACreate(EventQABase):
+    event_id: UUID
+    user_id: Optional[UUID] = None
+
+class EventQAResponse(EventQABase):
+    id: UUID
+    event_id: UUID
+    user_id: Optional[UUID] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# Event Incident Schemas
+# ==========================================
+class EventIncidentBase(BaseModel):
+    description: str
+    severity: str
+    status: str = "PENDING"
+
+class EventIncidentCreate(EventIncidentBase):
+    event_id: UUID
+    reported_by: UUID
+
+class EventIncidentResponse(EventIncidentBase):
+    id: UUID
+    event_id: UUID
+    reported_by: UUID
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -112,6 +159,19 @@ class EventRegistrationResponse(EventRegistrationBase):
     event_id: UUID
     user_id: UUID
     check_in_time: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class EventSummaryResponse(BaseModel):
+    event_id: UUID
+    name: str
+    total_participants: int
+    attended_count: int
+    qa_count: int
+    incident_count: int
+    highlights: List[str]
+    average_rating: float
 
     class Config:
         from_attributes = True

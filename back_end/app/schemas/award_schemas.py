@@ -11,6 +11,8 @@ class AwardBase(BaseModel):
     status: AwardStatus = AwardStatus.PENDING
     decision_number: Optional[str] = None
     awarded_date: Optional[date] = None
+    points: int = 0
+    assessment: Optional[dict] = None
 
 class AwardCreate(AwardBase):
     pass
@@ -22,6 +24,8 @@ class AwardUpdate(BaseModel):
     status: Optional[AwardStatus] = None
     decision_number: Optional[str] = None
     awarded_date: Optional[date] = None
+    points: Optional[int] = None
+    assessment: Optional[dict] = None
 
 class AwardResponse(AwardBase):
     id: UUID

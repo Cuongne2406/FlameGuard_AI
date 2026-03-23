@@ -196,8 +196,53 @@ def read_user_devices(
             "status": "Current",
             "time": "Bây giờ"
         })
-        
+
     return devices
+@router.delete("/me/devices")
+def logout_all_devices(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Đăng xuất khỏi tất cả các thiết bị khác bằng cách xóa lịch sử đăng nhập.
+    """
+    from app.models.audit import AuditLog
+    # Giữ lại log đăng nhập gần nhất
+    latest_log = db.query(AuditLog).filter(
+        AuditLog.user_id == current_user.id,
+        AuditLog.action == 'LOGIN'
+    ).order_by(AuditLog.created_at.desc()).first()
+    
+    query = db.query(AuditLog).filter(
+        AuditLog.user_id == current_user.id,
+        AuditLog.action == 'LOGIN'
+    )
+    if latest_log:
+        query = query.filter(AuditLog.id != latest_log.id)
+        
+    query.delete(synchronize_session=False)
+    db.commit()
+    return {"message": "Logged out from all other devices"}
+
+@router.delete("/me/devices/{device_id}")
+def logout_device(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Đăng xuất khỏi một thiết bị cụ thể.
+    """
+    from app.models.audit import AuditLog
+    log = db.query(AuditLog).filter(
+        AuditLog.id == device_id,
+        AuditLog.user_id == current_user.id
+    ).first()
+    
+    if log:
+        db.delete(log)
+        db.commit()
+    return {"message": "Device logged out"}
 
 @router.get("/me/team")
 def read_faculty_team(
@@ -233,6 +278,93 @@ def read_faculty_team(
                 }
             })
     return result
+
+@router.get("/search")
+def search_users(
+    q: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Tìm kiếm User theo Tên hoặc MSSV.
+    """
+    users = db.query(User).filter(
+        (User.full_name.ilike(f"%{q}%")) | (User.student_id.ilike(f"%{q}%"))
+    ).limit(10).all()
+    
+    return [
+        {
+            "id": str(u.id),
+            "name": u.full_name,
+            "mssv": u.student_id or "N/A",
+            "role": "Sinh viên",
+            "initial": "".join([w[0] for w in u.full_name.split()]).upper()[:2],
+            "color": "blue"
+        }
+        for u in users
+    ]
+
+@router.post("/me/team")
+def add_team_member(
+    user_data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Thêm thành viên vào Ban Thường vụ (Organization).
+    """
+    from app.models.core import UserOrganization
+    import uuid
+    
+    # Tìm org hiện tại của admin
+    user_org = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).first()
+    if not user_org:
+        return {"error": "Bạn chưa thuộc Đơn vị nào."}
+        
+    try:
+        new_org = UserOrganization(
+            user_id=uuid.UUID(user_data["user_id"]),
+            organization_id=user_org.organization_id,
+            title=user_data.get("role", "Thành viên")
+        )
+        db.add(new_org)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        return {"error": "Lỗi thêm thành viên hoặc thành viên đã có."}
+        
+    return {"message": "Success"}
+
+@router.delete("/me/team/{member_id}")
+def remove_team_member(
+    member_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Xóa thành viên khỏi Tổ chức.
+    """
+    from app.models.core import UserOrganization
+    user_org = db.query(UserOrganization).filter(
+        UserOrganization.user_id == member_id
+    ).first()
+    
+    if user_org:
+        db.delete(user_org)
+        db.commit()
+    return {"message": "Member removed"}
+
+@router.put("/me/team/{member_id}/permissions")
+def update_team_permissions(
+    member_id: str,
+    permissions: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Cập nhật quyền hạn thành viên. (Hiện tại mock DB return Success)
+    """
+    return {"message": "Permissions updated successfully", "permissions": permissions}
 
 @router.get("/me/profile_stats")
 def read_user_profile_stats(

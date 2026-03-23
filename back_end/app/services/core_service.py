@@ -412,6 +412,39 @@ def delete_user(db: Session, user_id: UUID):
 # ==========================================
 # Club Specific Services
 # ==========================================
+def get_organization_stats(db: Session):
+    org_count = db.query(func.count(Organization.id)).scalar() or 0
+    leader_count = db.query(func.count(User.id)).join(UserOrganization).filter(
+        UserOrganization.is_primary == True
+    ).scalar() or 0
+    member_count = db.query(func.count(UserOrganization.id)).scalar() or 0
+    
+    # New stats for Classes
+    alert_classes = db.query(func.count(Organization.id)).filter(
+        Organization.type == OrgType.CLASS,
+        Organization.warning_message != None
+    ).scalar() or 0
+    
+    total_students = db.query(func.count(UserOrganization.id)).join(Organization).filter(
+        Organization.type == OrgType.CLASS
+    ).scalar() or 0
+    
+    # Calculate average fee percent
+    avg_fee = db.query(func.avg(Organization.fee_percentage)).filter(
+        Organization.type == OrgType.CLASS
+    ).scalar() or 0
+    
+    return {
+        "totalUnits": org_count,
+        "totalLeaders": leader_count,
+        "totalMembers": member_count,
+        "totalClasses": db.query(func.count(Organization.id)).filter(Organization.type == OrgType.CLASS).scalar() or 0,
+        "alertClasses": alert_classes,
+        "feePercent": round(float(avg_fee), 1),
+        "totalStudents": total_students,
+        "subInfo": f"Dữ liệu được cập nhật từ hệ thống"
+    }
+
 def get_clubs_detailed_stats(db: Session):
     from app.models.finance import Budget
     total_clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB).count()
@@ -435,13 +468,8 @@ def get_clubs_list_detailed(db: Session):
         ).first()
         
         member_count = db.query(UserOrganization).filter(UserOrganization.organization_id == club.id).count()
-        budget = db.query(Budget).filter(Budget.organization_id == club.id).first()
+        budget = db.query(Budget).filter(Budget.organization_id == club.id).order_by(Budget.academic_term_id.desc()).first()
         
-        # Mock some dynamic health stats if not in DB yet
-        activity = 0
-        if member_count > 0:
-            activity = 85 # Mock
-            
         budget_percent = 0
         if budget and budget.total_amount > 0:
             budget_percent = int((budget.used_amount / budget.total_amount) * 100)
@@ -451,14 +479,47 @@ def get_clubs_list_detailed(db: Session):
             "name": club.name,
             "leader": leader.full_name if leader else "Chưa có",
             "members": str(member_count),
-            "nextEvent": "Tech Day 2026" if club.name == "CLB Tin học" else None,
-            "activity": activity,
-            "budget": budget_percent,
-            "status": "active",
-            "statusText": "Đang hoạt động",
-            "statusColor": "emerald",
+            "nextEvent": "Cập nhật sau",
+            "activity": club.activity_points or 0,
+            "budget": budget_percent or int(club.fee_percentage or 0), # Temporary fallback
+            "status": club.status.value.lower() if club.status else "active",
+            "statusText": club.classification or "Đang hoạt động",
+            "statusColor": "emerald" if club.status == OrgStatus.ACTIVE else "rose",
             "borderColor": "blue",
-            "icon": "groups"
+            "icon": club.icon or "groups",
+            "warningMsg": club.warning_message,
+            "warningDeadline": club.warning_deadline.strftime("%d/%m/%Y") if club.warning_deadline else None
+        })
+    return results
+
+def get_classes_list_detailed(db: Session):
+    classes = db.query(Organization).filter(Organization.type == OrgType.CLASS).all()
+    results = []
+    for cls in classes:
+        leader = db.query(User).join(UserOrganization).filter(
+            UserOrganization.organization_id == cls.id,
+            UserOrganization.is_primary == True
+        ).first()
+        
+        member_count = db.query(UserOrganization).filter(UserOrganization.organization_id == cls.id).count()
+        
+        # Check online status based on last_activity_at (e.g., within 15 mins)
+        is_online = False
+        if cls.last_activity_at:
+            is_online = (datetime.now() - cls.last_activity_at).total_seconds() < 900
+            
+        results.append({
+            "id": str(cls.id),
+            "name": cls.name,
+            "leader": leader.full_name if leader else "Chưa có",
+            "total": member_count,
+            "fee": float(cls.fee_percentage or 0),
+            "activity": cls.activity_points or 0,
+            "status": cls.classification or "Khá",
+            "online": is_online,
+            "lastSeen": cls.last_activity_at.strftime("%H:%M %d/%m") if cls.last_activity_at else "Chưa có",
+            "avatar": cls.avatar_url or f"https://ui-avatars.com/api/?name={cls.name}&background=random",
+            "alert": cls.warning_message is not None
         })
     return results
 

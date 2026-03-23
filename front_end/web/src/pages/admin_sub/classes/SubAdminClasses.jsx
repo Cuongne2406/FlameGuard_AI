@@ -20,7 +20,7 @@ const SubAdminClasses = () => {
         const fetchClasses = async () => {
             try {
                 const [data, statsRes] = await Promise.all([
-                    organizationService.getOrganizations('CLASS'),
+                    organizationService.getClassesDetailed(),
                     organizationService.getOrgStats()
                 ]);
                 setClasses(data);
@@ -34,6 +34,7 @@ const SubAdminClasses = () => {
                 }
             } catch (err) {
                 console.error("Failed to fetch classes:", err);
+                setToast({ message: 'Lỗi tải dữ liệu chi đoàn', type: 'error' });
             } finally {
                 setLoading(false);
             }
@@ -136,9 +137,21 @@ const SubAdminClasses = () => {
     };
 
     // Thêm chi đoàn
-    const handleAddClass = (newClass) => {
-        setClasses(prev => [...prev, newClass]);
-        setToast({ message: '✅ Thêm chi đoàn thành công!', type: 'success' });
+    const handleAddClass = async (modalData) => {
+        try {
+            const apiData = {
+                name: modalData.name,
+                type: 'CLASS',
+                description: `Chuyên ngành: ${modalData.tech || ''}`,
+                status: 'ACTIVE'
+            };
+            const result = await organizationService.createOrganization(apiData);
+            setClasses(prev => [result, ...prev]);
+            setToast({ message: '✅ Thêm chi đoàn thành công!', type: 'success' });
+        } catch (err) {
+            console.error("Failed to add class:", err);
+            setToast({ message: '❌ Lỗi khi thêm chi đoàn', type: 'error' });
+        }
     };
 
     // Sửa chi đoàn
@@ -148,11 +161,22 @@ const SubAdminClasses = () => {
         setOpenDropdownId(null);
     };
 
-    const saveEdit = () => {
-        setClasses(prev => prev.map(c => c.id === selectedClass.id ? selectedClass : c));
-        setShowEditModal(false);
-        setSelectedClass(null);
-        setToast({ message: '✅ Cập nhật chi đoàn thành công!', type: 'success' });
+    const saveEdit = async () => {
+        try {
+            const apiData = {
+                name: selectedClass.name,
+                fee_percentage: selectedClass.fee,
+                activity_points: selectedClass.activity,
+                classification: selectedClass.status
+            };
+            const result = await organizationService.updateOrganization(selectedClass.id, apiData);
+            setClasses(prev => prev.map(c => c.id === selectedClass.id ? { ...c, ...result } : c));
+            setShowEditModal(false);
+            setSelectedClass(null);
+            setToast({ message: '✅ Cập nhật chi đoàn thành công!', type: 'success' });
+        } catch (err) {
+            setToast({ message: '❌ Lỗi khi cập nhật', type: 'error' });
+        }
     };
 
     // Xóa chi đoàn
@@ -162,11 +186,16 @@ const SubAdminClasses = () => {
         setOpenDropdownId(null);
     };
 
-    const confirmDelete = () => {
-        setClasses(prev => prev.filter(c => c.id !== classToDelete.id));
-        setShowDeleteModal(false);
-        setClassToDelete(null);
-        setToast({ message: '✅ Đã xóa chi đoàn!', type: 'success' });
+    const confirmDelete = async () => {
+        try {
+            await organizationService.deleteOrganization(classToDelete.id);
+            setClasses(prev => prev.filter(c => c.id !== classToDelete.id));
+            setShowDeleteModal(false);
+            setClassToDelete(null);
+            setToast({ message: '✅ Đã xóa chi đoàn!', type: 'success' });
+        } catch (err) {
+            setToast({ message: '❌ Lỗi khi xóa', type: 'error' });
+        }
     };
 
     // Chuyển trang

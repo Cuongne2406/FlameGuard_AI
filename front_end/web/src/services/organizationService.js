@@ -29,6 +29,7 @@ export const organizationService = {
 
   // Clubs detailed
   getClubsDetailed: () => apiClient('/organizations/clubs'),
+  getClassesDetailed: () => apiClient('/organizations/classes'),
   getClubsStats: () => apiClient('/organizations/clubs/stats'),
   getClubProposals: () => apiClient('/organizations/clubs/proposals'),
   approveClubProposal: (id) => apiClient(`/organizations/clubs/proposals/${id}/approve`, { method: 'PUT' }),

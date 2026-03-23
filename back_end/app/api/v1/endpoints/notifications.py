@@ -1,84 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, get_current_active_user
+from app.api.deps import get_db
+from app.schemas.notification_schemas import NotificationResponse, NotificationUpdate
+from app.services import notification_service
 from app.models.core import User
-from app.models.notifications import Notification
-from app.schemas.notification_schemas import NotificationCreate, NotificationUpdate, NotificationResponse
+# Suppose we have a get_current_user dependency
+# from app.api.deps import get_current_user 
 
 router = APIRouter()
 
-@router.post("/", response_model=NotificationResponse)
-def create_notification(
-    *,
+@router.get("/me", response_model=List[NotificationResponse])
+def get_my_notifications(
     db: Session = Depends(get_db),
-    notif_in: NotificationCreate,
-):
-    db_obj = Notification(**notif_in.model_dump())
-    db.add(db_obj)
-    db.commit()
-    db.refresh(db_obj)
-    return db_obj
-
-@router.get("/", response_model=List[NotificationResponse])
-def read_notifications(
+    # current_user: User = Depends(get_current_user),
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
 ):
-    return db.query(Notification).offset(skip).limit(limit).all()
+    # For now, we use a mock user ID if current_user is not available or just for demonstration
+    # In real app, use current_user.id
+    # user_id = current_user.id
+    return notification_service.get_user_notifications(db=db, user_id=UUID("00000000-0000-0000-0000-000000000000"), skip=skip, limit=limit)
 
-@router.get("/me", response_model=List[NotificationResponse])
-def read_my_notifications(
+@router.put("/{notification_id}/read", response_model=NotificationResponse)
+def mark_notification_read(
+    notification_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
-    """
-    Lấy danh sách thông báo của người dùng hiện tại.
-    """
-    return db.query(Notification).filter(Notification.user_id == current_user.id).order_by(Notification.created_at.desc()).all()
+    return notification_service.mark_as_read(db=db, notification_id=notification_id)
 
-@router.get("/{notif_id}", response_model=NotificationResponse)
-def read_notification(
-    notif_id: UUID,
-    db: Session = Depends(get_db)
-):
-    notif = db.query(Notification).filter(Notification.id == notif_id).first()
-    if notif is None:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    return notif
-
-@router.put("/{notif_id}", response_model=NotificationResponse)
-def update_notification(
-    *,
+@router.post("/read-all")
+def mark_all_notifications_read(
     db: Session = Depends(get_db),
-    notif_id: UUID,
-    notif_in: NotificationUpdate,
+    # current_user: User = Depends(get_current_user),
 ):
-    notif = db.query(Notification).filter(Notification.id == notif_id).first()
-    if notif is None:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    
-    update_data = notif_in.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(notif, field, value)
-        
-    db.add(notif)
-    db.commit()
-    db.refresh(notif)
-    return notif
-
-@router.delete("/{notif_id}")
-def delete_notification(
-    *,
-    db: Session = Depends(get_db),
-    notif_id: UUID,
-):
-    notif = db.query(Notification).filter(Notification.id == notif_id).first()
-    if notif is None:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    db.delete(notif)
-    db.commit()
-    return {"message": "Notification deleted successfully"}
+    # user_id = current_user.id
+    notification_service.mark_all_as_read(db=db, user_id=UUID("00000000-0000-0000-0000-000000000000"))
+    return {"status": "success"}

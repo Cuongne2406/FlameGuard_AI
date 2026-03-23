@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import Toast from '../../../components/ui/Toast';
 import { aiService } from '../../../services/aiService';
+import { notificationService } from '../../../services/notificationService';
 
 const SubAdminNotifications = () => {
   const [toast, setToast] = useState(null);
   const [filter, setFilter] = useState('All');
   const [data, setData] = useState(null);
 
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     const fetchData = async () => {
-      const res = await aiService.getSubAdminAnalysis();
-      setData(res);
+      try {
+        setLoading(true);
+        const [aiRes, notifRes] = await Promise.all([
+          aiService.getSubAdminAnalysis(),
+          notificationService.getNotifications()
+        ]);
+        setData(aiRes);
+        setNotifications(notifRes || []);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
@@ -98,36 +113,49 @@ const SubAdminNotifications = () => {
           </div>
         </div>
         <div className="divide-y divide-slate-50">
-          {feedbacks.length > 0 ? feedbacks.map((f, i) => {
-            const typeClass = f.color?.includes('emerald') ? 'Positive' : f.color?.includes('red') ? 'Critical' : 'Neutral';
-            const iconType = typeClass === 'Positive' ? 'sentiment_very_satisfied' : typeClass === 'Critical' ? 'sentiment_very_dissatisfied' : 'sentiment_neutral';
+          {notifications.length > 0 ? notifications.map((n, i) => {
+            const isRead = n.is_read;
             
             return (
-            <div key={f.id || i} className="p-8 hover:bg-slate-50/50 transition-all flex flex-col md:flex-row gap-8 group">
-              <div className={`h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${typeClass === 'Positive' ? 'text-emerald-500' : typeClass === 'Critical' ? 'text-rose-500' : 'text-blue-500'}`}>
-                <span className="material-symbols-outlined text-3xl">{iconType}</span>
+            <div key={n.id || i} className={`p-8 hover:bg-slate-50/50 transition-all flex flex-col md:flex-row gap-8 group ${!isRead ? 'bg-blue-50/20' : ''}`}>
+              <div className={`h-16 w-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform ${!isRead ? 'text-blue-600' : 'text-slate-400'}`}>
+                <span className="material-symbols-outlined text-3xl">{!isRead ? 'notifications_active' : 'notifications'}</span>
               </div>
-              <div className="flex-1 space-y-6">
+              <div className="flex-1 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h4 className="text-lg font-bold text-slate-900">{f.user || 'Người dùng ẩn danh'}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{f.status} • {f.time}</p>
+                    <h4 className="text-lg font-bold text-slate-900">{n.title}</h4>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                      Hệ thống • {new Date(n.created_at).toLocaleString()}
+                    </p>
                   </div>
-                  <span className={`px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border ${typeClass === 'Positive' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : typeClass === 'Critical' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
-                    {typeClass}
-                  </span>
+                  {!isRead && (
+                    <span className="px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-100">
+                      Mới
+                    </span>
+                  )}
                 </div>
-                <div className={`p-6 rounded-[2rem] border transition-all ${typeClass === 'Positive' ? 'bg-emerald-50/30 border-emerald-100' : typeClass === 'Critical' ? 'bg-rose-50/30 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
-                  <p className="text-sm font-medium text-slate-700 italic leading-relaxed">{f.text}</p>
+                <div className="p-6 rounded-[2rem] border bg-white border-slate-100 shadow-sm">
+                  <p className="text-sm font-medium text-slate-700 leading-relaxed">{n.message}</p>
                 </div>
-                <div className="flex gap-4">
-                  <button className="h-11 px-8 rounded-xl bg-slate-900 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-blue-600 shadow-lg shadow-slate-100 transition-all">Phản hồi SV</button>
-                  <button className="h-11 px-8 rounded-xl bg-white border border-slate-200 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-900 transition-all">Lưu trữ</button>
-                </div>
+                {!isRead && (
+                  <button 
+                    onClick={async () => {
+                      await notificationService.markAsRead(n.id);
+                      setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, is_read: true } : item));
+                    }}
+                    className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline"
+                  >
+                    Đánh dấu đã đọc
+                  </button>
+                )}
               </div>
             </div>
           )}) : (
-             <div className="p-8 text-center text-slate-400">Không có phản hồi nào</div>
+             <div className="p-20 text-center text-slate-400">
+               <span className="material-symbols-outlined text-5xl block mb-4">mail_outline</span>
+               <p className="font-bold uppercase tracking-widest text-xs">Không có thông báo mới</p>
+             </div>
           )}
         </div>
       </section>

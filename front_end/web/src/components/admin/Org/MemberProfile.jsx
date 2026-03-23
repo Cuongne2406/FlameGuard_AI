@@ -193,7 +193,7 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
             <div className="relative">
               <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Đơn vị</label>
               <input
-                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.unitId ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100'} rounded-2xl outline-none font-bold`}
+                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.unitId ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100'} rounded-2xl outline-none font-bold transition-all`}
                 value={searchUnit}
                 onChange={(e) => {
                   setSearchUnit(e.target.value);
@@ -203,10 +203,11 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
                 placeholder="Tìm tên khoa/lớp..."
               />
               {showUnitSuggestions && filteredOrgs.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
                   {filteredOrgs.map(o => (
                     <button
                       key={o.id}
+                      type="button"
                       className="w-full px-5 py-3 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0"
                       onClick={() => {
                         setFormData(prev => ({ ...prev, unit: o.name, unitId: o.id }));
@@ -219,6 +220,12 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
                   ))}
                 </div>
               )}
+              {formData.unit && !formData.unitId && (
+                <p className="text-[10px] text-rose-500 font-bold mt-1.5 ml-2 animate-pulse flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">info</span>
+                  Vui lòng nhấp chọn từ danh sách gợi ý phía trên
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -226,8 +233,8 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
           <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Hủy bỏ</button>
           <button
             onClick={() => onSave(formData)}
-            disabled={!formData.name || !formData.unit}
-            className="flex-1 py-3 bg-blue-600 disabled:opacity-50 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200"
+            disabled={!formData.name || !formData.unitId}
+            className={`flex-1 py-3 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200 transition-all ${(!formData.name || !formData.unitId) ? 'bg-slate-300 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
             Lưu thay đổi
           </button>

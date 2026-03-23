@@ -16,7 +16,7 @@ conf = ConnectionConfig(
     VALIDATE_CERTS = True
 )
 
-async def send_otp_email(email: EmailStr, otp: str):
+async def send_otp_email(email: EmailStr, otp: str, full_name: str = "Người dùng"):
     message = MessageSchema(
         subject="FlameGuard AI - Mã xác thực 2 lớp (2FA)",
         recipients=[email],
@@ -24,11 +24,12 @@ async def send_otp_email(email: EmailStr, otp: str):
         <html>
             <body style="font-family: sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #2563eb;">Xác thực đăng nhập FlameGuard AI</h2>
-                <p>Chào bạn,</p>
+                <p>Chào <b>{full_name}</b>,</p>
                 <p>Mã xác thực 2 lớp của bạn là: <b style="font-size: 24px; color: #1e40af; letter-spacing: 5px;">{otp}</b></p>
+                <p>Email nhận mã: {email}</p>
                 <p>Mã này sẽ hết hạn sau 5 phút. Nếu bạn không thực hiện đăng nhập, vui lòng đổi mật khẩu ngay lập tức.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 11px; color: #999;">Đây là email tự động, vui lòng không trả lời.</p>
+                <p style="font-size: 11px; color: #999;">Đây là email tự động từ hệ thống FlameGuard AI, vui lòng không trả lời.</p>
             </body>
         </html>
         """,

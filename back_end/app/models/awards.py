@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, ForeignKey, Date, Enum, Text
+from sqlalchemy import Column, String, ForeignKey, Date, Enum, Text, Integer, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -20,5 +20,7 @@ class Award(Base):
     status = Column(Enum(AwardStatus), default=AwardStatus.PENDING)
     decision_number = Column(String, nullable=True)
     awarded_date = Column(Date, nullable=True)
+    points = Column(Integer, default=0)
+    assessment = Column(JSON, nullable=True)
 
     user = relationship("User", backref="awards")

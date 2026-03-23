@@ -125,6 +125,16 @@ class Organization(Base):
     description = Column(String)
     status = Column(Enum(OrgStatus), default=OrgStatus.ACTIVE)
     
+    # Extended fields for Classes & Clubs
+    fee_percentage = Column(Numeric(5, 2), default=0.0)
+    activity_points = Column(Integer, default=0)
+    avatar_url = Column(String, nullable=True)
+    icon = Column(String, nullable=True) # For Clubs
+    classification = Column(String, nullable=True)
+    warning_message = Column(Text, nullable=True)
+    warning_deadline = Column(DateTime, nullable=True)
+    last_activity_at = Column(DateTime, nullable=True)
+    
     parent = relationship("Organization", remote_side=[id], backref="children")
     members = relationship("UserOrganization", back_populates="organization")
     campaigns = relationship("Campaign", back_populates="organization")

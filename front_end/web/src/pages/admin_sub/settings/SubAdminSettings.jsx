@@ -53,7 +53,20 @@ const SubAdminSettings = () => {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [newMember, setNewMember] = useState({ name: '', mssv: '', role: '' });
+  const [searchResults, setSearchResults] = useState([]);
+  const [newMember, setNewMember] = useState({ id: '', name: '', mssv: '', role: '' });
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.length >= 2) {
+        const res = await userService.searchUsers(searchQuery);
+        setSearchResults(res);
+      } else {
+        setSearchResults([]);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     fetchData();
@@ -95,13 +108,7 @@ const SubAdminSettings = () => {
     }
   };
 
-  // Real search results should be fetched from an API
-  const searchResults = [];
 
-  const filteredResults = searchResults.filter(r =>
-    r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    r.mssv?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   // Avatar upload
   const handleAvatarChange = async (e) => {
@@ -125,31 +132,47 @@ const SubAdminSettings = () => {
     }
   };
 
-  // Toggles
-  const handleToggle = async (key) => {
-    const newToggles = { ...toggles, [key]: !toggles[key] };
-    setToggles(newToggles);
-    
+  // Toggles chỉ đổi state local
+  const handleToggle = (key) => {
+    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Nút Lưu thay đổi tổng (Email, Phone, 2FA, Notification settings)
+  const handleSaveSettings = async () => {
     try {
       await userService.updateMe({
-        is_2fa_enabled: newToggles.twoFactor,
-        email_alerts_enabled: newToggles.emailAlert,
-        zalo_alerts_enabled: newToggles.zaloAlert,
-        daily_digest_enabled: newToggles.dailyDigest
+        email: profile.email,
+        phone_number: profile.phone,
+        is_2fa_enabled: toggles.twoFactor,
+        email_alerts_enabled: toggles.emailAlert,
+        zalo_alerts_enabled: toggles.zaloAlert,
+        daily_digest_enabled: toggles.dailyDigest
       });
-      setToast({ message: 'Đã lưu cài đặt', type: 'success' });
+      setToast({ message: 'Thông tin đã được cập nhật thành công lên hệ thống!', type: 'success' });
     } catch (error) {
-      setToast({ message: 'Lỗi lưu cài đặt', type: 'error' });
-      // Revert UI on error
-      setToggles(toggles);
+      setToast({ message: 'Có lỗi xảy ra khi lưu cài đặt!', type: 'error' });
     }
   };
 
   // Devices: logout all others
-  const handleLogoutAll = () => {
-    // In real app, call DELETE /me/devices
-    setDevices(devices.map(d => d.status === 'Current' ? d : { ...d, status: 'Logged out' }));
-    setToast({ message: 'Đã đăng xuất các thiết bị khác', type: 'success' });
+  const handleLogoutAll = async () => {
+    try {
+      await userService.logoutAllDevices();
+      setToast({ message: 'Đã đăng xuất thành công khỏi tất cả thiết bị khác', type: 'success' });
+      fetchData();
+    } catch (error) {
+      setToast({ message: 'Lỗi khi đăng xuất thiết bị', type: 'error' });
+    }
+  };
+
+  const handleLogoutDevice = async (id) => {
+    try {
+      await userService.logoutDevice(id);
+      setToast({ message: 'Đã đăng xuất thiết bị', type: 'success' });
+      fetchData();
+    } catch (error) {
+      setToast({ message: 'Lỗi khi đăng xuất thiết bị', type: 'error' });
+    }
   };
 
   // Signature handlers
@@ -238,10 +261,15 @@ const SubAdminSettings = () => {
     setShowPermissionsModal(true);
   };
 
-  const handleDeleteMember = (id) => {
+  const handleDeleteMember = async (id) => {
     if (window.confirm('Bạn có chắc muốn xóa thành viên này?')) {
-      setTeam(team.filter(m => m.id !== id));
-      setToast({ message: 'Đã xóa thành viên', type: 'success' });
+      try {
+        await userService.removeTeamMember(id);
+        setToast({ message: 'Đã xóa thành viên', type: 'success' });
+        fetchData();
+      } catch (error) {
+        setToast({ message: 'Lỗi xóa thành viên', type: 'error' });
+      }
     }
   };
 
@@ -249,24 +277,38 @@ const SubAdminSettings = () => {
     setTeam(prev => prev.map(m =>
       m.id === memberId ? { ...m, permissions: { ...m.permissions, [perm]: !m.permissions[perm] } } : m
     ));
+    if (selectedMember && selectedMember.id === memberId) {
+      setSelectedMember(prev => ({ ...prev, permissions: { ...prev.permissions, [perm]: !prev.permissions[perm] } }));
+    }
   };
 
-  const handleAddMember = () => {
-    if (!newMember.name || !newMember.mssv) {
-      setToast({ message: 'Vui lòng nhập đủ thông tin', type: 'error' });
+  const handleSavePermissions = async () => {
+    if (selectedMember) {
+      try {
+        await userService.updateTeamPermissions(selectedMember.id, selectedMember.permissions);
+        setToast({ message: 'Đã lưu phân quyền', type: 'success' });
+        setShowPermissionsModal(false);
+        fetchData();
+      } catch (e) {
+        setToast({ message: 'Lỗi lưu phân quyền', type: 'error' });
+      }
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!newMember.id || !newMember.role) {
+      setToast({ message: 'Vui lòng chọn thành viên và nhập Vai trò', type: 'error' });
       return;
     }
-    const newId = team.length + 1;
-    setTeam([...team, {
-      id: newId,
-      name: newMember.name,
-      role: newMember.role || 'Thành viên',
-      permissions: { events: false, finance: false, posts: false },
-      initial: newMember.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase(),
-    }]);
-    setNewMember({ name: '', mssv: '', role: '' });
-    setShowAddMemberModal(false);
-    setToast({ message: 'Thêm thành viên thành công!', type: 'success' });
+    try {
+      await userService.addTeamMember({ user_id: newMember.id, role: newMember.role });
+      setNewMember({ id: '', name: '', mssv: '', role: '' });
+      setShowAddMemberModal(false);
+      setToast({ message: 'Thêm thành viên thành công!', type: 'success' });
+      fetchData();
+    } catch (error) {
+      setToast({ message: 'Lỗi thêm thành viên (có thể đã tồn tại)!', type: 'error' });
+    }
   };
 
   return (
@@ -282,6 +324,13 @@ const SubAdminSettings = () => {
           </nav>
           <h1 className="text-2xl font-bold text-slate-900">Thiết lập Tài khoản & Cấu hình Khoa</h1>
         </div>
+        <button
+          onClick={handleSaveSettings}
+          className="px-6 py-3 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined">save</span>
+          LƯU THAY ĐỔI
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -311,10 +360,16 @@ const SubAdminSettings = () => {
 
             <div className="space-y-6 pt-6 text-left border-t border-slate-50">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email (Đã xác thực)</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-3 text-slate-300">mail</span>
-                  <input type="text" value={profile.email} readOnly className="w-full h-12 pl-12 pr-10 rounded-xl border border-slate-100 bg-slate-50/50 text-sm font-bold text-slate-700 outline-none" />
+                  <input
+                    type="text"
+                    value={profile.email}
+                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    className="w-full h-12 pl-12 pr-10 rounded-xl border border-slate-100 bg-white focus:bg-slate-50 text-sm font-bold text-slate-700 outline-none transition-all focus:border-blue-400"
+                    placeholder="Nhập email của bạn"
+                  />
                   <span className="material-symbols-outlined absolute right-4 top-3 text-emerald-500">check_circle</span>
                 </div>
               </div>
@@ -322,7 +377,13 @@ const SubAdminSettings = () => {
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Số điện thoại</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-4 top-3 text-slate-300">call</span>
-                  <input type="text" value={profile.phone} readOnly className="w-full h-12 pl-12 pr-4 rounded-xl border border-slate-100 bg-slate-50/50 text-sm font-bold text-slate-700 outline-none" />
+                  <input
+                    type="text"
+                    value={profile.phone}
+                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    className="w-full h-12 pl-12 pr-4 rounded-xl border border-slate-100 bg-white focus:bg-slate-50 text-sm font-bold text-slate-700 outline-none transition-all focus:border-blue-400"
+                    placeholder="Nhập số điện thoại"
+                  />
                 </div>
               </div>
             </div>
@@ -351,7 +412,7 @@ const SubAdminSettings = () => {
         {/* Right Column */}
         <div className="lg:col-span-8 space-y-8">
           {/* Account Security */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8">
+          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8 relative">
             <div className="flex items-center gap-3 text-blue-600">
               <span className="material-symbols-outlined font-bold">security</span>
               <h3 className="text-sm font-bold uppercase tracking-widest">Account Security</h3>
@@ -400,7 +461,7 @@ const SubAdminSettings = () => {
                         </div>
                       </div>
                       {d.status !== 'Current' && (
-                        <button className="h-8 w-8 text-slate-300 hover:text-rose-500 transition-colors">
+                        <button onClick={() => handleLogoutDevice(d.id)} className="h-8 w-8 text-slate-300 hover:text-rose-500 transition-colors">
                           <span className="material-symbols-outlined text-lg">logout</span>
                         </button>
                       )}
@@ -689,14 +750,15 @@ const SubAdminSettings = () => {
               />
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredResults.map(r => (
+              {searchResults.length === 0 && searchQuery.length >= 2 && <p className="text-xs text-slate-400 p-2">Không tìm thấy cán bộ nào.</p>}
+              {searchResults.map(r => (
                 <div
                   key={r.id}
-                  onClick={() => setNewMember({ name: r.name, mssv: r.mssv, role: r.role })}
-                  className="p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer flex items-center justify-between"
+                  onClick={() => setNewMember({ id: r.id, name: r.name, mssv: r.mssv, role: newMember.role })}
+                  className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${newMember.id === r.id ? 'border-blue-500 bg-blue-50' : 'border-slate-100 hover:bg-slate-50'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-white ${r.color === 'rose' ? 'bg-rose-400' : 'bg-blue-400'}`}>
+                    <div className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white bg-blue-400">
                       {r.initial}
                     </div>
                     <div>
@@ -704,7 +766,7 @@ const SubAdminSettings = () => {
                       <p className="text-xs text-slate-500">{r.mssv} • {r.role}</p>
                     </div>
                   </div>
-                  <span className="text-blue-600 text-sm">Chọn</span>
+                  {newMember.id === r.id ? <span className="material-symbols-outlined text-blue-600">check_circle</span> : <span className="text-blue-600 text-sm">Chọn</span>}
                 </div>
               ))}
             </div>
@@ -773,6 +835,7 @@ const SubAdminSettings = () => {
             </div>
             <div className="flex gap-4 pt-4">
               <Button variant="outline" className="flex-1" onClick={() => setShowPermissionsModal(false)}>Đóng</Button>
+              <Button variant="primary" className="flex-1" onClick={handleSavePermissions}>Lưu phân quyền</Button>
             </div>
           </div>
         </Modal>

@@ -95,7 +95,7 @@ async def login_access_token(
                 db.commit()
                 
                 # Gửi email (Chạy sync cho demo hoặc dùng background task)
-                await email_service.send_otp_email(user.email, otp)
+                await email_service.send_otp_email(user.email, otp, user.full_name)
                 
                 return {
                     "access_token": "",
@@ -139,7 +139,7 @@ async def login_access_token(
         user.otp_code = otp
         user.otp_expires_at = datetime.now() + timedelta(minutes=5)
         db.commit()
-        await email_service.send_otp_email(user.email, otp)
+        await email_service.send_otp_email(user.email, otp, user.full_name)
         return {
             "access_token": "",
             "token_type": "bearer",

@@ -110,3 +110,9 @@ def assign_member(
     Bổ nhiệm hoặc gán nhân sự vào một tổ chức/đơn vị.
     """
     return core_service.assign_member_to_org(db=db, assign_in=assign_in)
+@router.get("/classes")
+def get_classes_list(db: Session = Depends(get_db)):
+    """
+    Lấy danh sách Chi đoàn kèm chi tiết trạng thái, nhân sự, đoàn phí.
+    """
+    return core_service.get_classes_list_detailed(db)

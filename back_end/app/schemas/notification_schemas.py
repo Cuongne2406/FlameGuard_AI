@@ -1,23 +1,23 @@
-from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
+from pydantic import BaseModel
 
 class NotificationBase(BaseModel):
-    user_id: UUID
     title: str
     message: str
     is_read: bool = False
-    created_at: Optional[datetime] = None
 
 class NotificationCreate(NotificationBase):
-    pass
+    user_id: UUID
 
 class NotificationUpdate(BaseModel):
-    is_read: Optional[bool] = None
+    is_read: bool
 
 class NotificationResponse(NotificationBase):
     id: UUID
+    user_id: UUID
+    created_at: datetime
 
     class Config:
         from_attributes = True

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 
 # ==========================================
@@ -76,6 +76,14 @@ class OrganizationBase(BaseModel):
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
     status: OrgStatusEnum = OrgStatusEnum.ACTIVE
+    fee_percentage: float = 0.0
+    activity_points: int = 0
+    avatar_url: Optional[str] = None
+    icon: Optional[str] = None
+    classification: Optional[str] = None
+    warning_message: Optional[str] = None
+    warning_deadline: Optional[datetime] = None
+    last_activity_at: Optional[datetime] = None
 
 class OrganizationCreate(OrganizationBase):
     pass
@@ -86,6 +94,14 @@ class OrganizationUpdate(BaseModel):
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
     status: Optional[OrgStatusEnum] = None
+    fee_percentage: Optional[float] = None
+    activity_points: Optional[int] = None
+    avatar_url: Optional[str] = None
+    icon: Optional[str] = None
+    classification: Optional[str] = None
+    warning_message: Optional[str] = None
+    warning_deadline: Optional[datetime] = None
+    last_activity_at: Optional[datetime] = None
 
 class OrganizationResponse(OrganizationBase):
     id: UUID

@@ -86,10 +86,10 @@ const AppRoutes = () => {
         <Route path="classes" element={<SubAdminClasses />} />
         <Route path="clubs" element={<SubAdminClubs />} />
         <Route path="events" element={<SubAdminEvents />} />
-        <Route path="events/feedback" element={<EventFeedbackAnalysis />} />
-        <Route path="events/live-report" element={<EventLiveReport />} />
+        <Route path="events/:id/feedback" element={<EventFeedbackAnalysis />} />
+        <Route path="events/:id/live" element={<EventLiveReport />} />
         <Route path="events/manual-checkin" element={<EventManualCheckin />} />
-        <Route path="events/registration-approval" element={<EventRegistrationApproval />} />
+        <Route path="events/:id/registrations" element={<EventRegistrationApproval />} />
         <Route path="events/summary" element={<EventSummary />} />
         <Route path="finance" element={<SubAdminFinance />} />
         <Route path="awards" element={<SubAdminAwards />} />

@@ -37,7 +37,7 @@ const SubAdminEvents = () => {
                 status: ev.status === 'PUBLISHED' ? 'Đang mở đăng ký' : ev.status === 'DRAFT' ? 'Sắp tới' : ev.status === 'COMPLETED' ? 'Đã kết thúc' : 'Đang diễn ra (Live)',
                 statusColor: ev.status === 'PUBLISHED' ? 'orange' : ev.status === 'COMPLETED' ? 'emerald' : 'blue',
                 progress: null, // Dynamic features to be added later
-                attendees: `${ev.current_participants || 0}/${ev.max_participants || 100}`,
+                attendees: `${ev.current_participants || 0}/${ev.capacity || 100}`,
                 actions: ev.status === 'COMPLETED' 
                     ? [{ label: 'Xem tổng kết', icon: 'summarize', primary: false, showFor: ['ended'] }]
                     : [

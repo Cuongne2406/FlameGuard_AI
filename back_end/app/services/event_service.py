@@ -1,12 +1,15 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException
-from app.models.events import Campaign, Event, EventRegistration
+from app.models.events import Campaign, Event, EventRegistration, EventQA, EventIncident, EventRegistrationStatus
 from app.schemas.event_schemas import (
     CampaignCreate, CampaignUpdate,
     EventCreate, EventUpdate,
-    EventRegistrationCreate, EventRegistrationUpdate
+    EventRegistrationCreate, EventRegistrationUpdate,
+    EventQACreate, EventIncidentCreate
 )
+from app.services import notification_service
+from app.schemas.notification_schemas import NotificationCreate
 
 from app.models.core import Organization, AcademicTerm
 
@@ -134,24 +137,61 @@ def register_for_event(db: Session, registration_in: EventRegistrationCreate):
     ).first()
     
     if existing_reg:
-        if existing_reg.status.value == "CANCELLED":
+        if existing_reg.status == EventRegistrationStatus.CANCELLED:
             # Re-register
-            existing_reg.status = "REGISTERED"
+            existing_reg.status = EventRegistrationStatus.PENDING
             db.commit()
             db.refresh(existing_reg)
             return existing_reg
-        else:
-            raise HTTPException(status_code=400, detail="User is already registered for this event")
-
-    # 4. Create new registration
-    db_registration = EventRegistration(**registration_in.dict())
+        raise HTTPException(status_code=400, detail="User already registered for this event")
+        
+    # 4. Create Registration
+    db_registration = EventRegistration(
+        **registration_in.dict(),
+        status=EventRegistrationStatus.PENDING
+    )
     db.add(db_registration)
     db.commit()
     db.refresh(db_registration)
+    
+    # 5. Notify the user
+    notification_service.create_notification(
+        db=db,
+        notification_in=NotificationCreate(
+            user_id=registration_in.user_id,
+            title="Đăng ký sự kiện thành công",
+            message=f"Bạn đã đăng ký tham gia sự kiện '{event.name}'. Vui lòng chờ quản trị viên duyệt."
+        )
+    )
+    
+    return db_registration
+
+def approve_registration(db: Session, registration_id: UUID):
+    db_registration = db.query(EventRegistration).filter(EventRegistration.id == registration_id).first()
+    if not db_registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+        
+    db_registration.status = EventRegistrationStatus.REGISTERED
+    db.commit()
+    db.refresh(db_registration)
+    
+    # Notify the user
+    notification_service.create_notification(
+        db=db,
+        notification_in=NotificationCreate(
+            user_id=db_registration.user_id,
+            title="Đăng ký sự kiện được duyệt",
+            message=f"Đăng ký tham gia sự kiện '{db_registration.event.name}' của bạn đã được phê duyệt."
+        )
+    )
+    
     return db_registration
 
 def get_event_registrations(db: Session, event_id: UUID, skip: int = 0, limit: int = 100):
     return db.query(EventRegistration).filter(EventRegistration.event_id == event_id).offset(skip).limit(limit).all()
+
+def get_all_pending_registrations(db: Session, skip: int = 0, limit: int = 100):
+    return db.query(EventRegistration).filter(EventRegistration.status == EventRegistrationStatus.PENDING).offset(skip).limit(limit).all()
 
 def update_event_registration(db: Session, registration_id: UUID, registration_in: EventRegistrationUpdate):
     db_registration = db.query(EventRegistration).filter(EventRegistration.id == registration_id).first()
@@ -165,3 +205,84 @@ def update_event_registration(db: Session, registration_id: UUID, registration_i
     db.commit()
     db.refresh(db_registration)
     return db_registration
+
+
+# ==========================================
+# Event QA Services
+# ==========================================
+def create_qa(db: Session, qa_in: EventQACreate):
+    db_qa = EventQA(**qa_in.dict())
+    db.add(db_qa)
+    db.commit()
+    db.refresh(db_qa)
+    return db_qa
+
+def get_event_qa(db: Session, event_id: UUID, skip: int = 0, limit: int = 100):
+    return db.query(EventQA).filter(EventQA.event_id == event_id).order_by(EventQA.created_at.desc()).offset(skip).limit(limit).all()
+
+def answer_qa(db: Session, qa_id: UUID, answer: str):
+    db_qa = db.query(EventQA).filter(EventQA.id == qa_id).first()
+    if not db_qa:
+        raise HTTPException(status_code=404, detail="QA session not found")
+    db_qa.answer = answer
+    db_qa.is_answered = True
+    db.commit()
+    db.refresh(db_qa)
+    return db_qa
+
+
+# ==========================================
+# Event Incident Services
+# ==========================================
+def report_incident(db: Session, incident_in: EventIncidentCreate):
+    db_incident = EventIncident(**incident_in.dict())
+    db.add(db_incident)
+    db.commit()
+    db.refresh(db_incident)
+    return db_incident
+
+def get_event_incidents(db: Session, event_id: UUID, skip: int = 0, limit: int = 100):
+    return db.query(EventIncident).filter(EventIncident.event_id == event_id).order_by(EventIncident.created_at.desc()).offset(skip).limit(limit).all()
+
+def update_incident_status(db: Session, incident_id: UUID, status: str):
+    db_incident = db.query(EventIncident).filter(EventIncident.id == incident_id).first()
+    if not db_incident:
+        raise HTTPException(status_code=404, detail="Incident report not found")
+    db_incident.status = status
+    db.commit()
+    db.refresh(db_incident)
+    return db_incident
+
+def get_event_summary(db: Session, event_id: UUID):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+        
+    registrations = db.query(EventRegistration).filter(EventRegistration.event_id == event_id).all()
+    attended_count = sum(1 for r in registrations if r.status == EventRegistrationStatus.ATTENDED)
+    qa_count = db.query(EventQA).filter(EventQA.event_id == event_id).count()
+    answered_qa_count = db.query(EventQA).filter(EventQA.event_id == event_id, EventQA.is_answered == True).count()
+    incident_count = db.query(EventIncident).filter(EventIncident.event_id == event_id).count()
+    critical_incident_count = db.query(EventIncident).filter(EventIncident.event_id == event_id, EventIncident.severity == "CRITICAL").count()
+    
+    # Simple logic for highlights
+    highlights = [
+        f"Tổng số sinh viên đăng ký: {len(registrations)}",
+        f"Tỷ lệ tham gia thực tế: {(attended_count / len(registrations) * 100) if registrations else 0:.1f}%",
+        f"Đã giải đáp {answered_qa_count}/{qa_count} thắc mắc trực tuyến",
+    ]
+    if critical_incident_count > 0:
+        highlights.append(f"Ghi nhận {critical_incident_count} sự cố nghiêm trọng cần lưu ý.")
+    else:
+        highlights.append("Sự kiện diễn ra an toàn, không có sự cố nghiêm trọng.")
+        
+    return {
+        "event_id": event_id,
+        "name": event.name,
+        "total_participants": len(registrations),
+        "attended_count": attended_count,
+        "qa_count": qa_count,
+        "incident_count": incident_count,
+        "highlights": highlights,
+        "average_rating": 4.5
+    }

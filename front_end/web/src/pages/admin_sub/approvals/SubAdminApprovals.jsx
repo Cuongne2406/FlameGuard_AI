@@ -18,9 +18,10 @@ const SubAdminApprovals = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [events, fundReqs] = await Promise.all([
+            const [events, fundReqs, pendingRegs] = await Promise.all([
                 eventService.getEvents(),
-                financeService.getFacultyTransactions()
+                financeService.getFacultyTransactions(),
+                eventService.getPendingRegistrations()
             ]);
 
             const allItems = [];
@@ -53,6 +54,22 @@ const SubAdminApprovals = () => {
                         amount: f.amount ? `${f.amount.toLocaleString()} VNĐ` : '',
                         status: f.status || 'PENDING',
                         actions: ['sign', 'reject']
+                    });
+                });
+            }
+
+            // Mapping Event Registrations
+            if (Array.isArray(pendingRegs)) {
+                pendingRegs.forEach(r => {
+                    allItems.push({
+                        id: r.id,
+                        type: 'registration',
+                        title: `Đăng ký: ${r.event_name || 'Sự kiện'}`,
+                        sender: r.user_name || 'Sinh viên',
+                        subject: `Mã SV: ${r.student_code || ''}`,
+                        status: r.status || 'PENDING',
+                        time: r.created_at,
+                        actions: ['approve', 'reject']
                     });
                 });
             }
@@ -108,6 +125,8 @@ const SubAdminApprovals = () => {
         try {
             if (item.type === 'event') {
                 await eventService.updateEvent(item.id, { status: 'APPROVED' });
+            } else if (item.type === 'registration') {
+                await eventService.approveRegistration(item.id);
             } else if (item.type === 'finance') {
                 await financeService.approveFacultyTransaction(item.id);
             }

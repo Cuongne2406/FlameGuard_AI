@@ -1,9 +1,11 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Enum, ForeignKey, Date, DateTime, Numeric
+from sqlalchemy import Column, String, Integer, Enum, ForeignKey, Date, DateTime, Numeric, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
 import enum
+from datetime import datetime
+import sqlalchemy as sa
 
 class CampaignStatus(enum.Enum):
     PLANNING = "PLANNING"
@@ -18,6 +20,7 @@ class EventStatus(enum.Enum):
     ENDED = "ENDED"
 
 class EventRegistrationStatus(enum.Enum):
+    PENDING = "PENDING"
     REGISTERED = "REGISTERED"
     ATTENDED = "ATTENDED"
     CANCELLED = "CANCELLED"
@@ -55,6 +58,8 @@ class Event(Base):
     registrations = relationship("EventRegistration", back_populates="event")
     fund_requests = relationship("FundRequest", back_populates="event")
     ai_predictions = relationship("AIPrediction", back_populates="event")
+    qa_sessions = relationship("EventQA", back_populates="event")
+    incidents = relationship("EventIncident", back_populates="event")
 
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
@@ -67,3 +72,32 @@ class EventRegistration(Base):
     
     event = relationship("Event", back_populates="registrations")
     user = relationship("User", back_populates="event_registrations")
+
+class EventQA(Base):
+    __tablename__ = "event_qa"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True) # Anonymous Qs allowed?
+    question = Column(Text, nullable=False)
+    answer = Column(Text, nullable=True)
+    is_answered = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'), nullable=False)
+    # Using sa.text if imported, otherwise default
+    
+    event = relationship("Event", back_populates="qa_sessions")
+    user = relationship("User")
+
+class EventIncident(Base):
+    __tablename__ = "event_incidents"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=False)
+    reported_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    description = Column(Text, nullable=False)
+    severity = Column(String) # Low, Medium, High, Critical
+    status = Column(String, default="PENDING") # PENDING, RESOLVING, RESOLVED
+    created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'), nullable=False)
+    
+    event = relationship("Event", back_populates="incidents")
+    reporter = relationship("User")
