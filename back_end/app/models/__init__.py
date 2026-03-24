@@ -4,7 +4,7 @@ from app.models.events import Campaign, Event, EventRegistration
 from app.models.finance import Budget, FundRequest, Asset, AssetLoan
 from app.models.ai import AISentiment, AIPrediction, AIAudit, ChatbotLog
 from app.models.audit import AuditLog
-from app.models.awards import Award
+from app.models.awards import Award, AwardCriteria
 from app.models.documents import DigitalDocument
 from app.models.notifications import Notification
 from app.models.settings import SystemSetting
@@ -18,5 +18,5 @@ __all__ = [
     "Campaign", "Event", "EventRegistration",
     "Budget", "FundRequest", "Asset", "AssetLoan",
     "AISentiment", "AIPrediction", "AIAudit", "ChatbotLog", "AuditLog",
-    "Award", "DigitalDocument", "Notification", "SystemSetting", "News"
+    "Award", "AwardCriteria", "DigitalDocument", "Notification", "SystemSetting", "News"
 ]

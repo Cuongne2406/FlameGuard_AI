@@ -3,9 +3,76 @@ from sqlalchemy import func, desc
 from typing import List, Optional
 from uuid import UUID
 from datetime import date, datetime
-from app.models.awards import Award, AwardStatus
+from app.models.awards import Award, AwardStatus, AwardCriteria, CriteriaType
 from app.models.core import Organization, OrgType, AcademicTerm, User, UserOrganization
+from app.models.events import EventRegistration, EventRegistrationStatus
 from app.schemas.award_schemas import AwardCreate, AwardUpdate
+
+def check_award_eligibility(db: Session, user_id: UUID):
+    """
+    Checking Engine: So khớp thành tích thực tế của User với bộ tiêu chí của Admin.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return {"passed": False, "error": "User not found"}
+
+    criteria_list = db.query(AwardCriteria).all()
+    results = []
+    overall_passed = True
+
+    for criteria in criteria_list:
+        passed = False
+        actual_val = "N/A"
+        
+        if criteria.type == CriteriaType.MIN_TRAINING_SCORE:
+            actual_val = user.training_score or 0
+            passed = float(actual_val) >= float(criteria.value)
+        
+        elif criteria.type == CriteriaType.MIN_GPA:
+            # Giả định GPA lưu trong training_score tạm thời để test, hoặc mock 3.5
+            actual_val = 3.5 
+            passed = float(actual_val) >= float(criteria.value)
+            
+        elif criteria.type == CriteriaType.MIN_EVENTS_ATTENDED:
+            actual_val = db.query(EventRegistration).filter(
+                EventRegistration.user_id == user_id,
+                EventRegistration.status == EventRegistrationStatus.ATTENDED
+            ).count()
+            passed = int(actual_val) >= int(criteria.value)
+
+        results.append({
+            "criteria_name": criteria.name,
+            "required": criteria.value,
+            "actual": str(actual_val),
+            "passed": passed,
+            "is_required": criteria.is_required
+        })
+        
+        if criteria.is_required and not passed:
+            overall_passed = False
+
+    return {
+        "overall_passed": overall_passed,
+        "details": results
+    }
+
+def create_award_application(db: Session, award_in: AwardCreate):
+    """
+    Tạo đơn nộp thưởng kèm Sơ lọc ngay lập tức.
+    """
+    # 1. Thực hiện sơ lọc
+    screening = check_award_eligibility(db, award_in.user_id)
+    
+    # 2. Tạo bản ghi Award (Loại trừ screening_results từ input để tránh trùng lặp)
+    obj_data = award_in.model_dump(exclude={"screening_results"})
+    db_obj = Award(
+        **obj_data,
+        screening_results=screening
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
 
 def get_awards_list(db: Session, skip: int = 0, limit: int = 100):
     """

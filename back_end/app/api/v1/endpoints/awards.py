@@ -4,8 +4,11 @@ from typing import List
 from uuid import UUID
 
 from app.api.deps import get_db
-from app.models.awards import Award
-from app.schemas.award_schemas import AwardCreate, AwardUpdate, AwardResponse
+from app.schemas.award_schemas import (
+    AwardCreate, AwardUpdate, AwardResponse,
+    AwardCriteriaCreate, AwardCriteriaResponse
+)
+from app.models.awards import Award, AwardCriteria, AwardStatus
 from app.services import award_service
 
 router = APIRouter()
@@ -16,11 +19,7 @@ def create_award(
     db: Session = Depends(get_db),
     award_in: AwardCreate,
 ):
-    db_obj = Award(**award_in.model_dump())
-    db.add(db_obj)
-    db.commit()
-    db.refresh(db_obj)
-    return db_obj
+    return award_service.create_award_application(db=db, award_in=award_in)
 
 @router.get("/", response_model=List[AwardResponse])
 def read_awards(
@@ -71,3 +70,36 @@ def delete_award(
     db.delete(award)
     db.commit()
     return {"message": "Award deleted successfully"}
+
+# ==========================================
+# Admin Criteria Management
+# ==========================================
+
+@router.get("/criteria", response_model=List[AwardCriteriaResponse])
+def get_criteria(db: Session = Depends(get_db)):
+    return db.query(AwardCriteria).all()
+
+@router.post("/criteria", response_model=AwardCriteriaResponse)
+def create_criteria(
+    *,
+    db: Session = Depends(get_db),
+    criteria_in: AwardCriteriaCreate
+):
+    db_obj = AwardCriteria(**criteria_in.model_dump())
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+@router.delete("/criteria/{criteria_id}")
+def delete_criteria(
+    *,
+    db: Session = Depends(get_db),
+    criteria_id: UUID
+):
+    db_obj = db.query(AwardCriteria).filter(AwardCriteria.id == criteria_id).first()
+    if not db_obj:
+        raise HTTPException(status_code=404, detail="Criteria not found")
+    db.delete(db_obj)
+    db.commit()
+    return {"message": "Criteria deleted"}

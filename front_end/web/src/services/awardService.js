@@ -23,5 +23,9 @@ export const awardService = {
 
   updateAwardAssessment: async (studentId, data) => {
     return apiClient(`/awards/${studentId}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  createAward: async (data) => {
+    return apiClient('/awards', { method: 'POST', body: JSON.stringify(data) });
   }
 };

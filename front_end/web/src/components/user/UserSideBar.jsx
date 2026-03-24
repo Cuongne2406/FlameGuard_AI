@@ -16,6 +16,7 @@ import {
   Moon,
   MessageSquare,
   CheckCircle2,
+  Award,
 } from "lucide-react";
 
 const UserSidebar = ({ isOpen, setIsOpen }) => {
@@ -44,6 +45,11 @@ const UserSidebar = ({ isOpen, setIsOpen }) => {
       icon: <CreditCard size={22} />,
       label: "Ví Đoàn viên",
       path: "/user/wallet",
+    },
+    {
+      icon: <Award size={22} />,
+      label: "Danh hiệu & Khen thưởng",
+      path: "/user/awards",
     },
     {
       icon: <FileText size={22} />,

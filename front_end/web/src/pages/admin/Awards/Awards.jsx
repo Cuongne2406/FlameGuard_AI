@@ -7,19 +7,15 @@ import {
   TrendingDown,
   Minus,
   Plus,
-  Edit3,
   Calendar,
   CheckCircle2,
   Clock,
   Award,
-  X, // Thêm icon đóng modal
 } from "lucide-react";
 import { awardService } from "../../../services/awardService";
 
 const Awards = () => {
   // --- BỔ SUNG STATE ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [criteria, setCriteria] = useState([]);
   const [rankings, setRankings] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({ remainingDays: '0', submitted: '0', approved: '0', passRate: '0%' });
@@ -97,9 +93,9 @@ const Awards = () => {
         </div>
       </div>
 
-      {/* 2. BẢNG VÀNG & CẤU HÌNH TIÊU CHÍ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* 2. BẢNG VÀNG */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center">
             <h3 className="font-black text-slate-700 flex items-center gap-2">
               <TrendingUp className="text-amber-500" size={18} /> Bảng vàng Thi
@@ -131,28 +127,6 @@ const Awards = () => {
             </table>
           </div>
         </div>
-
-        {/* --- CẤU HÌNH TIÊU CHÍ (Phần thay đổi) --- */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-black text-slate-700 flex items-center gap-2">
-              <Edit3 className="text-slate-400" size={18} /> Cấu hình Bộ tiêu
-              chí
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {criteria.map((item, index) => (
-              <CriterionItem key={index} {...item} />
-            ))}
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full py-3 border-2 border-dashed border-slate-100 rounded-xl text-[11px] font-bold text-slate-400 hover:border-blue-200 hover:text-blue-500 transition-all active:scale-95"
-            >
-              + Thêm tiêu chí mới
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 3. TIẾN ĐỘ XÉT DUYỆT (Giữ nguyên) */}
@@ -175,72 +149,6 @@ const Awards = () => {
         </div>
       </div>
 
-      {/* --- MODAL HỘP THOẠI THÊM MỚI --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-300 border border-slate-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-slate-800">
-                Tiêu chí thi đua
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsModalOpen(false);
-              }}
-            >
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">
-                  Tên tiêu chí
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nhập tên hoạt động..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">
-                  Điểm thưởng/phạt
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: +10 hoặc -5"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 text-xs font-bold text-slate-400 hover:text-slate-600"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
-                >
-                  Lưu tiêu chí
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -278,26 +186,6 @@ const RankRow = ({ rank, name, score, trend, trendIcon, trendColor }) => (
   </tr>
 );
 
-const CriterionItem = ({ label, points, color, icon }) => {
-  const safeColor = color || "bg-slate-100 text-slate-400";
-  const colorParts = safeColor.split(" ");
-  const bgOpacityClass = colorParts[0] ? colorParts[0].replace("bg-", "bg-opacity-20 bg-") : "";
-  const textColorClass = colorParts[1] || "";
-
-  return (
-    <div
-      className={`flex justify-between items-center p-4 rounded-xl border border-transparent hover:border-slate-100 transition-all ${bgOpacityClass}`}
-    >
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${safeColor}`}>{icon}</div>
-        <span className="text-xs font-bold text-slate-700">{label}</span>
-      </div>
-      <span className={`text-sm font-black ${textColorClass}`}>
-        {points}
-      </span>
-    </div>
-  );
-};
 
 const CandidateCard = ({ full_name, student_id, university, status }) => {
   // Mapping màu sắc dựa trên status

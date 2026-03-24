@@ -41,6 +41,7 @@ import UserSetting from "../pages/user/Settings/UserSetting";
 import Profile from "../pages/user/Profile/Profile";
 import Event from "../pages/user/Event/Event";
 import WalletPage from "../pages/user/Wallet/Wallet";
+import UserAwards from "../pages/user/Awards/UserAwards";
 
 //public pages
 import PublicLayout from "../layouts/PublicLayout";
@@ -111,6 +112,7 @@ const AppRoutes = () => {
         <Route path="profile" element={<Profile />} />
         <Route path="event" element={<Event />} />
           <Route path="wallet" element={<WalletPage />} />
+          <Route path="awards" element={<UserAwards />} />
         </Route>
       </Route>
 
