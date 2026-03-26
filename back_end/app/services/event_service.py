@@ -204,6 +204,33 @@ def update_event_registration(db: Session, registration_id: UUID, registration_i
         
     db.commit()
     db.refresh(db_registration)
+
+    # Gửi thông báo nếu có chuyển biến trạng thái (Check-in, Hủy, Từ chối)
+    if "status" in update_data:
+        new_st = update_data["status"]
+        notif_title = None
+        notif_msg = None
+
+        if new_st in [EventRegistrationStatus.REJECTED, EventRegistrationStatus.CANCELLED]:
+            notif_title = "Cập nhật vé Sự kiện"
+            notif_msg = f"Đăng ký tham gia '{db_registration.event.name}' của bạn bị từ chối/hủy ({new_st})."
+        elif new_st == EventRegistrationStatus.ATTENDED:
+            notif_title = "Bạn đã Điểm danh thành công"
+            notif_msg = f"Đã ghi nhận tham gia '{db_registration.event.name}'. Điểm rèn luyện sẽ tự động cộng sau sự kiện."
+
+        if notif_title and notif_msg:
+            try:
+                notification_service.create_notification(
+                    db=db,
+                    notification_in=NotificationCreate(
+                        user_id=db_registration.user_id,
+                        title=notif_title,
+                        message=notif_msg
+                    )
+                )
+            except Exception as e:
+                print(f"Error notifying registration update: {e}")
+
     return db_registration
 
 
@@ -215,6 +242,21 @@ def create_qa(db: Session, qa_in: EventQACreate):
     db.add(db_qa)
     db.commit()
     db.refresh(db_qa)
+
+    # Nếu model có user_id
+    if hasattr(db_qa, "user_id") and db_qa.user_id:
+        try:
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_qa.user_id,
+                    title="Đã gửi Câu hỏi thành công",
+                    message="Ban Tổ chức đã tiếp nhận câu hỏi của bạn. Vui lòng chờ phản hồi trực tuyến."
+                )
+            )
+        except Exception:
+            pass
+
     return db_qa
 
 def get_event_qa(db: Session, event_id: UUID, skip: int = 0, limit: int = 100):
@@ -228,6 +270,20 @@ def answer_qa(db: Session, qa_id: UUID, answer: str):
     db_qa.is_answered = True
     db.commit()
     db.refresh(db_qa)
+
+    if hasattr(db_qa, "user_id") and db_qa.user_id:
+        try:
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_qa.user_id,
+                    title="Ban Tổ chức đã giải đáp câu hỏi",
+                    message=f"Hệ thống vừa ghi nhận phản hồi cho câu hỏi Q&A của bạn. Hãy vào xem ngay!"
+                )
+            )
+        except Exception:
+            pass
+
     return db_qa
 
 
@@ -239,6 +295,20 @@ def report_incident(db: Session, incident_in: EventIncidentCreate):
     db.add(db_incident)
     db.commit()
     db.refresh(db_incident)
+
+    if hasattr(db_incident, "reported_by") and db_incident.reported_by:
+        try:
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_incident.reported_by,
+                    title="Tiếp nhận Báo cáo Sự cố",
+                    message="Cảm ơn bạn. SubAdmin đang trong quá trình điều tra & giải quyết sự cố báo cáo."
+                )
+            )
+        except Exception:
+            pass
+
     return db_incident
 
 def get_event_incidents(db: Session, event_id: UUID, skip: int = 0, limit: int = 100):
@@ -251,6 +321,20 @@ def update_incident_status(db: Session, incident_id: UUID, status: str):
     db_incident.status = status
     db.commit()
     db.refresh(db_incident)
+
+    if hasattr(db_incident, "reported_by") and db_incident.reported_by and status == "RESOLVED":
+        try:
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_incident.reported_by,
+                    title="Giải quyết xong Sự cố",
+                    message="Báo cáo sự cố của bạn đã được Admin xử lý thành công (RESOLVED). Cảm ơn bạn!"
+                )
+            )
+        except Exception:
+            pass
+
     return db_incident
 
 def get_event_summary(db: Session, event_id: UUID):

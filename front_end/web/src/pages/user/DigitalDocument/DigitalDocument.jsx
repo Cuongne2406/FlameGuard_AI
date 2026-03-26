@@ -15,16 +15,31 @@ import {
   Printer,
   X,
   CheckCircle,
+  CloudUpload,
+  AlertCircle
 } from "lucide-react";
+import { AuthContext } from "../../../context/AuthContext";
+import { awardService } from "../../../services/awardService";
 
 const DigitalDocument = () => {
   const SHOW_PENDING = false; // Tạm thời ẩn mục Thủ tục đang xử lý
 
 
+  const { user } = React.useContext(AuthContext);
   const [requests, setRequests] = useState([]);
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [activeTab, setActiveTab] = useState(0); // 0: Khoa, 1: Trường, 2: Mẫu đơn
+  
+  // State for SV5T Application Procedure
+  const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    award_name: "Sinh viên 5 Tốt cấp Trường",
+    description: "",
+    evidence_url: ""
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,6 +66,28 @@ const DigitalDocument = () => {
       alert("Đã gửi yêu cầu thành công!");
     } catch (err) {
       alert("Lỗi khi gửi yêu cầu.");
+    }
+  };
+
+  const handleApplyAward = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      if (!user) {
+         alert("Vui lòng đăng nhập để nộp hồ sơ!");
+         return;
+      }
+      await awardService.createAward({
+        ...formData,
+        user_id: user.id
+      });
+      setIsSubmitModalOpen(false);
+      setFormData({ ...formData, description: "", evidence_url: "" });
+      alert("Gửi hồ sơ xét duyệt thành công!");
+    } catch (err) {
+      alert("Lỗi khi nộp hồ sơ. Vui lòng thử lại!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -165,8 +202,9 @@ const DigitalDocument = () => {
                 {["Đoàn - Hội Khoa", "Đoàn Trường", "Mẫu đơn"].map((tab, i) => (
                   <button
                     key={i}
+                    onClick={() => setActiveTab(i)}
                     className={`pb-4 text-xs font-black uppercase tracking-widest transition-all
-                    ${i === 0 ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-400 hover:text-slate-600"}
+                    ${activeTab === i ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-400 hover:text-slate-600"}
                   `}
                   >
                     {tab}
@@ -182,9 +220,46 @@ const DigitalDocument = () => {
               {loading ? (
                 <p className="text-xs text-slate-400 font-bold">Đang tải văn bản...</p>
               ) : (
-                docs.map((doc) => (
-                  <div
-                    key={doc.id}
+                <>
+                  {/* injected Procedure Card - Only show in "Mẫu đơn" tab */}
+                  {activeTab === 2 && (
+                    <div
+                      onClick={() => setIsSubmitModalOpen(true)}
+                      className="flex items-center gap-5 p-5 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-all group cursor-pointer border border-orange-100 hover:border-orange-200 hover:shadow-sm"
+                    >
+                      <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-[12px] shrink-0 shadow-sm bg-orange-100 text-orange-600">
+                        FORM
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded text-[9px] font-black bg-orange-500 text-white uppercase tracking-widest leading-none">THỦ TỤC ĐIỆN TỬ</span>
+                        </div>
+                        <h5 className="text-sm font-black text-slate-800 group-hover:text-amber-600 transition-colors mt-1">
+                          Nộp minh chứng xét duyệt Danh hiệu Sinh viên 5 Tốt (Online)
+                        </h5>
+                        <p className="text-[11px] text-slate-500 font-medium mt-1">
+                          Dành cho sinh viên đã đủ điều kiện theo văn bản quy định.
+                        </p>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        className="text-orange-300 group-hover:text-orange-600 group-hover:translate-x-1 transition-all shrink-0"
+                      />
+                    </div>
+                  )}
+
+                  {/* Standard docs filtered by active tab */}
+                  {docs.filter(doc => {
+                    const title = (doc.title || "").toLowerCase();
+                    const type = (doc.document_type || "").toLowerCase();
+                    // Basic heuristic filter (if no DB category is strictly enforced)
+                    if (activeTab === 0) return !title.includes("trường") && !title.includes("mẫu") && !title.includes("đơn") && !type.includes("form");
+                    if (activeTab === 1) return title.includes("trường") || type.includes("trường");
+                    if (activeTab === 2) return title.includes("mẫu") || title.includes("đơn") || type.includes("form");
+                    return true;
+                  }).map((doc) => (
+                    <div
+                      key={doc.id}
                     onClick={() => setSelectedDoc(doc)}
                     className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-blue-100 hover:shadow-sm"
                   >
@@ -218,7 +293,8 @@ const DigitalDocument = () => {
                       className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0"
                     />
                   </div>
-                ))
+                ))}
+                </>
               )}
             </div>
 
@@ -318,6 +394,104 @@ const DigitalDocument = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* FORM NỘP HỒ SƠ MODAL */}
+      {isSubmitModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setIsSubmitModalOpen(false)}
+          />
+          <div className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100">
+            {/* Modal Header */}
+            <div className="bg-slate-50 p-8 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-200">
+                  <CloudUpload size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-800">Thủ tục Nộp Hồ sơ</h3>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">Trực tuyến</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSubmitModalOpen(false)}
+                className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleApplyAward} className="p-8 space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Danh hiệu nộp đơn
+                </label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={formData.award_name}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-500 outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Link minh chứng (Google Drive / PDF) <span className="text-red-500">*</span>
+                </label>
+                <div className="relative group">
+                  <CloudUpload className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" size={20} />
+                  <input 
+                    required
+                    type="url" 
+                    placeholder="https://drive.google.com/..."
+                    value={formData.evidence_url}
+                    onChange={(e) => setFormData({...formData, evidence_url: e.target.value})}
+                    className="w-full bg-white border border-slate-200 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 italic ml-1">* Đảm bảo link đã được mở quyền truy cập công khai.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                  Ghi chú bổ sung
+                </label>
+                <textarea 
+                  rows={3}
+                  placeholder="Mô tả tóm tắt các thành tích nổi bật của bạn..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm resize-none"
+                />
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button"
+                  onClick={() => setIsSubmitModalOpen(false)}
+                  className="flex-1 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  disabled={isSubmitting}
+                  type="submit"
+                  className="flex-[2] py-4 bg-orange-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? "Đang gửi..." : (
+                    <>
+                      Xác nhận Nộp đơn <ChevronRight size={16} />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

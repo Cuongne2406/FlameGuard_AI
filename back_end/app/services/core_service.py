@@ -13,8 +13,9 @@ from app.schemas.core_schemas import (
 )
 from sqlalchemy import func
 from app.core.security import get_password_hash
-from app.services import ai_audit_service
+from app.services import ai_audit_service, notification_service
 from app.schemas.ai_audit_schemas import AuditLogCreate
+from app.schemas.notification_schemas import NotificationCreate
 from datetime import datetime
 
 # ==========================================
@@ -214,6 +215,21 @@ def assign_member_to_org(db: Session, assign_in: UserOrganizationCreate):
         
     db.commit()
     db.refresh(db_assign)
+
+    # Notify user about org assignment
+    try:
+        role_text = assign_in.title if getattr(assign_in, 'title', None) else ("Quản lý" if assign_in.is_primary else "Thành viên")
+        notification_service.create_notification(
+            db=db,
+            notification_in=NotificationCreate(
+                user_id=assign_in.user_id,
+                title="Cập nhật Đơn vị & Chức vụ",
+                message=f"Bạn đã được phân bổ vào đơn vị '{org.name}' với vai trò: {role_text}."
+            )
+        )
+    except Exception:
+        pass
+
     return db_assign
 
 
@@ -528,6 +544,19 @@ def create_club_proposal(db: Session, prop_in: ClubProposalCreate, user_id: UUID
     db.add(db_prop)
     db.commit()
     db.refresh(db_prop)
+
+    try:
+        notification_service.create_notification(
+            db=db,
+            notification_in=NotificationCreate(
+                user_id=user_id,
+                title="Đã nhận Đề xuất CLB",
+                message=f"Bản nháp đề xuất thành lập '{prop_in.title}' của bạn đã được hệ thống lưu trữ và chờ duyệt."
+            )
+        )
+    except Exception:
+        pass
+
     return db_prop
 
 def get_club_proposals(db: Session):
@@ -552,4 +581,18 @@ def approve_club_proposal(db: Session, prop_id: UUID):
         raise HTTPException(status_code=404, detail="Proposal not found")
     db_prop.status = "APPROVED"
     db.commit()
+
+    if db_prop.requested_by:
+        try:
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_prop.requested_by,
+                    title="Đề xuất CLB được phê duyệt 🎉",
+                    message=f"Chúc mừng! Đề xuất thành lập '{db_prop.title}' của bạn đã được Ban Giám Hiệu phê duyệt."
+                )
+            )
+        except Exception:
+            pass
+
     return db_prop

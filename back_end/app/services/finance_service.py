@@ -12,6 +12,8 @@ from app.schemas.finance_schemas import (
     AssetLoanCreate, AssetLoanUpdate,
     TransactionCreate
 )
+from app.services import notification_service
+from app.schemas.notification_schemas import NotificationCreate
 
 # ==========================================
 # Budget Services
@@ -90,6 +92,27 @@ def update_fund_request(db: Session, request_id: UUID, request_in: FundRequestUp
         
     db.commit()
     db.refresh(db_request)
+
+    # Gửi thông báo nếu thay đổi trạng thái quỹ
+    if new_status != old_status and new_status in ["APPROVED", "REJECTED", "DISBURSED"]:
+        try:
+            notif_title = "Cập nhật Phiếu Xin Cấu Quỹ"
+            notif_msg = f"Yêu cầu cấp quỹ của bạn đã được cập nhật thành: {new_status}"
+            if new_status == "DISBURSED":
+                notif_title = "Giải ngân thành công"
+                notif_msg = f"Yêu cầu cấp vốn {db_request.amount}đ của bạn đã được giải ngân."
+                
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_request.requested_by,
+                    title=notif_title,
+                    message=notif_msg
+                )
+            )
+        except Exception:
+            pass
+
     return db_request
 
 
@@ -169,6 +192,22 @@ def update_asset_loan(db: Session, loan_id: UUID, loan_in: AssetLoanUpdate):
         
     db.commit()
     db.refresh(db_loan)
+
+    # Gửi thông báo đổi trạng thái Mượn Tài sản
+    if loan_in.status:
+        try:
+            new_st = loan_in.status.value if hasattr(loan_in.status, "value") else loan_in.status
+            notification_service.create_notification(
+                db=db,
+                notification_in=NotificationCreate(
+                    user_id=db_loan.borrowed_by,
+                    title="Cấu nhật Mượn Tài sản",
+                    message=f"Phiếu mượn tài sản của bạn đã chuyển sang trạng thái: {new_st}."
+                )
+            )
+        except Exception:
+            pass
+
     return db_loan
 
 # ==========================================

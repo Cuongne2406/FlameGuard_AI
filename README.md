@@ -28,30 +28,45 @@ git clone https://github.com/Cuongne2406/FlameGuard_AI.git
     a. Front_end
             Terminal: cd front_end/web
         - npm install
-        - npm install react react-dom react-router-dom@6.22.3
-        - npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
    
     b. Back_end
             Terminal: cd back_end
         - B1:  python -m venv venv
         - B2:  .\venv\Scripts\activate
         - B3:  pip install -r requirements.txt
-               pip install psycopg2-binary
-        - B4: tại back_end/
-              --- tạo một file tên là .env (đây là file cấu hình hệ thống)
-                        ``` Nội dung file cấu hình 
-         DATABASE_URL=postgresql://postgres:********@localhost:5432/TÊN_DATABASE_BẠN_TẠO_TRONG_POSTGRESQL
-         SECRET_KEY="SECRET_KEY_BẠN_TỰ_ĐẶT"
-         MAIL_USERNAME=email bạn dùng để nhận thư feedback
-         MAIL_PASSWORD=App PassWord của email nhận feedback
+
+        
+        ### 1.1. Cấu hình file `.env`
+            Tạo file `.env` trong thư mục `front_end/web/` với nội dung:
+            ```env
+            VITE_API_URL=http://localhost:8000/api/v1
+            ```
+        
+        ### 1.2. Cấu hình file `.env`
+            Tạo file `.env` trong thư mục `back_end/` với nội dung:
+            ```env
+            DATABASE_URL=postgresql://postgres:********@localhost:5432/TÊN_DATABASE_BẠN_TẠO_TRONG_POSTGRESQL
+            SECRET_KEY="SECRET_KEY_BẠN_TỰ_ĐẶT"
+            
+            MAIL_USERNAME=email bạn dùng để nhận thư feedback
+            MAIL_PASSWORD=App  PassWord của email nhận feedback
+            MAIL_FROM=Email bạn dùng để gửi thư feedback 
+            MAIL_PORT=587
+            MAIL_SERVER=smtp.gmail.com
+            
+            CLOUDINARY_CLOUD_NAME=dtb6uvcw7
+            CLOUDINARY_API_KEY=598317716265961
+            CLOUDINARY_API_SECRET=4rKmzQavOB7HQuI9uUbk4tqH0Ao
+            ```
+
 
 2. Cách để dự án hoạt động: (Chạy song song 2 terminal)
-    a. Front_end
-        - cd front_end/web
-        - npm run dev
-    b. Back_end
-        -   cd back_end
-        -   .\venv\Scripts\activate
-        -   uvicorn app.main:app --reload
-   
-        -   (dành cho swagger) truy cập: 127.0.0.1:8000/docs 
+        a. Front_end
+            - cd front_end/web
+            - npm run dev
+        b. Back_end
+            -   cd back_end
+            -   .\venv\Scripts\activate
+            -   uvicorn app.main:app --reload
+    
+            -   (dành cho swagger) truy cập: 127.0.0.1:8000/docs 

@@ -7,6 +7,8 @@ from app.models.awards import Award, AwardStatus, AwardCriteria, CriteriaType
 from app.models.core import Organization, OrgType, AcademicTerm, User, UserOrganization
 from app.models.events import EventRegistration, EventRegistrationStatus
 from app.schemas.award_schemas import AwardCreate, AwardUpdate
+from app.services.notification_service import create_notification
+from app.schemas.notification_schemas import NotificationCreate
 
 def check_award_eligibility(db: Session, user_id: UUID):
     """
@@ -72,6 +74,18 @@ def create_award_application(db: Session, award_in: AwardCreate):
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # Gửi thông báo nộp thành công cho Sinh viên
+    try:
+        notif_in = NotificationCreate(
+            user_id=db_obj.user_id,
+            title="Đã lưu Hồ sơ Xét duyệt",
+            message=f"Hồ sơ '{db_obj.award_name}' của bạn đã được ghi nhận và đang chờ Admin xét duyệt."
+        )
+        create_notification(db, notif_in)
+    except Exception as e:
+        print(f"Lỗi khi gửi thông báo nộp hồ sơ: {e}")
+
     return db_obj
 
 def get_awards_list(db: Session, skip: int = 0, limit: int = 100):
@@ -117,6 +131,23 @@ def update_award_assessment(db: Session, award_id: UUID, award_in: AwardUpdate):
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # Gửi thông báo kết quả duyệt cho Sinh viên
+    try:
+        status_str = "ĐƯỢC DUYỆT" if db_obj.status == AwardStatus.APPROVED else "BỊ TỪ CHỐI"
+        notif_msg = f"Hồ sơ '{db_obj.award_name}' của bạn đã {status_str}."
+        if db_obj.comments:
+            notif_msg += f" Kèm lời nhắn: {db_obj.comments}"
+            
+        notif_in = NotificationCreate(
+            user_id=db_obj.user_id,
+            title=f"Kết quả Khảo thí: {status_str}",
+            message=notif_msg
+        )
+        create_notification(db, notif_in)
+    except Exception as e:
+        print(f"Lỗi khi gửi thông báo kết quả xét duyệt: {e}")
+
     return db_obj
 
 def get_award_stats(db: Session, timescale: str = "Tháng này"):
