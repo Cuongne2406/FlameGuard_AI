@@ -56,6 +56,8 @@ class User(Base):
     training_score = Column(Integer, default=0)
     university = Column(String, default="ĐH Lạc Hồng")
     address = Column(String, default="Đồng Nai")
+    class_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
+    device_id = Column(String, nullable=True, unique=True)
     
     # Settings & Profile
     is_2fa_enabled = Column(Boolean, default=False)
@@ -68,6 +70,7 @@ class User(Base):
     
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     organizations = relationship("UserOrganization", back_populates="user")
+    study_class = relationship("Organization", foreign_keys=[class_id])
     event_registrations = relationship("EventRegistration", back_populates="user")
     fund_requests = relationship("FundRequest", foreign_keys="[FundRequest.requested_by]", back_populates="requester")
     asset_loans = relationship("AssetLoan", back_populates="borrower")

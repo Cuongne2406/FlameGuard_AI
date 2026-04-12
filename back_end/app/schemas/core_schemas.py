@@ -213,9 +213,11 @@ class UserBase(BaseModel):
     zalo_alerts_enabled: bool = True
     daily_digest_enabled: bool = False
     signature_data: Optional[str] = None
+    device_id: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
+    class_id: Optional[UUID] = None
     role_ids: Optional[List[UUID]] = []
 
 class UserUpdate(BaseModel):
@@ -230,6 +232,8 @@ class UserUpdate(BaseModel):
     zalo_alerts_enabled: Optional[bool] = None
     daily_digest_enabled: Optional[bool] = None
     signature_data: Optional[str] = None
+    class_id: Optional[UUID] = None
+    device_id: Optional[str] = None
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
 
@@ -240,6 +244,8 @@ class UserResponse(UserBase):
     training_score: int = 0
     university: Optional[str] = None
     address: Optional[str] = None
+    class_id: Optional[UUID] = None
+    class_name: Optional[str] = None
     role_title: Optional[str] = None
     activity_count: int = 0
     award_count: int = 0

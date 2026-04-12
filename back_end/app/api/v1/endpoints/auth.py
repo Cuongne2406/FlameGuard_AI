@@ -1,6 +1,6 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -27,7 +27,9 @@ router = APIRouter()
 
 @router.post("/login", response_model=Token)
 async def login_access_token(
-    db: Session = Depends(deps.get_db), form_data: OAuth2PasswordRequestForm = Depends()
+    db: Session = Depends(deps.get_db), 
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    x_device_id: str = Header(None, alias="X-Device-ID")
 ) -> Any:
     """
     OAuth2 compatible token login, get an access token for future requests.
@@ -66,6 +68,20 @@ async def login_access_token(
                 )
                 db.add(user)
                 db.flush() # Lấy ID tạm thời để gán role
+
+            # --- DEVICE BINDING LOGIC ---
+            if x_device_id:
+                if not user.device_id:
+                    # Lần đầu đăng nhập: Gắn thiết bị
+                    user.device_id = x_device_id
+                    db.commit()
+                elif user.device_id != x_device_id:
+                    # Sai thiết bị đã gắn: Từ chối
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
+                    )
+            # ----------------------------
             
             # Đảm bảo User có ít nhất role STUDENT (Repair logic cho account cũ)
             if not user.roles:
@@ -122,6 +138,18 @@ async def login_access_token(
             detail="Mã số sinh viên (username) hoặc mật khẩu không chính xác",
             headers={"WWW-Authenticate": "Bearer"},
         )
+        
+    # --- DEVICE BINDING LOGIC (Local Fallback) ---
+    if x_device_id:
+        if not user.device_id:
+            user.device_id = x_device_id
+            db.commit()
+        elif user.device_id != x_device_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
+            )
+    # ---------------------------------------------
         
     # Ghi nhật ký đăng nhập Local
     ai_audit_service.create_system_audit_log(db, AuditLogCreate(
