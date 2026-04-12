@@ -11,8 +11,9 @@ export const unstable_settings = {
 import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { View, ActivityIndicator } from 'react-native';
-import { COLORS } from '@/src/constants/theme';
+import { View, ActivityIndicator, Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { COLORS } from '../src/constants/theme';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -22,6 +23,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (Platform.OS === 'web') {
+        setIsAuthenticated(true); // Bypass for web testing
+        return;
+      }
       const token = await SecureStore.getItemAsync('userToken');
       setIsAuthenticated(!!token);
     };
@@ -45,14 +50,16 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="login" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="settings" options={{ presentation: 'card' }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="login" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

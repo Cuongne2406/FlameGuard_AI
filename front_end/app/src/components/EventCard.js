@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { Calendar, MapPin, Award } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 
@@ -48,84 +48,90 @@ const EventCard = ({ event, onPress, horizontal = false }) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: SIZES.radius,
+    borderRadius: SIZES.radius * 1.5,
     overflow: 'hidden',
-    marginBottom: SIZES.base * 2,
+    marginBottom: SIZES.padding,
+    ...Platform.select({
+      ios: SHADOWS.light,
+      android: { elevation: 3 }
+    })
   },
   horizontalCard: {
-    width: 280,
-    marginRight: SIZES.base * 2,
+    width: 260,
+    marginRight: SIZES.padding,
   },
   fullCard: {
     width: '100%',
   },
   image: {
     width: '100%',
-    height: 150,
+    height: 160,
     resizeMode: 'cover',
   },
   content: {
-    padding: SIZES.base * 1.5,
+    padding: 16,
   },
   tagContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SIZES.base,
+    marginBottom: 10,
   },
   tag: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   tagText: {
     color: COLORS.white,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   pointsTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(0, 82, 212, 0.05)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
     gap: 4,
   },
   pointsText: {
     color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.text,
     marginBottom: 4,
   },
   organizer: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textSecondary,
-    marginBottom: SIZES.base,
+    marginBottom: 12,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingTop: SIZES.base,
-    marginTop: SIZES.base / 2,
+    paddingTop: 12,
+    marginTop: 4,
+    gap: 15,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   infoText: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   }
 });
 

@@ -3,9 +3,9 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
-  SafeAreaView 
+  FlatList,
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { 
   Bell, 
@@ -13,9 +13,10 @@ import {
   Info, 
   Clock, 
   ChevronRight,
-  Announce
+  Megaphone
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const mockNotifications = [
   {
@@ -53,7 +54,8 @@ const mockNotifications = [
 ];
 
 const NotificationsScreen = () => {
-  const getIcon = (type) => {
+  const insets = useSafeAreaInsets();
+  const getIcon = (type: string) => {
     switch(type) {
       case 'EVENT': return <Bell size={20} color={COLORS.primary} />;
       case 'SCORE': return <MessageSquare size={20} color={COLORS.success} />;
@@ -62,7 +64,7 @@ const NotificationsScreen = () => {
     }
   };
 
-  const getIconBg = (type) => {
+  const getIconBg = (type: string) => {
     switch(type) {
       case 'EVENT': return 'rgba(67, 97, 238, 0.1)';
       case 'SCORE': return 'rgba(76, 175, 80, 0.1)';
@@ -71,7 +73,7 @@ const NotificationsScreen = () => {
     }
   };
 
-  const renderItem = ({ item }) => (
+  const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity style={[styles.notificationCard, !item.isRead && styles.unreadCard, SHADOWS.light]}>
       <View style={[styles.iconContainer, { backgroundColor: getIconBg(item.type) }]}>
         {getIcon(item.type)}
@@ -92,12 +94,15 @@ const NotificationsScreen = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Trung tâm Thông báo</Text>
-        <TouchableOpacity>
-          <Text style={styles.markRead}>Đánh dấu đã đọc</Text>
-        </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 15 }, SHADOWS.light]}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Thông báo</Text>
+          <TouchableOpacity>
+            <Text style={styles.markRead}>Đọc tất cả</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.headerSub}>Chào mừng bạn quay lại với các tin tức mới nhất</Text>
       </View>
 
       <FlatList
@@ -107,7 +112,7 @@ const NotificationsScreen = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -117,21 +122,33 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
+    paddingHorizontal: SIZES.padding,
+    paddingBottom: 25,
+    backgroundColor: COLORS.surface,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    zIndex: 10,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
-    padding: SIZES.padding,
-    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    marginBottom: 6,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '800',
     color: COLORS.text,
+  },
+  headerSub: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   markRead: {
     fontSize: 14,
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,
@@ -143,10 +160,12 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 20,
     marginBottom: 12,
+    ...(Platform.OS === 'ios' ? SHADOWS.light : { elevation: 2 })
   },
   unreadCard: {
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
+    backgroundColor: '#F0F4FF',
   },
   iconContainer: {
     width: 48,

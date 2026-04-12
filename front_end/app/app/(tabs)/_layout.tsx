@@ -8,7 +8,7 @@ import {
   User,
   LayoutDashboard
 } from 'lucide-react-native';
-import { COLORS } from '../../src/constants/theme';
+import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 
 export default function TabLayout() {
   return (
@@ -21,13 +21,15 @@ export default function TabLayout() {
           backgroundColor: COLORS.surface,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          height: Platform.OS === 'ios' ? 100 : 80,
+          paddingBottom: Platform.OS === 'ios' ? 40 : 20,
           paddingTop: 10,
+          ...SHADOWS.medium,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 12,
+          fontWeight: '700',
+          marginBottom: 4,
         }
       }}>
       <Tabs.Screen

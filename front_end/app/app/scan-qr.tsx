@@ -11,12 +11,14 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { X, Zap, ZapOff, ShieldCheck, AlertCircle } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SIZES } from '../src/constants/theme';
 import LottieView from 'lottie-react-native';
 
 const { width, height } = Dimensions.get('window');
 
 const ScanQRScreen = () => {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [flash, setFlash] = useState(false);
@@ -40,7 +42,7 @@ const ScanQRScreen = () => {
     );
   }
 
-  const handleBarCodeScanned = ({ data }) => {
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
     
@@ -104,7 +106,7 @@ const ScanQRScreen = () => {
         </View>
 
         {/* Floating Controls */}
-        <SafeAreaView style={styles.controls}>
+        <View style={[styles.controls, { paddingTop: insets.top }]}>
           <View style={styles.header}>
             <TouchableOpacity 
               onPress={() => router.back()}
@@ -120,7 +122,7 @@ const ScanQRScreen = () => {
               {flash ? <Zap size={24} color="#FFD700" /> : <ZapOff size={24} color={COLORS.white} />}
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </CameraView>
     </View>
   );

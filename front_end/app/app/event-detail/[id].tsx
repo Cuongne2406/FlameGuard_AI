@@ -164,7 +164,7 @@ const EventDetailScreen = () => {
 };
 
 // Sub-component for info cards
-const InfoCard = ({ icon, label, value }) => (
+const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
   <View style={styles.infoCard}>
     <View style={styles.infoIconContainer}>{icon}</View>
     <View>

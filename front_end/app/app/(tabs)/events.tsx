@@ -4,12 +4,13 @@ import {
   Text, 
   StyleSheet, 
   FlatList, 
-  TouchableOpacity, 
+  TouchableOpacity,
   TextInput,
   Image,
-  SafeAreaView
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Search, 
   Filter, 
@@ -23,6 +24,7 @@ import { mockEvents } from '../../src/api/mockData';
 
 const EventsScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredEvents = mockEvents.filter(event => 
@@ -30,16 +32,17 @@ const EventsScreen = () => {
     event.organizer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderEventItem = ({ item }) => (
+  const renderEventItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={[styles.eventCard, SHADOWS.light]}
       onPress={() => router.push(`/event-detail/${item.id}`)}
+      activeOpacity={0.7}
     >
       <Image source={{ uri: item.image }} style={styles.eventImage} />
       <View style={styles.eventInfo}>
         <View style={styles.badgeRow}>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.status}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: item.status === 'Upcoming' ? 'rgba(67, 97, 238, 0.1)' : 'rgba(76, 175, 80, 0.1)' }]}>
+            <Text style={[styles.statusText, { color: item.status === 'Upcoming' ? COLORS.primary : COLORS.success }]}>{item.status}</Text>
           </View>
           <View style={styles.pointsBadge}>
             <Trophy size={12} color={COLORS.warning} />
@@ -60,29 +63,30 @@ const EventsScreen = () => {
           </View>
         </View>
       </View>
-      <ChevronRight size={20} color={COLORS.border} />
+      <ChevronRight size={18} color={COLORS.border} />
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 15 }, SHADOWS.light]}>
         <Text style={styles.headerTitle}>Hành trình Sự kiện</Text>
         <Text style={styles.headerSub}>Khám phá các hoạt động Đoàn - Hội mới nhất</Text>
       </View>
 
       <View style={styles.searchSection}>
-        <View style={styles.searchContainer}>
-          <Search size={20} color={COLORS.textSecondary} />
+        <View style={[styles.searchContainer, SHADOWS.light]}>
+          <Search size={22} color={COLORS.textSecondary} />
           <TextInput
             placeholder="Tìm kiếm sự kiện, hoạt động..."
             style={styles.searchInput}
             value={searchQuery}
             onChangeText={setSearchQuery}
+            placeholderTextColor={COLORS.textSecondary}
           />
         </View>
-        <TouchableOpacity style={styles.filterButton}>
-          <Filter size={20} color={COLORS.white} />
+        <TouchableOpacity style={[styles.filterButton, SHADOWS.light]}>
+          <Filter size={22} color={COLORS.white} />
         </TouchableOpacity>
       </View>
 
@@ -98,7 +102,7 @@ const EventsScreen = () => {
           </View>
         }
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -108,23 +112,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    padding: SIZES.padding,
+    paddingHorizontal: SIZES.padding,
+    paddingBottom: 25,
     backgroundColor: COLORS.surface,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    zIndex: 10,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 26,
+    fontWeight: '800',
     color: COLORS.text,
   },
   headerSub: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 6,
+    fontWeight: '500',
   },
   searchSection: {
     flexDirection: 'row',
     paddingHorizontal: SIZES.padding,
-    paddingVertical: 15,
+    marginTop: 20,
+    marginBottom: SIZES.padding,
     gap: 12,
   },
   searchContainer: {
@@ -132,20 +142,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: 15,
+    borderRadius: SIZES.radius * 1.2,
     paddingHorizontal: 15,
-    height: 50,
+    height: 55,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   searchInput: {
     flex: 1,
     marginLeft: 10,
     fontSize: 15,
+    color: COLORS.text,
   },
   filterButton: {
-    width: 50,
-    height: 50,
+    width: 55,
+    height: 55,
     backgroundColor: COLORS.primary,
-    borderRadius: 15,
+    borderRadius: SIZES.radius * 1.2,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -158,8 +171,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    padding: 15,
     marginBottom: 16,
+    ...(Platform.OS === 'ios' ? SHADOWS.light : { elevation: 3 })
   },
   eventImage: {
     width: 80,

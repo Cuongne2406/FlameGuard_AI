@@ -4,10 +4,10 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  SafeAreaView, 
   Image, 
   TouchableOpacity,
-  Dimensions
+  Dimensions,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
@@ -21,6 +21,7 @@ import {
   Settings as SettingsIcon,
   Share2
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import { mockUser } from '../../src/api/mockData';
 
@@ -28,6 +29,7 @@ const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const chartData = {
     labels: ["Bí thư", "Kỹ thuật", "Giao tiếp", "Sáng tạo", "Xã hội"],
     datasets: [
@@ -46,10 +48,14 @@ const ProfileScreen = () => {
   const chartConfig = {
     backgroundGradientFrom: COLORS.surface,
     backgroundGradientTo: COLORS.surface,
-    color: (opacity = 1) => `rgba(67, 97, 238, ${opacity})`,
+    color: (opacity = 1) => `rgba(0, 82, 212, ${opacity})`, // Solid primary blue
     strokeWidth: 2,
+    barPercentage: 0.6,
+    useShadowColorFromDataset: false,
+    decimalPlaces: 0,
+    labelColor: (opacity = 1) => `rgba(43, 45, 66, ${opacity})`,
     fillShadowGradient: COLORS.primary,
-    fillShadowGradientOpacity: 0.2,
+    fillShadowGradientOpacity: 1,
   };
 
   return (
@@ -57,36 +63,35 @@ const ProfileScreen = () => {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <LinearGradient
-          colors={[COLORS.gradient[0], COLORS.gradient[1]]}
-          style={styles.header}
+          colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 15 }]}
         >
-          <SafeAreaView>
-            <View style={styles.headerTop}>
-              <TouchableOpacity style={styles.circularButton}>
-                <Share2 size={20} color={COLORS.white} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.circularButton}
-                onPress={() => router.push('/settings')}
-              >
-                <SettingsIcon size={20} color={COLORS.white} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.headerTop}>
+            <TouchableOpacity style={styles.circularButton}>
+              <Share2 size={20} color={COLORS.white} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.circularButton}
+              onPress={() => router.push('/settings')}
+            >
+              <SettingsIcon size={20} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
 
-            <View style={styles.profileInfo}>
-              <View style={styles.avatarContainer}>
-                <Image source={{ uri: mockUser.avatar_url }} style={styles.avatar} />
-                <View style={styles.levelBadge}>
-                  <Text style={styles.levelText}>Lvl {mockUser.level}</Text>
-                </View>
+          <View style={styles.profileInfo}>
+            <View style={styles.avatarContainer}>
+              <Image source={{ uri: mockUser.avatar_url }} style={styles.avatar} />
+              <View style={[styles.levelBadge, SHADOWS.light]}>
+                <Text style={styles.levelText}>Lvl {mockUser.level}</Text>
               </View>
-              <Text style={styles.userName}>{mockUser.full_name}</Text>
-              <View style={styles.idChip}>
-                <Text style={styles.idText}>MSSV: {mockUser.student_id}</Text>
-              </View>
-              <Text style={styles.facultyText}>{mockUser.class_name} • {mockUser.university}</Text>
             </View>
-          </SafeAreaView>
+            <Text style={styles.userName}>{mockUser.full_name}</Text>
+            <View style={styles.idChip}>
+              <Text style={styles.idText}>MSSV: {mockUser.student_id}</Text>
+            </View>
+          </View>
         </LinearGradient>
 
         <View style={styles.content}>
@@ -162,16 +167,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingBottom: 30,
+    paddingBottom: 40,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
+    zIndex: 10,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: SIZES.padding,
     gap: 12,
-    marginTop: 10,
   },
   circularButton: {
     width: 40,
@@ -240,15 +245,16 @@ const styles = StyleSheet.create({
   },
   sectionCard: {
     backgroundColor: COLORS.surface,
-    padding: SIZES.padding,
-    borderRadius: SIZES.radius * 1.5,
+    padding: 20,
+    borderRadius: 24,
     marginBottom: SIZES.padding,
+    ...(Platform.OS === 'ios' ? SHADOWS.light : { elevation: 2 })
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.text,
-    marginBottom: 15,
+    marginBottom: 20,
   },
   chartContainer: {
     alignItems: 'center',

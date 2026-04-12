@@ -3,15 +3,17 @@ import {
   Text, 
   StyleSheet, 
   ScrollView, 
-  SafeAreaView, 
   StatusBar,
   Image,
   Dimensions,
   FlatList,
-  TouchableOpacity
+  TouchableOpacity,
+  TextInput,
+  Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bell, Search, Filter, Rocket, Sparkles } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import { mockEvents, mockUser } from '../../src/api/mockData';
@@ -21,59 +23,69 @@ const { width } = Dimensions.get('window');
 
 const HomeScreen: React.FC = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header Section */}
+      {/* Header Section - Modern Gradient Header */}
       <LinearGradient
-        colors={[COLORS.gradient[0], COLORS.gradient[1]]}
+        colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top + 15 }]}
       >
-        <SafeAreaView>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.welcomeText}>Chào buổi sáng,</Text>
-              <Text style={styles.userName}>{mockUser.full_name} ✨</Text>
-            </View>
-            <TouchableOpacity style={styles.iconButton}>
-              <Bell size={24} color={COLORS.white} />
-              <View style={styles.badge} />
-            </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.welcomeText}>Chào buổi sáng,</Text>
+            <Text style={styles.userName}>{mockUser.full_name} ✨</Text>
           </View>
+          <TouchableOpacity style={styles.iconButton}>
+            <Bell size={24} color={COLORS.white} />
+            <View style={styles.badge} />
+          </TouchableOpacity>
+        </View>
 
-          {/* User Score Summary Card */}
-          <View style={[styles.scoreCard, SHADOWS.medium]}>
-            <View style={styles.scoreInfo}>
-              <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
-              <Text style={styles.scoreValue}>{mockUser.training_score}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.scoreInfo}>
-              <Text style={styles.scoreLabel}>LEVEL</Text>
-              <Text style={styles.scoreValue}>{mockUser.level}</Text>
-            </View>
-            <View style={styles.scoreAction}>
-              <Rocket size={20} color={COLORS.primary} />
-              <Text style={styles.actionText}>Review</Text>
-            </View>
+        {/* User Score Summary Card - Now integrated into the header flow */}
+        <View style={[styles.scoreCard, SHADOWS.medium]}>
+          <View style={styles.scoreInfo}>
+            <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
+            <Text style={styles.scoreValue}>{mockUser.training_score}</Text>
           </View>
-        </SafeAreaView>
+          <View style={styles.divider} />
+          <View style={styles.scoreInfo}>
+            <Text style={styles.scoreLabel}>LEVEL</Text>
+            <Text style={styles.scoreValue}>{mockUser.level}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.scoreAction}
+            onPress={() => router.push('/profile')}
+          >
+            <Rocket size={18} color={COLORS.primary} />
+            <Text style={styles.actionText}>Review</Text>
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <ScrollView 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent, 
+          { paddingBottom: insets.bottom + 120 }
+        ]}
       >
-        {/* Search Bar Placeholder */}
+        {/* Search Bar - Positioned outside header to avoid overlapping */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchBar}>
+          <View style={[styles.searchBar, SHADOWS.light]}>
             <Search size={20} color={COLORS.textSecondary} />
-            <Text style={styles.searchPlaceholder}>Tìm kiếm sự kiện, hoạt động...</Text>
+            <TextInput 
+              placeholder="Tìm kiếm sự kiện, hoạt động..." 
+              style={styles.searchInput}
+              placeholderTextColor={COLORS.textSecondary}
+            />
           </View>
-          <TouchableOpacity style={styles.filterButton}>
+          <TouchableOpacity style={[styles.filterButton, SHADOWS.light]}>
             <Filter size={20} color={COLORS.white} />
           </TouchableOpacity>
         </View>
@@ -150,17 +162,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingTop: SIZES.base * 2,
-    paddingBottom: SIZES.padding * 1.5,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingBottom: SIZES.padding * 2.5,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    zIndex: 1,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SIZES.padding,
-    marginBottom: SIZES.padding,
+    marginBottom: SIZES.padding * 1.5,
   },
   welcomeText: {
     color: 'rgba(255,255,255,0.8)',
@@ -193,11 +205,13 @@ const styles = StyleSheet.create({
   scoreCard: {
     backgroundColor: COLORS.white,
     marginHorizontal: SIZES.padding,
-    borderRadius: SIZES.radius * 1.5,
-    padding: SIZES.padding / 1.5,
+    borderRadius: SIZES.radius * 2,
+    padding: SIZES.padding,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 5,
+    ...(Platform.OS === 'ios' ? SHADOWS.medium : { elevation: 6 })
   },
   scoreInfo: {
     alignItems: 'center',
@@ -239,33 +253,35 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     paddingHorizontal: SIZES.padding,
-    marginTop: -SIZES.padding,
+    marginTop: 20,
     marginBottom: SIZES.padding,
     gap: 12,
   },
   searchBar: {
     flex: 1,
-    height: 50,
+    height: 55,
     backgroundColor: COLORS.white,
-    borderRadius: SIZES.radius,
+    borderRadius: SIZES.radius * 1.2,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     gap: 10,
-    ...SHADOWS.light,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
-  searchPlaceholder: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: COLORS.text,
+    height: '100%',
   },
   filterButton: {
-    width: 50,
-    height: 50,
+    width: 55,
+    height: 55,
     backgroundColor: COLORS.primary,
-    borderRadius: SIZES.radius,
+    borderRadius: SIZES.radius * 1.2,
     justifyContent: 'center',
     alignItems: 'center',
-    ...SHADOWS.light,
   },
   sectionHeader: {
     flexDirection: 'row',

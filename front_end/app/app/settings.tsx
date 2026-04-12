@@ -10,6 +10,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   ChevronLeft, 
   User, 
@@ -35,6 +36,7 @@ interface SettingItemProps {
 
 const SettingsScreen = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
 
   const handleLogout = () => {
