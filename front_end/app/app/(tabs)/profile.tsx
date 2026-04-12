@@ -7,7 +7,8 @@ import {
   Image, 
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
@@ -23,24 +24,45 @@ import {
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
-import { mockUser } from '../../src/api/mockData';
+import { useAuth } from '../../src/context/AuthContext';
+import apiClient from '../../src/api/client';
 
 const { width } = Dimensions.get('window');
 
 const ProfileScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [stats, setStats] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await apiClient.get('/users/me/profile_stats');
+        setStats(response.data);
+      } catch (error) {
+        console.error('Error fetching profile stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading || !user) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
   const chartData = {
-    labels: ["Bí thư", "Kỹ thuật", "Giao tiếp", "Sáng tạo", "Xã hội"],
+    labels: stats?.skills?.map((s: any) => s.subject) || ["Bí thư", "Kỹ thuật", "Giao tiếp", "Sáng tạo", "Xã hội"],
     datasets: [
       {
-        data: [
-          mockUser.skills.leadership,
-          mockUser.skills.technical,
-          mockUser.skills.communication,
-          mockUser.skills.creativity,
-          mockUser.skills.analysis
-        ]
+        data: stats?.skills?.map((s: any) => s.list_score || s.A) || [80, 70, 90, 60, 85]
       }
     ]
   };
@@ -82,14 +104,14 @@ const ProfileScreen = () => {
 
           <View style={styles.profileInfo}>
             <View style={styles.avatarContainer}>
-              <Image source={{ uri: mockUser.avatar_url }} style={styles.avatar} />
+              <Image source={{ uri: user.avatar_url || 'https://i.pravatar.cc/150' }} style={styles.avatar} />
               <View style={[styles.levelBadge, SHADOWS.light]}>
-                <Text style={styles.levelText}>Lvl {mockUser.level}</Text>
+                <Text style={styles.levelText}>Lvl {user.level || stats?.level || 1}</Text>
               </View>
             </View>
-            <Text style={styles.userName}>{mockUser.full_name}</Text>
+            <Text style={styles.userName}>{user.full_name}</Text>
             <View style={styles.idChip}>
-              <Text style={styles.idText}>MSSV: {mockUser.student_id}</Text>
+              <Text style={styles.idText}>MSSV: {user.student_id}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -121,7 +143,7 @@ const ProfileScreen = () => {
             </TouchableOpacity>
           </View>
 
-          {mockUser.certificates.map((cert) => (
+          {stats?.recent_certificates?.map((cert: any) => (
             <TouchableOpacity key={cert.id} style={[styles.certCard, SHADOWS.light]}>
               <View style={styles.certIconContainer}>
                 <Award size={24} color={COLORS.primary} />
@@ -130,10 +152,10 @@ const ProfileScreen = () => {
                 <Text style={styles.certTitle}>{cert.title}</Text>
                 <View style={styles.certMeta}>
                   <Calendar size={12} color={COLORS.textSecondary} />
-                  <Text style={styles.certMetaText}>{cert.date}</Text>
+                  <Text style={styles.certMetaText}>{cert.time || cert.date}</Text>
                   <View style={styles.dot} />
                   <Briefcase size={12} color={COLORS.textSecondary} />
-                  <Text style={styles.certMetaText}>{cert.issuer}</Text>
+                  <Text style={styles.certMetaText}>{cert.issuer || 'Đoàn trường'}</Text>
                 </View>
               </View>
               <ChevronRight size={20} color={COLORS.border} />

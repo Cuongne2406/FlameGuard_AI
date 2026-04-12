@@ -119,6 +119,7 @@ def read_user_my_events(
         if reg.event:
             events_data.append({
                 "id": str(reg.event.id),
+                "registration_id": str(reg.id),
                 "name": reg.event.name,
                 "start_time": reg.event.start_time.isoformat() if reg.event.start_time else None,
                 "location": reg.event.location,

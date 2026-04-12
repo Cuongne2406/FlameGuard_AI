@@ -9,21 +9,43 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Search, Filter, Rocket, Sparkles } from 'lucide-react-native';
+import { Bell, Search, Filter, Rocket, Sparkles, QrCode } from 'lucide-react-native';
+
+// Import constants
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
-import { mockEvents, mockUser } from '../../src/api/mockData';
 import EventCard from '../../src/components/EventCard';
+import { useAuth } from '../../src/context/AuthContext';
+import { getEvents } from '../../src/api/client';
 
 const { width } = Dimensions.get('window');
 
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await getEvents(0, 5); // Lấy 5 sự kiện mới nhất
+        setEvents(data);
+      } catch (error) {
+        console.error('Home fetch events error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -39,7 +61,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.welcomeText}>Chào buổi sáng,</Text>
-            <Text style={styles.userName}>{mockUser.full_name} ✨</Text>
+            <Text style={styles.userName}>{user?.full_name || 'Sinh viên'} ✨</Text>
           </View>
           <TouchableOpacity style={styles.iconButton}>
             <Bell size={24} color={COLORS.white} />
@@ -51,12 +73,12 @@ const HomeScreen: React.FC = () => {
         <View style={[styles.scoreCard, SHADOWS.medium]}>
           <View style={styles.scoreInfo}>
             <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
-            <Text style={styles.scoreValue}>{mockUser.training_score}</Text>
+            <Text style={styles.scoreValue}>{user?.training_score || 0}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.scoreInfo}>
             <Text style={styles.scoreLabel}>LEVEL</Text>
-            <Text style={styles.scoreValue}>{mockUser.level}</Text>
+            <Text style={styles.scoreValue}>{user?.level || 1}</Text>
           </View>
           <TouchableOpacity 
             style={styles.scoreAction}
@@ -96,25 +118,29 @@ const HomeScreen: React.FC = () => {
             <Sparkles size={20} color={COLORS.warning} />
             <Text style={styles.sectionTitle}>Sự kiện Nổi bật</Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/events')}>
             <Text style={styles.viewAll}>Xem tất cả</Text>
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={mockEvents}
-          renderItem={({ item }) => (
-            <EventCard 
-              event={item} 
-              horizontal 
-              onPress={() => router.push(`/event-detail/${item.id}`)} 
-            />
-          )}
-          keyExtractor={item => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.carouselContent}
-        />
+        {loading ? (
+          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 20 }} />
+        ) : (
+          <FlatList
+            data={events.slice(0, 3)}
+            renderItem={({ item }) => (
+              <EventCard 
+                event={item} 
+                horizontal 
+                onPress={() => router.push(`/event-detail/${item.id}`)} 
+              />
+            )}
+            keyExtractor={item => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContent}
+          />
+        )}
 
         {/* Upcoming Activities */}
         <View style={[styles.sectionHeader, { marginTop: SIZES.padding }]}>
@@ -125,13 +151,20 @@ const HomeScreen: React.FC = () => {
         </View>
 
         <View style={styles.activitiesList}>
-          {mockEvents.map(event => (
-            <EventCard 
-              key={event.id}
-              event={event} 
-              onPress={() => router.push(`/event-detail/${event.id}`)} 
-            />
-          ))}
+          {loading ? (
+             <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            events.map(event => (
+              <EventCard 
+                key={event.id}
+                event={event} 
+                onPress={() => router.push(`/event-detail/${event.id}`)} 
+              />
+            ))
+          )}
+          {!loading && events.length === 0 && (
+            <Text style={{ textAlign: 'center', color: COLORS.textSecondary }}>Không có hoạt động nào sắp diễn ra.</Text>
+          )}
         </View>
       </ScrollView>
 
@@ -145,8 +178,7 @@ const HomeScreen: React.FC = () => {
           style={styles.scanGradient}
         >
           <View style={styles.scanIconBox}>
-            <Search size={24} color={COLORS.white} /> 
-            {/* Note: In a real app we'd use a QR icon, but Search is close to 'scan' in some icon sets. I'll use Lucide's Scan if possible or just ViewFinder */}
+            <QrCode size={24} color={COLORS.white} /> 
           </View>
           <Text style={styles.scanText}>Check-in</Text>
         </LinearGradient>

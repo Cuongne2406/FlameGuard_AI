@@ -16,10 +16,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Lock, User, Eye, EyeOff, ShieldCheck, ArrowRight } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
-import { login } from '../src/api/client';
+import { login as loginApi } from '../src/api/client';
+import { useAuth } from '../src/context/AuthContext';
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -33,11 +35,8 @@ const LoginScreen = () => {
 
     setIsLoading(true);
     try {
-      const response = await login(username, password);
-      if (response.access_token) {
-        // Chuyển sang màn hình chính
-        router.replace('/(tabs)');
-      }
+      await login(username, password);
+      // _layout.tsx will automatically redirect since userToken is updated in AuthContext
     } catch (error: any) {
       console.error("Login error:", error);
       const errorMsg = error.response?.data?.detail || "Đăng nhập thất bại. Vui lòng thử lại.";

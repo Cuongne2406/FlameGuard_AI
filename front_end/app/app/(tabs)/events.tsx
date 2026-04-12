@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,65 +6,43 @@ import {
   FlatList, 
   TouchableOpacity,
   TextInput,
-  Image,
+  ActivityIndicator,
   Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Search, 
-  Filter, 
-  Calendar, 
-  MapPin, 
-  ChevronRight,
-  Trophy
+  Filter
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
-import { mockEvents } from '../../src/api/mockData';
+import EventCard from '../../src/components/EventCard';
+import { getEvents } from '../../src/api/client';
 
 const EventsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
+  const [events, setEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredEvents = mockEvents.filter(event => 
-    event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    event.organizer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await getEvents();
+        setEvents(data);
+      } catch (error) {
+        console.error('Failed to fetch events:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
-  const renderEventItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={[styles.eventCard, SHADOWS.light]}
-      onPress={() => router.push(`/event-detail/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <Image source={{ uri: item.image }} style={styles.eventImage} />
-      <View style={styles.eventInfo}>
-        <View style={styles.badgeRow}>
-          <View style={[styles.statusBadge, { backgroundColor: item.status === 'Upcoming' ? 'rgba(67, 97, 238, 0.1)' : 'rgba(76, 175, 80, 0.1)' }]}>
-            <Text style={[styles.statusText, { color: item.status === 'Upcoming' ? COLORS.primary : COLORS.success }]}>{item.status}</Text>
-          </View>
-          <View style={styles.pointsBadge}>
-            <Trophy size={12} color={COLORS.warning} />
-            <Text style={styles.pointsText}>+{item.points}đ</Text>
-          </View>
-        </View>
-        <Text style={styles.eventTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.organizerText}>{item.organizer}</Text>
-        
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Calendar size={14} color={COLORS.textSecondary} />
-            <Text style={styles.metaText}>{item.date}</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <MapPin size={14} color={COLORS.textSecondary} />
-            <Text style={styles.metaText} numberOfLines={1}>{item.location}</Text>
-          </View>
-        </View>
-      </View>
-      <ChevronRight size={18} color={COLORS.border} />
-    </TouchableOpacity>
+  const filteredEvents = events.filter(event => 
+    (event.name || event.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (event.organization_name || event.organizer || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -90,18 +68,30 @@ const EventsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={filteredEvents}
-        renderItem={renderEventItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>Không tìm thấy sự kiện nào khớp với tìm kiếm.</Text>
-          </View>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Đang tải sự kiện...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredEvents}
+          renderItem={({ item }) => (
+            <EventCard 
+              event={item} 
+              onPress={() => router.push(`/event-detail/${item.id}`)} 
+            />
+          )}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Không tìm thấy sự kiện nào.</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -165,6 +155,17 @@ const styles = StyleSheet.create({
   listContent: {
     padding: SIZES.padding,
     paddingTop: 0,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   eventCard: {
     backgroundColor: COLORS.surface,

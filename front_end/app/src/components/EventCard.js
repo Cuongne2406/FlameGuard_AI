@@ -4,6 +4,30 @@ import { Calendar, MapPin, Award } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/theme';
 
 const EventCard = ({ event, onPress, horizontal = false }) => {
+  // Mapping real backend data to UI fields
+  const title = event.name || event.title;
+  const image = event.image_url || event.image || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=500';
+  const points = event.points || 15;
+  const location = event.location || 'Hội trường A';
+  const organizer = event.organization_name || event.organizer || 'Đoàn trường';
+  
+  // Format date/time
+  let dateText = event.date || 'Sắp diễn ra';
+  if (event.start_time) {
+    const d = new Date(event.start_time);
+    dateText = `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  }
+
+  // Normalize status
+  const statusLabels = {
+    'PUBLISHED': 'Sắp tới',
+    'LIVE': 'Đang diễn ra',
+    'ENDED': 'Đã kết thúc',
+    'Upcoming': 'Sắp tới',
+    'Ended': 'Đã kết thúc'
+  };
+  const status = statusLabels[event.status] || event.status || 'Sắp tới';
+
   return (
     <TouchableOpacity 
       style={[
@@ -14,30 +38,33 @@ const EventCard = ({ event, onPress, horizontal = false }) => {
       onPress={onPress}
       activeOpacity={0.9}
     >
-      <Image source={{ uri: event.image }} style={styles.image} />
+      <Image source={{ uri: image }} style={styles.image} />
       
       <View style={styles.content}>
         <View style={styles.tagContainer}>
-          <View style={[styles.tag, { backgroundColor: event.status === 'Upcoming' ? COLORS.secondary : COLORS.success }]}>
-            <Text style={styles.tagText}>{event.status}</Text>
+          <View style={[
+            styles.tag, 
+            { backgroundColor: (status === 'Đang diễn ra' || status === 'LIVE') ? COLORS.success : COLORS.secondary }
+          ]}>
+            <Text style={styles.tagText}>{status}</Text>
           </View>
           <View style={styles.pointsTag}>
             <Award size={14} color={COLORS.primary} />
-            <Text style={styles.pointsText}>+{event.points}đ</Text>
+            <Text style={styles.pointsText}>+{points}đ</Text>
           </View>
         </View>
 
-        <Text style={styles.title} numberOfLines={1}>{event.title}</Text>
-        <Text style={styles.organizer} numberOfLines={1}>{event.organizer}</Text>
+        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+        <Text style={styles.organizer} numberOfLines={1}>{organizer}</Text>
 
         <View style={styles.footer}>
           <View style={styles.infoRow}>
             <Calendar size={14} color={COLORS.textSecondary} />
-            <Text style={styles.infoText}>{event.date}</Text>
+            <Text style={styles.infoText}>{dateText}</Text>
           </View>
           <View style={styles.infoRow}>
             <MapPin size={14} color={COLORS.textSecondary} />
-            <Text style={styles.infoText} numberOfLines={1}>{event.location}</Text>
+            <Text style={styles.infoText} numberOfLines={1}>{location}</Text>
           </View>
         </View>
       </View>

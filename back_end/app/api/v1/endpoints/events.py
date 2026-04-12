@@ -60,6 +60,14 @@ def read_events(
 ):
     return event_service.get_events(db, skip=skip, limit=limit)
 
+@router.get("/{event_id}", response_model=EventResponse)
+def read_event(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event(db, event_id=event_id)
+
 @router.put("/{event_id}", response_model=EventResponse)
 def update_event(
     *,

@@ -10,19 +10,22 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { X, Zap, ZapOff, ShieldCheck, AlertCircle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SIZES } from '../src/constants/theme';
-import LottieView from 'lottie-react-native';
+import { X, Zap, ZapOff, ShieldCheck, AlertCircle } from 'lucide-react-native';
+import { getEvents, getUserRegistrations, updateRegistrationStatus } from '../src/api/client';
+import { useAuth } from '../src/context/AuthContext';
+import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
 const ScanQRScreen = () => {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [flash, setFlash] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('Mã QR không hợp lệ');
   const router = useRouter();
 
   if (!permission) {
@@ -42,24 +45,44 @@ const ScanQRScreen = () => {
     );
   }
 
-  const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
+  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+    if (scanned || !user) return;
     setScanned(true);
     
-    // Logic: Kiểm tra mã QR (Mock check-in)
-    // Giả định mã QR hợp lệ bắt đầu bằng 'YH-' hoặc là URL
-    if (data.includes('YH') || data.startsWith('http')) {
+    try {
+      // 1. Giả định data là Event ID (UUID)
+      const eventId = data.trim();
+      
+      // Kiểm tra định dạng UUID cơ bản (8-4-4-4-12)
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(eventId)) {
+        throw new Error("Mã QR không đúng định dạng sự kiện.");
+      }
+
+      // 2. Lấy danh sách đăng ký của User để tìm registration_id
+      const myEvents = await getUserRegistrations(user.id);
+      const registration = myEvents.find((reg: any) => reg.id === eventId); // Backend cũ trả về id event
+
+      if (!registration) {
+        throw new Error("Bạn chưa đăng ký tham gia sự kiện này.");
+      }
+
+      // 3. Thực hiện Check-in
+      // Sử dụng registration_id vừa được bổ sung vào endpoint /me/events
+      await updateRegistrationStatus(registration.registration_id, 'ATTENDED');
+
       setStatus('success');
-      // Tự động quay về sau 3s
       setTimeout(() => {
         router.back();
-      }, 3000);
-    } else {
+      }, 2500);
+    } catch (error: any) {
+      console.error('Scan check-in error:', error);
+      setErrorMsg(error.message || "Lỗi hệ thống khi điểm danh.");
       setStatus('error');
       setTimeout(() => {
         setScanned(false);
         setStatus('idle');
-      }, 3000);
+      }, 3500);
     }
   };
 

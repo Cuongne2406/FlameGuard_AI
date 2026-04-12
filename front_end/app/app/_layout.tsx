@@ -14,34 +14,30 @@ import * as SecureStore from 'expo-secure-store';
 import { View, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { COLORS } from '../src/constants/theme';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+function InitialLayout() {
+  const { userToken, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (Platform.OS === 'web') {
-        setIsAuthenticated(true); // Bypass for web testing
-        return;
-      }
-      const token = await SecureStore.getItemAsync('userToken');
-      setIsAuthenticated(!!token);
-    };
-    checkAuth();
-  }, [segments]);
+    if (isLoading) return;
 
-  useEffect(() => {
-    if (isAuthenticated === false && segments[0] !== 'login') {
+    const inAuthGroup = segments[0] === '(tabs)';
+    const inLoginGroup = segments[0] === 'login';
+
+    if (!userToken && !inLoginGroup) {
+      // Redirect to login if not authenticated
       router.replace('/login');
-    } else if (isAuthenticated === true && segments[0] === 'login') {
+    } else if (userToken && inLoginGroup) {
+      // Redirect to tabs if authenticated
       router.replace('/(tabs)');
     }
-  }, [isAuthenticated, segments]);
+  }, [userToken, isLoading, segments]);
 
-  if (isAuthenticated === null) {
+  if (isLoading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background }}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -50,16 +46,24 @@ export default function RootLayout() {
   }
 
   return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+      <StatusBar style="auto" />
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <SafeAreaProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="login" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="settings" options={{ presentation: 'card' }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <AuthProvider>
+        <InitialLayout />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

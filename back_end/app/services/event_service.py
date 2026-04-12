@@ -84,6 +84,12 @@ def create_event(db: Session, event_in: EventCreate):
 def get_events(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Event).offset(skip).limit(limit).all()
 
+def get_event(db: Session, event_id: UUID):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return event
+
 def get_events_by_campaign(db: Session, campaign_id: UUID, skip: int = 0, limit: int = 100):
     return db.query(Event).filter(Event.campaign_id == campaign_id).offset(skip).limit(limit).all()
 

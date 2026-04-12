@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   TouchableOpacity, 
   Dimensions,
   Share,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -19,35 +21,94 @@ import {
   Users, 
   Star, 
   Info,
-  Rocket
+  Rocket,
+  CheckCircle2
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SHADOWS, SIZES } from '../../src/constants/theme';
-import { mockEvents } from '../../src/api/mockData';
+import { getEventDetail, registerEvent, getUserRegistrations } from '../../src/api/client';
+import { useAuth } from '../../src/context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const EventDetailScreen = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   
-  // Find event from mock data
-  const event = mockEvents.find(e => e.id === id) || mockEvents[0];
+  const [event, setEvent] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registering, setRegistering] = useState(false);
+
+  useEffect(() => {
+    const fetchEventData = async () => {
+      if (!id) return;
+      try {
+        const [detailData, registrations] = await Promise.all([
+          getEventDetail(id),
+          user ? getUserRegistrations(user.id) : []
+        ]);
+        
+        setEvent(detailData);
+        
+        // Check if current user is in registrations list for this event
+        const registered = registrations.some((reg: any) => reg.id === id); // /me/events trả về list event IDs
+        setIsRegistered(registered);
+      } catch (error) {
+        console.error('Fetch event detail error:', error);
+        Alert.alert("Lỗi", "Không thể tải thông tin sự kiện.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEventData();
+  }, [id, user]);
 
   const handleShare = async () => {
+    if (!event) return;
     try {
       await Share.share({
-        message: `Tham gia sự kiện ${event.title} cùng mình trên YouthHub nhé!`,
+        message: `Tham gia sự kiện ${event.name} cùng mình trên YouthHub nhé!`,
       });
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleRegister = () => {
-    // In real app, this would call API
-    alert("Đăng ký thành công! Đừng quên đến đúng giờ nhé.");
+  const handleRegister = async () => {
+    if (!user || !event) return;
+    setRegistering(true);
+    try {
+      await registerEvent(event.id, user.id);
+      setIsRegistered(true);
+      Alert.alert("Thành công", "Đăng ký tham gia thành công! Đừng quên đến đúng giờ nhé.");
+    } catch (error) {
+      console.error('Registration error:', error);
+      Alert.alert("Lỗi", "Đăng ký không thành công. Có thể bạn đã đăng ký hoặc sự kiện đã hết chỗ.");
+    } finally {
+      setRegistering(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Không tìm thấy sự kiện.</Text>
+      </View>
+    );
+  }
+
+  const startDate = event.start_time ? new Date(event.start_time).toLocaleDateString('vi-VN') : 'Sắp tới';
+  const imageUrl = event.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=800';
 
   return (
     <View style={styles.container}>
@@ -57,7 +118,7 @@ const EventDetailScreen = () => {
         {/* Header Image */}
         <View style={styles.imageContainer}>
           <Image 
-            source={{ uri: event.image }} 
+            source={{ uri: imageUrl }} 
             style={styles.image}
             contentFit="cover"
           />
@@ -85,15 +146,15 @@ const EventDetailScreen = () => {
           {/* Points Badge */}
           <View style={styles.pointsBadge}>
             <Star size={16} color="#FFD700" fill="#FFD700" />
-            <Text style={styles.pointsText}>+{event.points} ĐRL</Text>
+            <Text style={styles.pointsText}>+{event.points || 15} ĐRL</Text>
           </View>
         </View>
 
         {/* Content Section */}
         <View style={styles.content}>
           <View style={styles.titleSection}>
-            <Text style={styles.organizer}>{event.organizer}</Text>
-            <Text style={styles.title}>{event.title}</Text>
+            <Text style={styles.organizer}>{event.organization_name || 'Đoàn trường'}</Text>
+            <Text style={styles.title}>{event.name}</Text>
             <View style={styles.statusChip}>
               <View style={styles.statusDot} />
               <Text style={styles.statusText}>{event.status}</Text>
@@ -105,12 +166,12 @@ const EventDetailScreen = () => {
             <InfoCard 
               icon={<Calendar size={20} color={COLORS.primary} />}
               label="Thời gian"
-              value={event.date}
+              value={startDate}
             />
             <InfoCard 
               icon={<MapPin size={20} color={COLORS.secondary} />}
               label="Địa điểm"
-              value={event.location}
+              value={event.location || 'Chưa xác định'}
             />
           </View>
 
@@ -121,8 +182,8 @@ const EventDetailScreen = () => {
               <Text style={styles.sectionTitle}>Giới thiệu sự kiện</Text>
             </View>
             <Text style={styles.description}>
-              {event.description}
-              {"\n\n"}Đây là hoạt động trọng điểm trong kế hoạch chuyển đổi số Đoàn - Hội. Mục tiêu nhằm tạo sân chơi bổ ích, rèn luyện kỹ năng và tinh thần cống hiến cho sinh viên. 
+              {event.description || "Chưa có mô tả chi tiết cho sự kiện này."}
+              {"\n\n"}Đây là hoạt động nằm trong kế hoạch hoạt động của Đơn vị. Mục tiêu nhằm tạo sân chơi bổ ích, rèn luyện kỹ năng và tinh thần cống hiến cho sinh viên. 
               {"\n\n"}Sinh viên tham gia đầy đủ sẽ được cấp chứng nhận điện tử và điểm rèn luyện tự động qua app.
             </Text>
           </View>
@@ -134,7 +195,7 @@ const EventDetailScreen = () => {
             </View>
             <View style={styles.orgInfo}>
               <Text style={styles.orgLabel}>Ban tổ chức</Text>
-              <Text style={styles.orgName}>{event.organizer}</Text>
+              <Text style={styles.orgName}>{event.organization_name || 'Đoàn TNCS Hồ Chí Minh'}</Text>
             </View>
             <TouchableOpacity style={styles.followBtn}>
               <Text style={styles.followText}>Theo dõi</Text>
@@ -152,11 +213,29 @@ const EventDetailScreen = () => {
           style={styles.bottomGradient}
         />
         <TouchableOpacity 
-          style={[styles.registerBtn, SHADOWS.medium]}
+          style={[
+            styles.registerBtn, 
+            SHADOWS.medium,
+            (isRegistered || event.status === 'ENDED') && { backgroundColor: COLORS.success }
+          ]}
           onPress={handleRegister}
+          disabled={isRegistered || registering || event.status === 'ENDED'}
         >
-          <Rocket size={20} color={COLORS.white} />
-          <Text style={styles.registerText}>Đăng ký tham gia ngay</Text>
+          {registering ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : isRegistered ? (
+            <>
+              <CheckCircle2 size={20} color={COLORS.white} />
+              <Text style={styles.registerText}>Đã đăng ký tham gia</Text>
+            </>
+          ) : event.status === 'ENDED' ? (
+             <Text style={styles.registerText}>Sự kiện đã kết thúc</Text>
+          ) : (
+            <>
+              <Rocket size={20} color={COLORS.white} />
+              <Text style={styles.registerText}>Đăng ký tham gia ngay</Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>

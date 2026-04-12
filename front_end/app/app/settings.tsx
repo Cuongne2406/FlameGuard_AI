@@ -23,7 +23,7 @@ import {
   UserCircle
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
-import { mockUser } from '../src/api/mockData';
+import { useAuth } from '../src/context/AuthContext';
 
 interface SettingItemProps {
   icon: any;
@@ -37,7 +37,10 @@ interface SettingItemProps {
 const SettingsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user, logout } = useAuth();
   const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
+
+  if (!user) return null;
 
   const handleLogout = () => {
     Alert.alert(
@@ -45,7 +48,14 @@ const SettingsScreen = () => {
       "Bạn có chắc chắn muốn đăng xuất khỏi YouthHub?",
       [
         {"text": "Hủy", "style": "cancel"},
-        {"text": "Đăng xuất", "onPress": () => router.replace('/'), "style": "destructive"}
+        {
+          "text": "Đăng xuất", 
+          "onPress": async () => {
+            await logout();
+            // AuthContext redirection logic in _layout.tsx will handle the rest
+          }, 
+          "style": "destructive"
+        }
       ]
     );
   };
@@ -97,19 +107,19 @@ const SettingsScreen = () => {
           <View style={styles.avatarPlaceholder}>
             <UserCircle size={80} color={COLORS.primary} strokeWidth={1} />
           </View>
-          <Text style={styles.userName}>{mockUser.full_name}</Text>
-          <Text style={styles.userSub}>{mockUser.student_id} • {mockUser.class_name}</Text>
+          <Text style={styles.userName}>{user.full_name}</Text>
+          <Text style={styles.userSub}>{user.student_id} • {user.class_name || 'Đoàn viên'}</Text>
         </View>
 
         {/* Account Details Group */}
         <View style={styles.group}>
           <Text style={styles.groupTitle}>Thông tin cá nhân</Text>
           <View style={[styles.groupCard, SHADOWS.light]}>
-            <SettingItem icon={User} title="Họ và tên" value={mockUser.full_name} showArrow={false} />
+            <SettingItem icon={User} title="Họ và tên" value={user.full_name} showArrow={false} />
             <View style={styles.divider} />
-            <SettingItem icon={Smartphone} title="Số điện thoại" value={mockUser.phone_number} showArrow={false} />
+            <SettingItem icon={Smartphone} title="Số điện thoại" value={user.phone_number || 'Chưa cập nhật'} showArrow={false} />
             <View style={styles.divider} />
-            <SettingItem icon={HelpCircle} title="Email" value={mockUser.email} showArrow={false} />
+            <SettingItem icon={HelpCircle} title="Email" value={user.email} showArrow={false} />
           </View>
         </View>
 
@@ -120,8 +130,8 @@ const SettingsScreen = () => {
             <SettingItem 
               icon={Smartphone} 
               title="Mã thiết bị hiện tại" 
-              value={mockUser.device_id.substring(0, 8) + "..."} 
-              onPress={() => Alert.alert("Thông tin thiết bị", `ID: ${mockUser.device_id}\n\nMã này dùng để xác thực check-in chính chủ.`)}
+              value={user.device_id ? user.device_id.substring(0, 8) + "..." : "Chưa liên kết"} 
+              onPress={() => Alert.alert("Thông tin thiết bị", `ID: ${user.device_id || 'Chưa xác định'}\n\nMã này dùng để xác thực check-in chính chủ.`)}
             />
             <View style={styles.divider} />
             <SettingItem icon={ShieldCheck} title="Thay đổi mật khẩu" onPress={() => {}} />
