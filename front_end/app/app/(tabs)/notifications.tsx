@@ -13,53 +13,66 @@ import {
   Info, 
   Clock, 
   ChevronRight,
-  Megaphone
+  Megaphone,
+  AlertCircle
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const mockNotifications = [
-  {
-    id: '1',
-    type: 'EVENT',
-    title: 'Đăng ký thành công',
-    message: 'Bạn đã đăng ký tham gia Mùa Hè Xanh 15/07. Đừng quên chuẩn bị quân trang!',
-    time: '2 phút trước',
-    isRead: false
-  },
-  {
-    id: '2',
-    type: 'SCORE',
-    title: 'Cập nhật Điểm rèn luyện',
-    message: 'Bạn đã được cộng +5đ vào quỹ Điểm rèn luyện từ hoạt động AI Workshop.',
-    time: '1 giờ trước',
-    isRead: true
-  },
-  {
-    id: '3',
-    type: 'NEWS',
-    title: 'Thông báo Đoàn trường',
-    message: 'Lịch thi kỹ năng cán bộ Đoàn cấp trường đã được dời sang tuần sau.',
-    time: '4 giờ trước',
-    isRead: true
-  },
-  {
-    id: '4',
-    type: 'REMINDER',
-    title: 'Nhắc nhở nộp Đoàn phí',
-    message: 'Hạn cuối nộp đoàn phí kỳ 2 là ngày 20/04. Vui lòng hoàn tất đúng hạn.',
-    time: '1 ngày trước',
-    isRead: true
-  }
-];
+import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../src/api/client';
+import { RefreshControl } from 'react-native';
+import { NotificationSkeleton } from '../../src/components/SkeletonLoader';
 
 const NotificationsScreen = () => {
   const insets = useSafeAreaInsets();
+  const [notifications, setNotifications] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const fetchNotifications = async () => {
+    try {
+      const data = await getMyNotifications();
+      setNotifications(data);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchNotifications();
+  };
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+    } catch (error) {
+      console.error('Error marking read:', error);
+    }
+  };
+
+  const handleReadAll = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (error) {
+      console.error('Error marking all read:', error);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch(type) {
       case 'EVENT': return <Bell size={20} color={COLORS.primary} />;
       case 'SCORE': return <MessageSquare size={20} color={COLORS.success} />;
       case 'NEWS': return <Info size={20} color={COLORS.warning} />;
+      case 'URGENT': return <AlertCircle size={20} color={COLORS.error} />;
       default: return <Bell size={20} color={COLORS.textSecondary} />;
     }
   };
@@ -69,24 +82,44 @@ const NotificationsScreen = () => {
       case 'EVENT': return 'rgba(67, 97, 238, 0.1)';
       case 'SCORE': return 'rgba(76, 175, 80, 0.1)';
       case 'NEWS': return 'rgba(255, 152, 0, 0.1)';
+      case 'URGENT': return 'rgba(239, 35, 60, 0.1)';
       default: return COLORS.background;
     }
   };
 
+  const formatTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Vừa xong';
+    if (minutes < 60) return `${minutes} phút trước`;
+    if (hours < 24) return `${hours} giờ trước`;
+    if (days < 7) return `${days} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
+  };
+
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={[styles.notificationCard, !item.isRead && styles.unreadCard, SHADOWS.light]}>
+    <TouchableOpacity 
+      onPress={() => !item.is_read && handleMarkRead(item.id)}
+      style={[styles.notificationCard, !item.is_read && styles.unreadCard, SHADOWS.light]}
+    >
       <View style={[styles.iconContainer, { backgroundColor: getIconBg(item.type) }]}>
         {getIcon(item.type)}
       </View>
       <View style={styles.textContainer}>
         <View style={styles.headerRow}>
-          <Text style={[styles.title, !item.isRead && styles.unreadText]}>{item.title}</Text>
-          {!item.isRead && <View style={styles.unreadDot} />}
+          <Text style={[styles.title, !item.is_read && styles.unreadText]}>{item.title}</Text>
+          {!item.is_read && <View style={styles.unreadDot} />}
         </View>
         <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
         <View style={styles.timeRow}>
           <Clock size={12} color={COLORS.textSecondary} />
-          <Text style={styles.timeText}>{item.time}</Text>
+          <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
         </View>
       </View>
       <ChevronRight size={18} color={COLORS.border} />
@@ -98,20 +131,39 @@ const NotificationsScreen = () => {
       <View style={[styles.header, { paddingTop: insets.top + 15 }, SHADOWS.light]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Thông báo</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleReadAll}>
             <Text style={styles.markRead}>Đọc tất cả</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSub}>Chào mừng bạn quay lại với các tin tức mới nhất</Text>
       </View>
 
-      <FlatList
-        data={mockNotifications}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading ? (
+        <View style={{ padding: 20 }}>
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+          <NotificationSkeleton />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
+          }
+          ListEmptyComponent={
+            <View style={{ marginTop: 100, alignItems: 'center' }}>
+              <Bell size={60} color={COLORS.border} />
+              <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Không có thông báo nào</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };

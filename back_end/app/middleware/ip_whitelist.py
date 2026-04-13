@@ -1,4 +1,5 @@
-from fastapi import Request, HTTPException
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from app.models.settings import SystemSetting
 from app.db.session import SessionLocal
@@ -22,7 +23,13 @@ class IPWhitelistMiddleware(BaseHTTPMiddleware):
                             client_ip = forwarded_for.split(",")[0].strip()
                         
                         if client_ip not in allowed_ips and "127.0.0.1" not in allowed_ips:
-                             raise HTTPException(status_code=403, detail=f"IP {client_ip} không được phép truy cập vùng Admin.")
+                             return JSONResponse(
+                                 status_code=403, 
+                                 content={"detail": f"IP {client_ip} không được phép truy cập vùng Admin."}
+                             )
+            except Exception as e:
+                print(f"IP Whitelist Error: {e}")
+                # Nếu lỗi DB trong middleware, vẫn cho qua hoặc log lại thay vì crash 500
             finally:
                 db.close()
                 

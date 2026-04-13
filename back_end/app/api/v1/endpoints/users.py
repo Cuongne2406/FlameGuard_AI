@@ -375,7 +375,7 @@ def read_user_profile_stats(
     """
     Cung cấp dữ liệu thực tế cho trang Profile trích xuất từ Database.
     """
-    from app.models.awards import Award
+    from app.models.awards import Award, AwardStatus
     from app.models.core import UserSkill, UserExperience
     import json
 
@@ -398,7 +398,7 @@ def read_user_profile_stats(
         ]
 
     # 2. Map Certificates (Frontend expects { title, time })
-    awards = db.query(Award).filter(Award.user_id == current_user.id, Award.status == "APPROVED").all()
+    awards = db.query(Award).filter(Award.user_id == current_user.id, Award.status == AwardStatus.APPROVED).all()
     certs_data = []
     for a in awards:
         certs_data.append({
@@ -425,9 +425,9 @@ def read_user_profile_stats(
         })
 
     return {
-        "level": current_user.level,
-        "training_score": current_user.training_score,
-        "ranking": "Xuất sắc" if current_user.training_score >= 90 else ("Khá" if current_user.training_score >= 70 else "Trung bình"),
+        "level": current_user.level or 1,
+        "training_score": current_user.training_score or 0,
+        "ranking": "Xuất sắc" if (current_user.training_score or 0) >= 90 else ("Khá" if (current_user.training_score or 0) >= 70 else "Trung bình"),
         "summary": "Sinh viên năng động với nền tảng vững chắc và tinh thần cống hiến cao.",
         "skills": skills_data,
         "experiences": exps_data,

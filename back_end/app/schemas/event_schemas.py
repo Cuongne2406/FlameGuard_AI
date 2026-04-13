@@ -92,10 +92,31 @@ class EventResponse(EventBase):
     campaign_id: Optional[UUID] = None
     qa_sessions: List['EventQAResponse'] = []
     incidents: List['EventIncidentResponse'] = []
+    feedbacks: List['EventFeedbackResponse'] = []
 
     class Config:
         from_attributes = True
 
+
+# ==========================================
+# Event Feedback Schemas
+# ==========================================
+class EventFeedbackBase(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+class EventFeedbackCreate(EventFeedbackBase):
+    event_id: UUID
+    user_id: UUID
+
+class EventFeedbackResponse(EventFeedbackBase):
+    id: UUID
+    event_id: UUID
+    user_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 # ==========================================
 # Event QA Schemas

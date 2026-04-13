@@ -1,26 +1,29 @@
+import React, { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-import React, { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { View, ActivityIndicator, Platform } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { COLORS } from '../src/constants/theme';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { usePushNotifications } from '../src/hooks/usePushNotifications';
+
+// Expo Router configuration
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
 
 function InitialLayout() {
   const { userToken, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
+  
+  // Initialize push notification settings safely
+  usePushNotifications();
 
   useEffect(() => {
     if (isLoading) return;

@@ -60,6 +60,7 @@ class Event(Base):
     ai_predictions = relationship("AIPrediction", back_populates="event")
     qa_sessions = relationship("EventQA", back_populates="event")
     incidents = relationship("EventIncident", back_populates="event")
+    feedbacks = relationship("EventFeedback", back_populates="event")
 
 class EventRegistration(Base):
     __tablename__ = "event_registrations"
@@ -72,6 +73,19 @@ class EventRegistration(Base):
     
     event = relationship("Event", back_populates="registrations")
     user = relationship("User", back_populates="event_registrations")
+
+class EventFeedback(Base):
+    __tablename__ = "event_feedbacks"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    rating = Column(Integer, nullable=False) # 1-5
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=sa.text('now()'), nullable=False)
+    
+    event = relationship("Event", back_populates="feedbacks")
+    user = relationship("User")
 
 class EventQA(Base):
     __tablename__ = "event_qa"

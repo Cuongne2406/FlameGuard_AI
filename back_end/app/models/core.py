@@ -57,7 +57,8 @@ class User(Base):
     university = Column(String, default="ĐH Lạc Hồng")
     address = Column(String, default="Đồng Nai")
     class_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
-    device_id = Column(String, nullable=True, unique=True)
+    device_id = Column(String, nullable=True)
+    push_token = Column(String, nullable=True)
     
     # Settings & Profile
     is_2fa_enabled = Column(Boolean, default=False)

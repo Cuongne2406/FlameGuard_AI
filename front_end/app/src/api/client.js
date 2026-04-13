@@ -1,96 +1,41 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 
-// Tự động lấy IP của máy tính đang chạy Metro Bundler để thay cho 'localhost'
-// Điều này giúp App chạy trên điện thoại thật vẫn kết nối được tới Backend trên máy tính.
-const getBaseUrl = () => {
-    const hostUri = Constants.expoConfig?.hostUri;
-    if (!hostUri) return 'http://localhost:8000/api/v1';
-
-    // hostUri thường có dạng 192.168.x.x:8081, ta cần đổi sang port 8000 của Backend
-    const ip = hostUri.split(':')[0];
-    return `http://${ip}:8000/api/v1`;
-};
-
-const BASE_URL = getBaseUrl();
+const API_URL = 'http://192.168.100.241:8000/api/v1'; // Update to your machine's IP for device testing
 
 const apiClient = axios.create({
-    baseURL: BASE_URL,
-    timeout: 10000,
+    baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
 });
 
-// Hàm lấy Device ID duy nhất (Punch 11 & 12)
-export const getDeviceId = async () => {
-    let deviceId = await SecureStore.getItemAsync('deviceId');
-
-    if (!deviceId) {
-        if (Platform.OS === 'android') {
-            deviceId = Application.androidId;
-        } else if (Platform.OS === 'ios') {
-            deviceId = await Application.getIosIdForVendorAsync();
-        } else {
-            // Web hoặc fallback
-            deviceId = Constants.installationId || `web-${Date.now()}`;
-        }
-
-        if (deviceId) {
-            try {
-                if (Platform.OS !== 'web') {
-                    await SecureStore.setItemAsync('deviceId', deviceId);
-                }
-            } catch (e) {
-                console.error('Failed to save deviceId:', e);
+// Request interceptor to add auth token
+apiClient.interceptors.request.use(
+    async (config) => {
+        let token = null;
+        try {
+            if (Platform.OS === 'web') {
+                token = localStorage.getItem('userToken');
+            } else {
+                token = await SecureStore.getItemAsync('userToken');
             }
-        }
-        return deviceId;
-    }
-};
-
-// Interceptor xử lý Auth Token & Device ID
-apiClient.interceptors.request.use(async (config) => {
-    try {
-        if (Platform.OS !== 'web') {
-            const token = await SecureStore.getItemAsync('userToken');
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
+        } catch (error) {
+            console.error('Error fetching token:', error);
         }
 
-        const deviceId = await getDeviceId();
-        if (deviceId) {
-            config.headers['X-Device-ID'] = deviceId;
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
         }
-    } catch (e) {
-        console.error('Auth interceptor error:', e);
-    }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
+// --- AUTH APIS ---
 
-// Hàm lấy thông tin người dùng hiện tại
-export const getCurrentUser = async () => {
-    try {
-        const response = await apiClient.get('/users/me');
-        return response.data;
-    } catch (error) {
-        console.error('Fetch user error:', error);
-        throw error;
-    }
-};
-
-// Hàm đăng nhập chính thức
 export const login = async (username, password) => {
-    const deviceId = await getDeviceId();
-
-    // OAuth2 expects form-data for /login endpoint inside auth.py
     const formData = new FormData();
     formData.append('username', username);
     formData.append('password', password);
@@ -99,25 +44,41 @@ export const login = async (username, password) => {
         const response = await apiClient.post('/auth/login', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
-                'X-Device-ID': deviceId
-            }
+            },
         });
-
-        if (response.data.access_token && Platform.OS !== 'web') {
-            await SecureStore.setItemAsync('userToken', response.data.access_token);
-        }
-
         return response.data;
     } catch (error) {
-        console.error('Login request error:', error);
+        console.error('Login error:', error);
+        throw error;
+    }
+};
+
+export const getCurrentUser = async () => {
+    try {
+        const response = await apiClient.get('/users/me');
+        return response.data;
+    } catch (error) {
+        console.error('Get current user error:', error);
+        throw error;
+    }
+};
+
+// Cập nhật Push Token cho User
+export const updatePushToken = async (token) => {
+    try {
+        const response = await apiClient.put('/users/me', {
+            push_token: token
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Update push token error:', error);
         throw error;
     }
 };
 
 // --- EVENT APIS ---
 
-// Lấy danh sách sự kiện
-export const getEvents = async (skip = 0, limit = 20) => {
+export const getEvents = async (skip = 0, limit = 10) => {
     try {
         const response = await apiClient.get('/events/', { params: { skip, limit } });
         return response.data;
@@ -127,7 +88,6 @@ export const getEvents = async (skip = 0, limit = 20) => {
     }
 };
 
-// Lấy thông tin chi tiết một sự kiện
 export const getEventDetail = async (eventId) => {
     try {
         const response = await apiClient.get(`/events/${eventId}`);
@@ -166,8 +126,6 @@ export const registerEvent = async (eventId, userId) => {
 // Lấy danh sách đăng ký của user hiện tại (để tìm registration_id)
 export const getUserRegistrations = async (userId) => {
     try {
-        // Backend không có endpoint /me/registrations trực tiếp trả về object đầy đủ dễ dàng, 
-        // nhưng có /me/events trả về list tóm tắt.
         const response = await apiClient.get('/users/me/events');
         return response.data;
     } catch (error) {
@@ -176,15 +134,95 @@ export const getUserRegistrations = async (userId) => {
     }
 };
 
-// Cập nhật trạng thái đăng ký (Dùng cho Check-in)
+// Cập nhật trạng thái tham gia sự kiện (Check-in)
 export const updateRegistrationStatus = async (registrationId, status) => {
     try {
-        const response = await apiClient.put(`/events/registrations/${registrationId}`, {
-            status: status
-        });
+        const response = await apiClient.put(`/events/registrations/${registrationId}/approve`); 
+        // Note: The backend endpoint is named 'approve' but it can be used for check-in
         return response.data;
     } catch (error) {
         console.error('Update registration status error:', error);
+        throw error;
+    }
+};
+
+// --- NOTIFICATION APIS ---
+
+// Lấy danh sách thông báo của tôi
+export const getMyNotifications = async (skip = 0, limit = 50) => {
+    try {
+        const response = await apiClient.get('/notifications/me', { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Get notifications error:', error);
+        throw error;
+    }
+};
+
+// Đánh dấu một thông báo đã đọc
+export const markNotificationRead = async (notificationId) => {
+    try {
+        const response = await apiClient.put(`/notifications/${notificationId}/read`);
+        return response.data;
+    } catch (error) {
+        console.error('Mark notification read error:', error);
+        throw error;
+    }
+};
+
+// Đánh dấu tất cả thông báo đã đọc
+export const markAllNotificationsRead = async () => {
+    try {
+        const response = await apiClient.post('/notifications/read-all');
+        return response.data;
+    } catch (error) {
+        console.error('Mark all notifications read error:', error);
+        throw error;
+    }
+};
+
+// --- Q&A APIS ---
+
+// Lấy danh sách câu hỏi của một sự kiện
+export const getEventQA = async (eventId, skip = 0, limit = 50) => {
+    try {
+        const response = await apiClient.get(`/events/${eventId}/qa`, { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Get event QA error:', error);
+        throw error;
+    }
+};
+
+// Đặt câu hỏi cho một sự kiện
+export const postQuestion = async (eventId, question, userId) => {
+    try {
+        const response = await apiClient.post(`/events/${eventId}/qa`, {
+            event_id: eventId,
+            user_id: userId,
+            question: question
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Post question error:', error);
+        throw error;
+    }
+};
+
+// --- FEEDBACK APIS ---
+
+// Gửi phản hồi/đánh giá cho một sự kiện
+export const submitFeedback = async (eventId, rating, comment, userId) => {
+    try {
+        const response = await apiClient.post(`/events/${eventId}/feedbacks`, {
+            event_id: eventId,
+            user_id: userId,
+            rating: rating,
+            comment: comment
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Submit feedback error:', error);
         throw error;
     }
 };

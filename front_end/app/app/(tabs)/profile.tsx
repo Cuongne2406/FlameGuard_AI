@@ -113,6 +113,27 @@ const ProfileScreen = () => {
             <View style={styles.idChip}>
               <Text style={styles.idText}>MSSV: {user.student_id}</Text>
             </View>
+
+            {/* Level Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressTitle}>Tiến trình cấp độ</Text>
+                <Text style={styles.progressValue}>
+                  {stats?.training_score || user.training_score || 0}/{((user.level || 1) * 1000)} XP
+                </Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                <LinearGradient
+                  colors={['#FFD700', '#FFA500']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[
+                    styles.progressBarFill, 
+                    { width: `${Math.min(((stats?.training_score || user.training_score || 0) / ((user.level || 1) * 1000)) * 100, 100)}%` }
+                  ]}
+                />
+              </View>
+            </View>
           </View>
         </LinearGradient>
 
@@ -123,8 +144,8 @@ const ProfileScreen = () => {
             <View style={styles.chartContainer}>
               <BarChart
                 data={chartData}
-                width={width - 40}
-                height={220}
+                width={width - 80}
+                height={200}
                 yAxisLabel=""
                 yAxisSuffix=""
                 chartConfig={chartConfig}
@@ -134,6 +155,31 @@ const ProfileScreen = () => {
               />
             </View>
           </View>
+
+          {/* Badges Section */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Huy hiệu đạt được</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
+            <View style={styles.badgeItem}>
+              <LinearGradient colors={['#FFD700', '#FDB931']} style={styles.badgeCircle}>
+                <Award size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.badgeName}>Tiên phong</Text>
+            </View>
+            <View style={styles.badgeItem}>
+              <LinearGradient colors={['#4361EE', '#3A0CA3']} style={styles.badgeCircle}>
+                <Briefcase size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.badgeName}>Chuyên cần</Text>
+            </View>
+            <View style={styles.badgeItem}>
+              <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.badgeCircle}>
+                <Calendar size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.badgeName}>Tình nguyện</Text>
+            </View>
+          </ScrollView>
 
           {/* Certificates Section */}
           <View style={styles.sectionHeader}>
@@ -257,6 +303,35 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  progressContainer: {
+    width: width * 0.7,
+    marginTop: 15,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  progressTitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  progressValue: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
   facultyText: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: 14,
@@ -281,7 +356,29 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 200,
+    height: 180,
+  },
+  badgesScroll: {
+    marginBottom: 25,
+    paddingLeft: 5,
+  },
+  badgeItem: {
+    alignItems: 'center',
+    marginRight: 20,
+  },
+  badgeCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    ...SHADOWS.light,
+  },
+  badgeName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
   },
   sectionHeader: {
     flexDirection: 'row',

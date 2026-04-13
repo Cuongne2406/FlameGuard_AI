@@ -67,6 +67,6 @@ git clone https://github.com/Cuongne2406/FlameGuard_AI.git
         b. Back_end
             -   cd back_end
             -   .\venv\Scripts\activate
-            -   uvicorn app.main:app --reload
+            -   python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
     
-            -   (dành cho swagger) truy cập: 127.0.0.1:8000/docs 
+            -   (dành cho swagger) truy cập: [IP_CỦA_MÁY]:8000/docs hoặc localhost:8000/docs

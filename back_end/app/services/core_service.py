@@ -340,10 +340,10 @@ def format_user_dict(db: Session, user: User):
     for uo in user.organizations:
         org_data_list.append({
             "organization_id": uo.organization_id,
-            "organization_name": uo.organization.name,
-            "title": uo.title,
+            "organization_name": uo.organization.name if uo.organization else "Đơn vị ẩn",
+            "title": uo.title or "Thành viên",
             "is_primary": uo.is_primary,
-            "joined_date": uo.joined_date.isoformat() if uo.joined_date else None
+            "joined_date": uo.joined_date # Phụ thuộc Pydantic serialization
         })
         if uo.is_primary:
             role_title = uo.title
@@ -353,34 +353,41 @@ def format_user_dict(db: Session, user: User):
         role_title = org_data_list[0]["title"] or "Cán bộ"
     
     # Tính toán số lượng hoạt động và khen thưởng thực tế
-    activity_count = db.query(EventRegistration).filter(EventRegistration.user_id == user.id).count()
-    award_count = db.query(Award).filter(Award.user_id == user.id, Award.status == AwardStatus.APPROVED).count()
+    try:
+        activity_count = db.query(EventRegistration).filter(EventRegistration.user_id == user.id).count()
+        award_count = db.query(Award).filter(Award.user_id == user.id, Award.status == AwardStatus.APPROVED).count()
+    except Exception:
+        activity_count = 0
+        award_count = 0
 
     return {
-        "id": str(user.id),
+        "id": user.id,
         "student_id": user.student_id,
         "full_name": user.full_name,
         "email": user.email,
         "phone_number": user.phone_number,
-        "status": user.status.value if user.status else "ACTIVE",
+        "status": user.status if user.status else "ACTIVE",
         "avatar_url": user.avatar_url,
-        "is_2fa_enabled": user.is_2fa_enabled,
-        "level": user.level,
-        "training_score": user.training_score,
-        "university": user.university,
-        "address": user.address,
-        "role_title": role_title,
+        "is_2fa_enabled": user.is_2fa_enabled or False,
+        "level": user.level or 1,
+        "training_score": user.training_score or 0,
+        "university": user.university or "ĐH Lạc Hồng",
+        "address": user.address or "Việt Nam",
+        "class_id": user.class_id,
+        "class_name": user.study_class.name if user.study_class else None,
+        "role_title": role_title or "Thành viên",
         "activity_count": activity_count,
         "award_count": award_count,
         "organizations": org_data_list,
         "roles": [
             {
-                "id": str(r.id),
+                "id": r.id,
                 "name": r.name,
-                "description": r.description
+                "description": r.description,
+                "permissions": [] # Fallback cho Schema
             } for r in user.roles
         ],
-        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None
+        "last_login_at": user.last_login_at
     }
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):

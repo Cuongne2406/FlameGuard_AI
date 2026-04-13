@@ -9,7 +9,8 @@ import {
   Share,
   StatusBar,
   ActivityIndicator,
-  Alert
+  Alert,
+  TextInput
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -22,11 +23,13 @@ import {
   Star, 
   Info,
   Rocket,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquare,
+  Send
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SHADOWS, SIZES } from '../../src/constants/theme';
-import { getEventDetail, registerEvent, getUserRegistrations } from '../../src/api/client';
+import { getEventDetail, registerEvent, getUserRegistrations, getEventQA, postQuestion } from '../../src/api/client';
 import { useAuth } from '../../src/context/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -40,20 +43,26 @@ const EventDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [isRegistered, setIsRegistered] = useState(false);
   const [registering, setRegistering] = useState(false);
+  
+  const [qaList, setQaList] = useState<any[]>([]);
+  const [newQuestion, setNewQuestion] = useState('');
+  const [postingQa, setPostingQa] = useState(false);
 
   useEffect(() => {
     const fetchEventData = async () => {
       if (!id) return;
       try {
-        const [detailData, registrations] = await Promise.all([
+        const [detailData, registrations, qaData] = await Promise.all([
           getEventDetail(id),
-          user ? getUserRegistrations(user.id) : []
+          user ? getUserRegistrations(user.id) : [],
+          getEventQA(id)
         ]);
         
         setEvent(detailData);
+        setQaList(qaData);
         
         // Check if current user is in registrations list for this event
-        const registered = registrations.some((reg: any) => reg.id === id); // /me/events trả về list event IDs
+        const registered = registrations.some((reg: any) => reg.id === id);
         setIsRegistered(registered);
       } catch (error) {
         console.error('Fetch event detail error:', error);
@@ -88,6 +97,22 @@ const EventDetailScreen = () => {
       Alert.alert("Lỗi", "Đăng ký không thành công. Có thể bạn đã đăng ký hoặc sự kiện đã hết chỗ.");
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handlePostQA = async () => {
+    if (!newQuestion.trim() || !user || !id) return;
+    setPostingQa(true);
+    try {
+      const result = await postQuestion(id, newQuestion, user.id);
+      setQaList(prev => [result, ...prev]);
+      setNewQuestion('');
+      Alert.alert("Thành công", "Câu hỏi của bạn đã được gửi. BTC sẽ sớm phản hồi!");
+    } catch (error) {
+      console.error('Post QA error:', error);
+      Alert.alert("Lỗi", "Không thể gửi câu hỏi lúc này.");
+    } finally {
+      setPostingQa(false);
     }
   };
 
@@ -200,6 +225,57 @@ const EventDetailScreen = () => {
             <TouchableOpacity style={styles.followBtn}>
               <Text style={styles.followText}>Theo dõi</Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Q&A Section */}
+          <View style={[styles.section, { marginTop: 30 }]}>
+            <View style={styles.sectionHeader}>
+              <MessageSquare size={18} color={COLORS.text} />
+              <Text style={styles.sectionTitle}>Hỏi & Đáp trực tuyến</Text>
+            </View>
+            
+            {qaList.length === 0 ? (
+              <Text style={styles.emptyQa}>Chưa có câu hỏi nào. Hãy là người đầu tiên!</Text>
+            ) : (
+              qaList.map((qa: any) => (
+                <View key={qa.id} style={styles.qaItem}>
+                  <View style={styles.questionRow}>
+                    <View style={styles.qIndicator}><Text style={styles.qText}>Q</Text></View>
+                    <Text style={styles.questionText}>{qa.question}</Text>
+                  </View>
+                  {qa.is_answered ? (
+                    <View style={styles.answerRow}>
+                      <View style={styles.aIndicator}><Text style={styles.aText}>A</Text></View>
+                      <Text style={styles.answerText}>{qa.answer}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.pendingAnswer}>Đang chờ Ban tổ chức phản hồi...</Text>
+                  )}
+                </View>
+              ))
+            )}
+
+            {/* Post Question Form */}
+            <View style={styles.qaForm}>
+              <TextInput
+                style={styles.qaInput}
+                placeholder="Đặt câu hỏi cho Ban Tổ Chức..."
+                value={newQuestion}
+                onChangeText={setNewQuestion}
+                placeholderTextColor={COLORS.textSecondary}
+              />
+              <TouchableOpacity 
+                style={[styles.sendQaBtn, !newQuestion.trim() && { opacity: 0.5 }]}
+                disabled={!newQuestion.trim() || postingQa}
+                onPress={handlePostQA}
+              >
+                {postingQa ? (
+                  <ActivityIndicator size="small" color={COLORS.white} />
+                ) : (
+                  <Send size={18} color={COLORS.white} />
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
           
           <View style={{ height: 120 }} />
@@ -480,6 +556,95 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: 17,
     fontWeight: 'bold',
+  },
+  emptyQa: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  qaItem: {
+    backgroundColor: COLORS.background,
+    padding: 15,
+    borderRadius: 15,
+    marginBottom: 15,
+  },
+  questionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+  qIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  questionText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  answerRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  aIndicator: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  answerText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  pendingAnswer: {
+    fontSize: 12,
+    color: COLORS.warning,
+    fontStyle: 'italic',
+    marginLeft: 34,
+  },
+  qaForm: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
+  qaInput: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    height: 50,
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  sendQaBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
   }
 });
 

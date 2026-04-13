@@ -1,13 +1,14 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException
-from app.models.events import Campaign, Event, EventRegistration, EventQA, EventIncident, EventRegistrationStatus
 from app.schemas.event_schemas import (
     CampaignCreate, CampaignUpdate,
     EventCreate, EventUpdate,
     EventRegistrationCreate, EventRegistrationUpdate,
-    EventQACreate, EventIncidentCreate
+    EventQACreate, EventIncidentCreate,
+    EventFeedbackCreate
 )
+from app.models.events import Campaign, Event, EventRegistration, EventQA, EventIncident, EventRegistrationStatus, EventFeedback
 from app.services import notification_service
 from app.schemas.notification_schemas import NotificationCreate
 

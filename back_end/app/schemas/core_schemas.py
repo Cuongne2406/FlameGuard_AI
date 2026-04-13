@@ -214,6 +214,7 @@ class UserBase(BaseModel):
     daily_digest_enabled: bool = False
     signature_data: Optional[str] = None
     device_id: Optional[str] = None
+    push_token: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -234,6 +235,7 @@ class UserUpdate(BaseModel):
     signature_data: Optional[str] = None
     class_id: Optional[UUID] = None
     device_id: Optional[str] = None
+    push_token: Optional[str] = None
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
 

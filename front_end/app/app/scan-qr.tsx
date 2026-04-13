@@ -6,17 +6,22 @@ import {
   TouchableOpacity, 
   Dimensions,
   SafeAreaView,
-  StatusBar
+  StatusBar,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Zap, ZapOff, ShieldCheck, AlertCircle } from 'lucide-react-native';
-import { getEvents, getUserRegistrations, updateRegistrationStatus } from '../src/api/client';
+import { X, Zap, ZapOff, ShieldCheck, AlertCircle, Star } from 'lucide-react-native';
+import { getUserRegistrations, updateRegistrationStatus, submitFeedback } from '../src/api/client';
 import { useAuth } from '../src/context/AuthContext';
+import SuccessAnimation from '../src/components/SuccessAnimation';
 import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const ScanQRScreen = () => {
   const insets = useSafeAreaInsets();
@@ -26,15 +31,21 @@ const ScanQRScreen = () => {
   const [flash, setFlash] = useState(false);
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('Mã QR không hợp lệ');
+  
+  // Feedback states
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [currentEventId, setCurrentEventId] = useState<string | null>(null);
+
   const router = useRouter();
 
   if (!permission) {
-    // Camera permissions are still loading.
     return <View />;
   }
 
   if (!permission.granted) {
-    // Camera permissions are not granted yet.
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Chúng tôi cần quyền truy cập Camera để quét mã QR.</Text>
@@ -50,31 +61,29 @@ const ScanQRScreen = () => {
     setScanned(true);
     
     try {
-      // 1. Giả định data là Event ID (UUID)
       const eventId = data.trim();
-      
-      // Kiểm tra định dạng UUID cơ bản (8-4-4-4-12)
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      
       if (!uuidRegex.test(eventId)) {
         throw new Error("Mã QR không đúng định dạng sự kiện.");
       }
 
-      // 2. Lấy danh sách đăng ký của User để tìm registration_id
       const myEvents = await getUserRegistrations(user.id);
-      const registration = myEvents.find((reg: any) => reg.id === eventId); // Backend cũ trả về id event
+      const registration = myEvents.find((reg: any) => reg.id === eventId); 
 
       if (!registration) {
         throw new Error("Bạn chưa đăng ký tham gia sự kiện này.");
       }
 
-      // 3. Thực hiện Check-in
-      // Sử dụng registration_id vừa được bổ sung vào endpoint /me/events
       await updateRegistrationStatus(registration.registration_id, 'ATTENDED');
 
+      setCurrentEventId(eventId);
       setStatus('success');
+      
       setTimeout(() => {
-        router.back();
-      }, 2500);
+        setShowFeedback(true);
+      }, 1500);
+      
     } catch (error: any) {
       console.error('Scan check-in error:', error);
       setErrorMsg(error.message || "Lỗi hệ thống khi điểm danh.");
@@ -86,6 +95,22 @@ const ScanQRScreen = () => {
     }
   };
 
+  const handleFeedbackSubmit = async () => {
+    if (!user || !currentEventId) return;
+    setSubmitting(true);
+    try {
+      await submitFeedback(currentEventId, rating, comment, user.id);
+      Alert.alert("Cảm ơn!", "Phản hồi của bạn đã được ghi nhận.");
+      router.back();
+    } catch (error) {
+      console.error('Submit feedback error:', error);
+      Alert.alert("Lỗi", "Không thể gửi phản hồi lúc này.");
+      router.back();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -94,59 +119,107 @@ const ScanQRScreen = () => {
         style={StyleSheet.absoluteFillObject} 
         onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
         enableTorch={flash}
-      >
-        {/* Sub-UI: Overlay & Scanner Box */}
-        <View style={styles.overlay}>
-          <View style={styles.unfocusedContainer}></View>
-          <View style={styles.middleContainer}>
-            <View style={styles.unfocusedContainer}></View>
-            <View style={styles.focusedContainer}>
-                {/* Corner Markers */}
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-                
-                {/* Scanning Animation or result */}
-                {status === 'success' && (
-                  <View style={styles.resultOverlay}>
-                    <ShieldCheck size={60} color={COLORS.success} />
-                    <Text style={styles.resultText}>Check-in thành công!</Text>
-                  </View>
-                )}
-                {status === 'error' && (
-                  <View style={styles.resultOverlay}>
-                    <AlertCircle size={60} color={COLORS.error} />
-                    <Text style={styles.errorText}>Mã QR không hợp lệ</Text>
-                  </View>
-                )}
-            </View>
-            <View style={styles.unfocusedContainer}></View>
-          </View>
-          <View style={styles.unfocusedContainer}>
-            <Text style={styles.hintText}>Vui lòng đưa mã QR vào khung hình</Text>
-          </View>
-        </View>
+      />
 
-        {/* Floating Controls */}
-        <View style={[styles.controls, { paddingTop: insets.top }]}>
-          <View style={styles.header}>
+      {/* UI Overlay - Outside CameraView using absolute positioning */}
+      <View style={[StyleSheet.absoluteFillObject, styles.overlay]}>
+        <View style={styles.unfocusedContainer}></View>
+        <View style={styles.middleContainer}>
+          <View style={styles.unfocusedContainer}></View>
+          <View style={styles.focusedContainer}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+              
+              {status === 'success' && (
+                <View style={styles.resultOverlay}>
+                  <SuccessAnimation message="Check-in thành công!" />
+                </View>
+              )}
+              {status === 'error' && (
+                <View style={styles.resultOverlay}>
+                  <AlertCircle size={60} color={COLORS.error} />
+                  <Text style={styles.errorText}>{errorMsg}</Text>
+                </View>
+              )}
+          </View>
+          <View style={styles.unfocusedContainer}></View>
+        </View>
+        <View style={styles.unfocusedContainer}>
+          <Text style={styles.hintText}>Vui lòng đưa mã QR vào khung hình</Text>
+        </View>
+      </View>
+
+      {/* Floating Controls */}
+      <View style={[styles.controls, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={styles.circleBtn}
+          >
+            <X size={24} color={COLORS.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Điểm danh sự kiện</Text>
+          <TouchableOpacity 
+            onPress={() => setFlash(!flash)}
+            style={styles.circleBtn}
+          >
+            {flash ? <Zap size={24} color="#FFD700" /> : <ZapOff size={24} color={COLORS.white} />}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <Modal
+        visible={showFeedback}
+        transparent={true}
+        animationType="slide"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cảm ơn bạn!</Text>
+            <Text style={styles.modalSub}>Hãy cho chúng tôi biết cảm nhận của bạn về sự kiện này</Text>
+            
+            <View style={styles.ratingRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity key={star} onPress={() => setRating(star)}>
+                  <Star 
+                    size={36} 
+                    color={star <= rating ? "#FFD700" : COLORS.border} 
+                    fill={star <= rating ? "#FFD700" : "transparent"} 
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Lời nhắn cho Ban Tổ Chức (không bắt buộc)..."
+              multiline
+              numberOfLines={4}
+              value={comment}
+              onChangeText={setComment}
+              placeholderTextColor={COLORS.textSecondary}
+            />
+
             <TouchableOpacity 
-              onPress={() => router.back()}
-              style={styles.circleBtn}
+              style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
+              onPress={handleFeedbackSubmit}
+              disabled={submitting}
             >
-              <X size={24} color={COLORS.white} />
+              {submitting ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <Text style={styles.submitText}>Gửi phản hồi</Text>
+              )}
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Điểm danh sự kiện</Text>
-            <TouchableOpacity 
-              onPress={() => setFlash(!flash)}
-              style={styles.circleBtn}
-            >
-              {flash ? <Zap size={24} color="#FFD700" /> : <ZapOff size={24} color={COLORS.white} />}
+
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.skipText}>Bỏ qua</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </CameraView>
+      </Modal>
     </View>
   );
 };
@@ -155,8 +228,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   message: {
     textAlign: 'center',
@@ -169,6 +240,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
+    alignSelf: 'center',
+    marginTop: 20,
   },
   permissionText: {
     color: 'white',
@@ -190,7 +263,6 @@ const styles = StyleSheet.create({
   focusedContainer: {
     width: width * 0.7,
     position: 'relative',
-    backgroundColor: 'transparent',
   },
   corner: {
     position: 'absolute',
@@ -268,19 +340,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  resultText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.success,
-    marginTop: 15,
-    textAlign: 'center',
-  },
   errorText: {
       fontSize: 18,
       fontWeight: 'bold',
       color: COLORS.error,
       marginTop: 15,
       textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: 'white',
+    borderRadius: 30,
+    padding: 30,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 10,
+  },
+  modalSub: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 25,
+  },
+  commentInput: {
+    width: '100%',
+    backgroundColor: COLORS.background,
+    borderRadius: 15,
+    padding: 15,
+    height: 100,
+    textAlignVertical: 'top',
+    fontSize: 14,
+    color: COLORS.text,
+    marginBottom: 25,
+  },
+  submitBtn: {
+    width: '100%',
+    height: 55,
+    backgroundColor: COLORS.primary,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  submitText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  skipText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '600',
   }
 });
 

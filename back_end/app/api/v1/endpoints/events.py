@@ -8,6 +8,7 @@ from app.schemas.event_schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationCreate, EventRegistrationUpdate, EventRegistrationResponse,
     EventQACreate, EventQAResponse, EventIncidentCreate, EventIncidentResponse,
+    EventFeedbackCreate, EventFeedbackResponse,
     EventSummaryResponse
 )
 from app.services import event_service
@@ -22,13 +23,14 @@ def get_event_stats(db: Session = Depends(get_db)):
     """
     Lấy thống kê sự kiện thực tế từ Database.
     """
+    from app.models.events import Event, EventStatus, EventRegistration, EventFeedback
     total_events = db.query(func.count(Event.id)).scalar() or 0
     upcoming_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.PUBLISHED).scalar() or 0
     live_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.LIVE).scalar() or 0
     ended_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.ENDED).scalar() or 0
     total_participants = db.query(func.count(EventRegistration.id)).scalar() or 0
-    total_feedback = 0 # Future requirement: add Feedback table
-    avg_rating = 0.0 # Future requirement: add Feedback table
+    total_feedback = db.query(func.count(EventFeedback.id)).scalar() or 0
+    avg_rating = db.query(func.avg(EventFeedback.rating)).scalar() or 0.0
     
     return {
         "totalEvents": total_events,
@@ -38,7 +40,7 @@ def get_event_stats(db: Session = Depends(get_db)):
         "totalParticipants": total_participants,
         "participantTarget": 2000,
         "totalFeedback": total_feedback,
-        "avgRating": avg_rating
+        "avgRating": float(avg_rating)
     }
 
 # ==========================================
@@ -220,4 +222,13 @@ def get_event_summary(
 ):
     return event_service.get_event_summary(db=db, event_id=id)
 
-    return event_service.get_event_summary(db=db, event_id=id)
+@router.post("/{event_id}/feedbacks", response_model=EventFeedbackResponse)
+def create_event_feedback(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    feedback_in: EventFeedbackCreate,
+):
+    if str(event_id) != str(feedback_in.event_id):
+        raise HTTPException(status_code=400, detail="Event ID mismatch")
+    return event_service.create_feedback(db=db, feedback_in=feedback_in)

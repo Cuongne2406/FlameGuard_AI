@@ -71,16 +71,20 @@ async def login_access_token(
 
             # --- DEVICE BINDING LOGIC ---
             if x_device_id:
-                if not user.device_id:
-                    # Lần đầu đăng nhập: Gắn thiết bị
-                    user.device_id = x_device_id
-                    db.commit()
-                elif user.device_id != x_device_id:
-                    # Sai thiết bị đã gắn: Từ chối
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
-                    )
+                try:
+                    if not user.device_id:
+                        user.device_id = x_device_id
+                        db.commit()
+                    elif user.device_id != x_device_id:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
+                        )
+                except HTTPException as e:
+                    raise e
+                except Exception as e:
+                    db.rollback()
+                    print(f"Device binding error: {e}")
             # ----------------------------
             
             # Đảm bảo User có ít nhất role STUDENT (Repair logic cho account cũ)
@@ -90,8 +94,13 @@ async def login_access_token(
                 if student_role:
                     user.roles.append(student_role)
                 
-            db.commit()
-            db.refresh(user)
+            try:
+                db.commit()
+                db.refresh(user)
+            except Exception as e:
+                db.rollback()
+                print(f"Sync user error: {e}")
+                # Vẫn cho qua nếu chỉ là lỗi lặt vặt lúc sync profile
             
             # Ghi nhật ký đăng nhập
             ai_audit_service.create_system_audit_log(db, AuditLogCreate(
@@ -139,16 +148,21 @@ async def login_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
         
-    # --- DEVICE BINDING LOGIC (Local Fallback) ---
     if x_device_id:
-        if not user.device_id:
-            user.device_id = x_device_id
-            db.commit()
-        elif user.device_id != x_device_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
-            )
+        try:
+            if not user.device_id:
+                user.device_id = x_device_id
+                db.commit()
+            elif user.device_id != x_device_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Tài khoản này đã được liên kết với một thiết bị khác. Vui lòng liên hệ Admin để reset."
+                )
+        except HTTPException as e:
+            raise e
+        except Exception as e:
+            db.rollback()
+            print(f"Local bind error: {e}")
     # ---------------------------------------------
         
     # Ghi nhật ký đăng nhập Local

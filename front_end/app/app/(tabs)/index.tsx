@@ -23,6 +23,7 @@ import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import EventCard from '../../src/components/EventCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { getEvents } from '../../src/api/client';
+import { EventSkeleton } from '../../src/components/SkeletonLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -124,7 +125,10 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 20 }} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselContent}>
+            <EventSkeleton horizontal />
+            <EventSkeleton horizontal />
+          </ScrollView>
         ) : (
           <FlatList
             data={events.slice(0, 3)}
@@ -152,7 +156,10 @@ const HomeScreen: React.FC = () => {
 
         <View style={styles.activitiesList}>
           {loading ? (
-             <ActivityIndicator size="small" color={COLORS.primary} />
+             <View>
+              <EventSkeleton />
+              <EventSkeleton />
+             </View>
           ) : (
             events.map(event => (
               <EventCard 
