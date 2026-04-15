@@ -61,12 +61,16 @@ function InitialLayout() {
   );
 }
 
+import { QueryProvider } from '../src/context/QueryProvider';
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <InitialLayout />
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          <InitialLayout />
+        </AuthProvider>
+      </QueryProvider>
     </SafeAreaProvider>
   );
 }

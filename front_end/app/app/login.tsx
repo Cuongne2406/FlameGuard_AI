@@ -19,24 +19,38 @@ import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
 import { login as loginApi } from '../src/api/client';
 import { useAuth } from '../src/context/AuthContext';
 
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+import FormInput from '../src/components/common/FormInput';
+import PremiumButton from '../src/components/common/PremiumButton';
+
+const loginSchema = z.object({
+  username: z.string().min(4, 'MSSV không hợp lệ (quá ngắn)'),
+  password: z.string().min(6, 'Mật khẩu phải từ 6 ký tự trở lên')
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 const LoginScreen = () => {
   const router = useRouter();
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!username || !password) {
-      Alert.alert("Lỗi", "Vui lòng nhập đầy đủ MSSV và mật khẩu.");
-      return;
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: '',
+      password: ''
     }
+  });
 
+  const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await login(username, password);
-      // _layout.tsx will automatically redirect since userToken is updated in AuthContext
+      await login(data.username, data.password);
     } catch (error: any) {
       console.error("Login error:", error);
       const errorMsg = error.response?.data?.detail || "Đăng nhập thất bại. Vui lòng thử lại.";
@@ -69,57 +83,37 @@ const LoginScreen = () => {
             <Text style={styles.loginSub}>Sử dụng mã số sinh viên (MSSV) của bạn</Text>
 
             {/* Username Input */}
-            <View style={styles.inputWrapper}>
-              <View style={styles.inputIcon}>
-                <User size={20} color={COLORS.primary} />
-              </View>
-              <TextInput
-                placeholder="Mã số sinh viên (MSSV)"
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                autoCapitalize="none"
-              />
-            </View>
+            <FormInput 
+              control={control}
+              name="username"
+              placeholder="Mã số sinh viên (MSSV)"
+              leftIcon={<User size={20} color={COLORS.primary} />}
+            />
 
             {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <View style={styles.inputIcon}>
-                <Lock size={20} color={COLORS.primary} />
-              </View>
-              <TextInput
-                placeholder="Mật khẩu"
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <EyeOff size={20} color={COLORS.border} /> : <Eye size={20} color={COLORS.border} />}
-              </TouchableOpacity>
-            </View>
+            <FormInput 
+              control={control}
+              name="password"
+              placeholder="Mật khẩu"
+              secureTextEntry={!showPassword}
+              leftIcon={<Lock size={20} color={COLORS.primary} />}
+              rightIcon={
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff size={20} color={COLORS.border} /> : <Eye size={20} color={COLORS.border} />}
+                </TouchableOpacity>
+              }
+            />
 
             <TouchableOpacity style={styles.forgotBtn}>
               <Text style={styles.forgotText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.loginBtn, SHADOWS.medium]}
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <>
-                  <Text style={styles.loginBtnText}>Vào hệ thống</Text>
-                  <ArrowRight size={20} color={COLORS.white} />
-                </>
-              )}
-            </TouchableOpacity>
+            <PremiumButton 
+              title="Vào hệ thống"
+              onPress={handleSubmit(onSubmit)}
+              loading={isLoading}
+              icon={<ArrowRight size={20} color={COLORS.white} />}
+            />
           </View>
 
           <View style={styles.footer}>

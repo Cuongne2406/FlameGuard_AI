@@ -34,6 +34,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (Platform.OS !== 'web') {
           token = await SecureStore.getItemAsync('userToken');
+        } else {
+          token = localStorage.getItem('userToken');
         }
       } catch (e) {
         console.error('Failed to restore token:', e);
@@ -50,6 +52,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Nếu token hết hạn hoặc lỗi, xóa token
           if (Platform.OS !== 'web') {
               await SecureStore.deleteItemAsync('userToken');
+          } else {
+              localStorage.removeItem('userToken');
           }
           setUserToken(null);
         }
@@ -69,6 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const data = await loginApi(username, password);
         if (data.access_token) {
+          if (Platform.OS !== 'web') {
+             await SecureStore.setItemAsync('userToken', data.access_token);
+          } else {
+             localStorage.setItem('userToken', data.access_token);
+          }
           setUserToken(data.access_token);
           // Sau khi login thành công, lấy thông tin user đầy đủ
           const profile = await getCurrentUser();
@@ -84,6 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         if (Platform.OS !== 'web') {
           await SecureStore.deleteItemAsync('userToken');
+        } else {
+          localStorage.removeItem('userToken');
         }
         setUserToken(null);
         setUser(null);

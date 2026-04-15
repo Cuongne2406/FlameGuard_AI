@@ -24,6 +24,8 @@ import EventCard from '../../src/components/EventCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { getEvents } from '../../src/api/client';
 import { EventSkeleton } from '../../src/components/SkeletonLoader';
+import { useQuery } from '@tanstack/react-query';
+import GlassCard from '../../src/components/common/GlassCard';
 
 const { width } = Dimensions.get('window');
 
@@ -31,22 +33,14 @@ const HomeScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: events, isLoading: loading } = useQuery({
+    queryKey: ['events', 'home'],
+    queryFn: () => getEvents(0, 5),
+    staleTime: 5 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const data = await getEvents(0, 5); // Lấy 5 sự kiện mới nhất
-        setEvents(data);
-      } catch (error) {
-        console.error('Home fetch events error:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEvents();
-  }, []);
+  // Since React Query handles undefined data before it loads, we provide a safe fallback for the render methods:
+  const displayEvents = events || [];
 
   return (
     <View style={styles.container}>
@@ -70,25 +64,30 @@ const HomeScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* User Score Summary Card - Now integrated into the header flow */}
-        <View style={[styles.scoreCard, SHADOWS.medium]}>
-          <View style={styles.scoreInfo}>
-            <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
-            <Text style={styles.scoreValue}>{user?.training_score || 0}</Text>
+        {/* User Score Summary Card - Now integrated into the header flow using GlassCard */}
+        <GlassCard 
+          style={styles.scoreCard}
+          gradientColors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={styles.scoreInfo}>
+              <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
+              <Text style={styles.scoreValue}>{user?.training_score || 0}</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.scoreInfo}>
+              <Text style={styles.scoreLabel}>LEVEL</Text>
+              <Text style={styles.scoreValue}>{user?.level || 1}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.scoreAction}
+              onPress={() => router.push('/profile')}
+            >
+              <Rocket size={18} color={COLORS.primary} />
+              <Text style={styles.actionText}>Review</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.scoreInfo}>
-            <Text style={styles.scoreLabel}>LEVEL</Text>
-            <Text style={styles.scoreValue}>{user?.level || 1}</Text>
-          </View>
-          <TouchableOpacity 
-            style={styles.scoreAction}
-            onPress={() => router.push('/profile')}
-          >
-            <Rocket size={18} color={COLORS.primary} />
-            <Text style={styles.actionText}>Review</Text>
-          </TouchableOpacity>
-        </View>
+        </GlassCard>
       </LinearGradient>
 
       <ScrollView 
@@ -131,7 +130,7 @@ const HomeScreen: React.FC = () => {
           </ScrollView>
         ) : (
           <FlatList
-            data={events.slice(0, 3)}
+            data={displayEvents.slice(0, 3)}
             renderItem={({ item }) => (
               <EventCard 
                 event={item} 
@@ -161,7 +160,7 @@ const HomeScreen: React.FC = () => {
               <EventSkeleton />
              </View>
           ) : (
-            events.map(event => (
+            displayEvents.map(event => (
               <EventCard 
                 key={event.id}
                 event={event} 
@@ -169,7 +168,7 @@ const HomeScreen: React.FC = () => {
               />
             ))
           )}
-          {!loading && events.length === 0 && (
+          {!loading && displayEvents.length === 0 && (
             <Text style={{ textAlign: 'center', color: COLORS.textSecondary }}>Không có hoạt động nào sắp diễn ra.</Text>
           )}
         </View>

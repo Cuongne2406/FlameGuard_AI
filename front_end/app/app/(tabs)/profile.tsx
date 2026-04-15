@@ -20,12 +20,16 @@ import {
   ChevronRight, 
   ExternalLink,
   Settings as SettingsIcon,
-  Share2
+  Share2,
+  FileText,
+  LayoutGrid
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import apiClient from '../../src/api/client';
+import { useQuery } from '@tanstack/react-query';
+import GlassCard from '../../src/components/common/GlassCard';
 
 const { width } = Dimensions.get('window');
 
@@ -33,24 +37,18 @@ const ProfileScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const [stats, setStats] = React.useState<any>(null);
-  const [loading, setLoading] = React.useState(true);
+  
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['profileStats'],
+    queryFn: async () => {
+      const response = await apiClient.get('/users/me/profile_stats');
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
-  React.useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await apiClient.get('/users/me/profile_stats');
-        setStats(response.data);
-      } catch (error) {
-        console.error('Error fetching profile stats:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, []);
-
-  if (loading || !user) {
+  // Handle case where user context or stats are loading, or user is null
+  if (isLoading || !user) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -138,8 +136,42 @@ const ProfileScreen = () => {
         </LinearGradient>
 
         <View style={styles.content}>
-          {/* Radar Chart Section */}
-          <View style={[styles.sectionCard, SHADOWS.light]}>
+          {/* Lưới Mini-App (Tiện ích mở rộng) */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Tiện ích mở rộng</Text>
+          </View>
+          <View style={styles.gridMenuContainer}>
+            <TouchableOpacity 
+              style={[styles.gridMenuItem, SHADOWS.light]}
+              onPress={() => router.push('/awards')}
+            >
+              <LinearGradient colors={['#FFD700', '#FDB931']} style={styles.gridMenuIcon}>
+                <Award size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.gridMenuText}>Thành tích{'\n'}của tôi</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.gridMenuItem, SHADOWS.light]}
+              onPress={() => router.push('/documents')}
+            >
+              <LinearGradient colors={['#4361EE', '#3A0CA3']} style={styles.gridMenuIcon}>
+                <FileText size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.gridMenuText}>Dịch vụ{'\n'}Hành chính</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.gridMenuItem, SHADOWS.light, { opacity: 0.5 }]}
+            >
+              <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.gridMenuIcon}>
+                <LayoutGrid size={24} color={COLORS.white} />
+              </LinearGradient>
+              <Text style={styles.gridMenuText}>Thêm tính năng{'\n'}(Sắp ra mắt)</Text>
+            </TouchableOpacity>
+          </View>
+
+          <GlassCard style={{ marginTop: 20 }}>
             <Text style={styles.sectionTitle}>Năng lực cá nhân</Text>
             <View style={styles.chartContainer}>
               <BarChart
@@ -154,7 +186,7 @@ const ProfileScreen = () => {
                 showValuesOnTopOfBars={true}
               />
             </View>
-          </View>
+          </GlassCard>
 
           {/* Badges Section */}
           <View style={styles.sectionHeader}>
@@ -297,6 +329,36 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     marginBottom: 8,
+  },
+  gridMenuContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  gridMenuItem: {
+    width: (width - SIZES.padding * 2 - 30) / 3, // 3 columns
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2, // For Android
+  },
+  gridMenuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  gridMenuText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   idText: {
     color: COLORS.white,

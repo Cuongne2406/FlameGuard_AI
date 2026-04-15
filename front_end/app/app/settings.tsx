@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -24,6 +24,8 @@ import {
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
+import GlassCard from '../src/components/common/GlassCard';
+import PremiumButton from '../src/components/common/PremiumButton';
 
 interface SettingItemProps {
   icon: any;
@@ -38,7 +40,7 @@ const SettingsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
-  const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
+  const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
   if (!user) return null;
 
@@ -52,7 +54,6 @@ const SettingsScreen = () => {
           "text": "Đăng xuất", 
           "onPress": async () => {
             await logout();
-            // AuthContext redirection logic in _layout.tsx will handle the rest
           }, 
           "style": "destructive"
         }
@@ -76,19 +77,19 @@ const SettingsScreen = () => {
     >
       <View style={styles.settingLeft}>
         <View style={[styles.iconContainer, { backgroundColor: `${color}10` }]}>
-          <Icon size={20} color={color} />
+          <Icon size={18} color={color} />
         </View>
         <Text style={[styles.settingTitle, { color }]}>{title}</Text>
       </View>
       <View style={styles.settingRight}>
         {value && <Text style={styles.settingValue}>{value}</Text>}
-        {showArrow && <ChevronRight size={18} color={COLORS.border} />}
+        {showArrow && <ChevronRight size={16} color={COLORS.textSecondary} />}
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity 
@@ -97,57 +98,59 @@ const SettingsScreen = () => {
         >
           <ChevronLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cài đặt tài khoản</Text>
-        <View style={{ width: 40 }} />
+        <Text style={styles.headerTitle}>Cài đặt hệ thống</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* User Info Section */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarPlaceholder}>
-            <UserCircle size={80} color={COLORS.primary} strokeWidth={1} />
+        {/* User Profile Summary */}
+        <GlassCard style={styles.profileCard}>
+          <View style={styles.profileInfo}>
+            <View style={styles.avatarContainer}>
+              <UserCircle size={80} color={COLORS.primary} strokeWidth={1} />
+            </View>
+            <Text style={styles.userName}>{user.full_name}</Text>
+            <Text style={styles.userSub}>{user.student_id} • {user.class_name || 'Đoàn viên'}</Text>
           </View>
-          <Text style={styles.userName}>{user.full_name}</Text>
-          <Text style={styles.userSub}>{user.student_id} • {user.class_name || 'Đoàn viên'}</Text>
-        </View>
+        </GlassCard>
 
         {/* Account Details Group */}
         <View style={styles.group}>
-          <Text style={styles.groupTitle}>Thông tin cá nhân</Text>
-          <View style={[styles.groupCard, SHADOWS.light]}>
+          <Text style={styles.groupTitle}>Thông tin tài khoản</Text>
+          <GlassCard style={styles.groupGlass}>
             <SettingItem icon={User} title="Họ và tên" value={user.full_name} showArrow={false} />
             <View style={styles.divider} />
             <SettingItem icon={Smartphone} title="Số điện thoại" value={user.phone_number || 'Chưa cập nhật'} showArrow={false} />
             <View style={styles.divider} />
-            <SettingItem icon={HelpCircle} title="Email" value={user.email} showArrow={false} />
-          </View>
+            <SettingItem icon={HelpCircle} title="Email liên hệ" value={user.email} showArrow={false} />
+          </GlassCard>
         </View>
 
         {/* Security Group */}
         <View style={styles.group}>
-          <Text style={styles.groupTitle}>Bảo mật & Thiết bị</Text>
-          <View style={[styles.groupCard, SHADOWS.light]}>
+          <Text style={styles.groupTitle}>Bảo mật & Định danh</Text>
+          <GlassCard style={styles.groupGlass}>
             <SettingItem 
               icon={Smartphone} 
-              title="Mã thiết bị hiện tại" 
-              value={user.device_id ? user.device_id.substring(0, 8) + "..." : "Chưa liên kết"} 
-              onPress={() => Alert.alert("Thông tin thiết bị", `ID: ${user.device_id || 'Chưa xác định'}\n\nMã này dùng để xác thực check-in chính chủ.`)}
+              title="Thiết bị liên kết" 
+              value={user.device_id ? user.device_id.substring(0, 10).toUpperCase() : "Chưa xác thực"} 
+              onPress={() => Alert.alert("Mã định danh thiết bị", user.device_id || "Thiết bị chưa được gắn mã định danh.")}
             />
             <View style={styles.divider} />
-            <SettingItem icon={ShieldCheck} title="Thay đổi mật khẩu" onPress={() => {}} />
-          </View>
+            <SettingItem icon={ShieldCheck} title="Thay đổi mã PIN / Mật khẩu" onPress={() => {}} />
+          </GlassCard>
         </View>
 
         {/* Preferences Group */}
         <View style={styles.group}>
-          <Text style={styles.groupTitle}>Tùy chọn</Text>
-          <View style={[styles.groupCard, SHADOWS.light]}>
+          <Text style={styles.groupTitle}>Cá nhân hóa</Text>
+          <GlassCard style={styles.groupGlass}>
             <View style={styles.settingItem}>
               <View style={styles.settingLeft}>
-                <View style={[styles.iconContainer, { backgroundColor: `${COLORS.secondary}10` }]}>
-                  <Bell size={20} color={COLORS.secondary} />
+                <View style={[styles.iconContainer, { backgroundColor: `${COLORS.secondary}15` }]}>
+                  <Bell size={18} color={COLORS.secondary} />
                 </View>
-                <Text style={styles.settingTitle}>Thông báo sự kiện</Text>
+                <Text style={styles.settingTitle}>Thông báo đẩy (Push)</Text>
               </View>
               <Switch 
                 value={isNotificationsEnabled} 
@@ -156,19 +159,24 @@ const SettingsScreen = () => {
               />
             </View>
             <View style={styles.divider} />
-            <SettingItem icon={HelpCircle} title="Hỗ trợ kỹ thuật" onPress={() => {}} />
-          </View>
+            <SettingItem icon={HelpCircle} title="Điều khoản & Hỗ trợ" onPress={() => {}} />
+          </GlassCard>
         </View>
 
-        {/* Logout */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <LogOut size={20} color={COLORS.error} />
-          <Text style={styles.logoutText}>Đăng xuất khỏi hệ thống</Text>
-        </TouchableOpacity>
+        {/* Logout Section */}
+        <View style={styles.logoutWrapper}>
+          <PremiumButton 
+            title="Đăng xuất khỏi YouthHub" 
+            onPress={handleLogout}
+            variant="danger"
+            icon={<LogOut size={20} color={COLORS.white} />}
+            style={styles.logoutBtn}
+          />
+        </View>
         
-        <Text style={styles.versionText}>YouthHub Version 1.0.0 (Stable)</Text>
+        <Text style={styles.versionText}>YouthHub Platform • Build 1024 (v1.0.0)</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -181,63 +189,71 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
     backgroundColor: COLORS.surface,
   },
   backButton: {
-    padding: 8,
-    borderRadius: 12,
-    backgroundColor: COLORS.background,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.text,
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 60,
   },
-  profileSection: {
-    alignItems: 'center',
+  profileCard: {
     marginBottom: 30,
+    padding: 30,
+    borderRadius: 28,
   },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.surface,
+  profileInfo: {
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
   },
   userName: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: COLORS.text,
     marginBottom: 4,
   },
   userSub: {
     fontSize: 14,
     color: COLORS.textSecondary,
+    fontWeight: '500',
   },
   group: {
-    marginBottom: 25,
+    marginBottom: 30,
   },
   groupTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     color: COLORS.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     marginBottom: 10,
-    marginLeft: 10,
+    marginLeft: 5,
   },
-  groupCard: {
-    backgroundColor: COLORS.surface,
+  groupGlass: {
+    padding: 0,
     borderRadius: 24,
     overflow: 'hidden',
   },
@@ -252,16 +268,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 14,
   },
   settingTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
   },
   settingRight: {
@@ -272,32 +288,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     marginRight: 8,
+    fontWeight: '600',
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
     marginHorizontal: 16,
   },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    padding: 16,
-    borderRadius: 20,
+  logoutWrapper: {
     marginTop: 10,
-    gap: 10,
   },
-  logoutText: {
-    color: COLORS.error,
-    fontSize: 16,
-    fontWeight: 'bold',
+  logoutBtn: {
+    height: 60,
   },
   versionText: {
     textAlign: 'center',
-    marginTop: 30,
-    color: COLORS.border,
+    marginTop: 40,
+    color: COLORS.textSecondary,
     fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.6,
   }
 });
 

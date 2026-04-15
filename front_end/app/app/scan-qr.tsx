@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   StyleSheet, 
   Text, 
   View, 
   TouchableOpacity, 
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Modal,
   TextInput,
@@ -15,11 +14,13 @@ import {
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { X, Zap, ZapOff, ShieldCheck, AlertCircle, Star } from 'lucide-react-native';
+import { X, Zap, ZapOff, AlertCircle, Star, MessageSquare } from 'lucide-react-native';
 import { getUserRegistrations, updateRegistrationStatus, submitFeedback } from '../src/api/client';
 import { useAuth } from '../src/context/AuthContext';
 import SuccessAnimation from '../src/components/SuccessAnimation';
-import { COLORS, SIZES, SHADOWS } from '../src/constants/theme';
+import { COLORS, SHADOWS } from '../src/constants/theme';
+import GlassCard from '../src/components/common/GlassCard';
+import PremiumButton from '../src/components/common/PremiumButton';
 
 const { width } = Dimensions.get('window');
 
@@ -42,16 +43,18 @@ const ScanQRScreen = () => {
   const router = useRouter();
 
   if (!permission) {
-    return <View />;
+    return <View style={{ flex: 1, backgroundColor: 'black' }} />;
   }
 
   if (!permission.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>Chúng tôi cần quyền truy cập Camera để quét mã QR.</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permissionBtn}>
-          <Text style={styles.permissionText}>Cấp quyền ngay</Text>
-        </TouchableOpacity>
+        <PremiumButton 
+          title="Cấp quyền ngay"
+          onPress={requestPermission}
+          style={{ width: 200 }}
+        />
       </View>
     );
   }
@@ -82,7 +85,7 @@ const ScanQRScreen = () => {
       
       setTimeout(() => {
         setShowFeedback(true);
-      }, 1500);
+      }, 1800);
       
     } catch (error: any) {
       console.error('Scan check-in error:', error);
@@ -91,7 +94,7 @@ const ScanQRScreen = () => {
       setTimeout(() => {
         setScanned(false);
         setStatus('idle');
-      }, 3500);
+      }, 4000);
     }
   };
 
@@ -113,7 +116,7 @@ const ScanQRScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       
       <CameraView 
         style={StyleSheet.absoluteFillObject} 
@@ -121,70 +124,59 @@ const ScanQRScreen = () => {
         enableTorch={flash}
       />
 
-      {/* UI Overlay - Outside CameraView using absolute positioning */}
-      <View style={[StyleSheet.absoluteFillObject, styles.overlay]}>
-        <View style={styles.unfocusedContainer}></View>
-        <View style={styles.middleContainer}>
-          <View style={styles.unfocusedContainer}></View>
-          <View style={styles.focusedContainer}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-              
-              {status === 'success' && (
-                <View style={styles.resultOverlay}>
-                  <SuccessAnimation message="Check-in thành công!" />
-                </View>
-              )}
-              {status === 'error' && (
-                <View style={styles.resultOverlay}>
-                  <AlertCircle size={60} color={COLORS.error} />
-                  <Text style={styles.errorText}>{errorMsg}</Text>
-                </View>
-              )}
+      {/* UI Overlay */}
+      <View style={styles.overlay}>
+        <View style={styles.topSection}>
+          <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.circleBtn}>
+              <X size={24} color={COLORS.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Quét mã điểm danh</Text>
+            <TouchableOpacity onPress={() => setFlash(!flash)} style={styles.circleBtn}>
+              {flash ? <Zap size={22} color="#FFD700" fill="#FFD700" /> : <ZapOff size={22} color={COLORS.white} />}
+            </TouchableOpacity>
           </View>
-          <View style={styles.unfocusedContainer}></View>
         </View>
-        <View style={styles.unfocusedContainer}>
-          <Text style={styles.hintText}>Vui lòng đưa mã QR vào khung hình</Text>
+
+        <View style={styles.middleSection}>
+          <View style={styles.sideOverlay} />
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
+            
+            {status === 'success' && (
+              <GlassCard style={styles.resultGlass} opacity={0.98}>
+                <SuccessAnimation message="Điểm danh xong!" />
+              </GlassCard>
+            )}
+            {status === 'error' && (
+              <GlassCard style={styles.resultGlass} opacity={0.98}>
+                <AlertCircle size={60} color={COLORS.error} />
+                <Text style={styles.errorText}>{errorMsg}</Text>
+              </GlassCard>
+            )}
+          </View>
+          <View style={styles.sideOverlay} />
+        </View>
+
+        <View style={styles.bottomSection}>
+          <Text style={styles.hintText}>Đưa mã QR của sự kiện vào khung hình</Text>
         </View>
       </View>
 
-      {/* Floating Controls */}
-      <View style={[styles.controls, { paddingTop: insets.top }]}>
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.circleBtn}
-          >
-            <X size={24} color={COLORS.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Điểm danh sự kiện</Text>
-          <TouchableOpacity 
-            onPress={() => setFlash(!flash)}
-            style={styles.circleBtn}
-          >
-            {flash ? <Zap size={24} color="#FFD700" /> : <ZapOff size={24} color={COLORS.white} />}
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <Modal
-        visible={showFeedback}
-        transparent={true}
-        animationType="slide"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Cảm ơn bạn!</Text>
-            <Text style={styles.modalSub}>Hãy cho chúng tôi biết cảm nhận của bạn về sự kiện này</Text>
+      <Modal visible={showFeedback} transparent={true} animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <GlassCard style={styles.modalContent} opacity={1}>
+            <Text style={styles.modalTitle}>Sự kiện thế nào?</Text>
+            <Text style={styles.modalSub}>Hãy giúp chúng tôi cải thiện bằng cách để lại phản hồi</Text>
             
             <View style={styles.ratingRow}>
               {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity key={star} onPress={() => setRating(star)}>
                   <Star 
-                    size={36} 
+                    size={32} 
                     color={star <= rating ? "#FFD700" : COLORS.border} 
                     fill={star <= rating ? "#FFD700" : "transparent"} 
                   />
@@ -192,32 +184,30 @@ const ScanQRScreen = () => {
               ))}
             </View>
 
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Lời nhắn cho Ban Tổ Chức (không bắt buộc)..."
-              multiline
-              numberOfLines={4}
-              value={comment}
-              onChangeText={setComment}
-              placeholderTextColor={COLORS.textSecondary}
+            <View style={styles.inputContainer}>
+              <MessageSquare size={18} color={COLORS.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={styles.commentInput}
+                placeholder="Lời nhắn cho Ban Tổ Chức..."
+                multiline
+                numberOfLines={3}
+                value={comment}
+                onChangeText={setComment}
+                placeholderTextColor={COLORS.textSecondary}
+              />
+            </View>
+
+            <PremiumButton 
+              title="Gửi phản hồi"
+              onPress={handleFeedbackSubmit}
+              loading={submitting}
+              style={styles.submitBtn}
             />
 
-            <TouchableOpacity 
-              style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
-              onPress={handleFeedbackSubmit}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <Text style={styles.submitText}>Gửi phản hồi</Text>
-              )}
+            <TouchableOpacity onPress={() => router.back()} style={styles.skipBtn}>
+              <Text style={styles.skipText}>Bỏ qua & Đóng</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.skipText}>Bỏ qua</Text>
-            </TouchableOpacity>
-          </View>
+          </GlassCard>
         </View>
       </Modal>
     </View>
@@ -228,185 +218,185 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  message: {
-    textAlign: 'center',
-    paddingBottom: 20,
-    color: 'white',
-    fontSize: 16,
-  },
-  permissionBtn: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignSelf: 'center',
-    marginTop: 20,
-  },
-  permissionText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  unfocusedContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  middleContainer: {
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+  },
+  topSection: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  middleSection: {
     flexDirection: 'row',
-    height: width * 0.7,
+    height: width * 0.72,
   },
-  focusedContainer: {
-    width: width * 0.7,
+  bottomSection: {
+    flex: 1.2,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    alignItems: 'center',
+    paddingTop: 30,
+  },
+  sideOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  scanFrame: {
+    width: width * 0.72,
     position: 'relative',
-  },
-  corner: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
-    borderColor: COLORS.primary,
-    borderWidth: 4,
-  },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-    borderTopLeftRadius: 15,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-    borderTopRightRadius: 15,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-    borderBottomLeftRadius: 15,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-    borderBottomRightRadius: 15,
-  },
-  hintText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 20,
-    textAlign: 'center',
-  },
-  controls: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    backgroundColor: 'transparent',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '800',
   },
   circleBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  resultOverlay: {
+  corner: {
+    position: 'absolute',
+    width: 35,
+    height: 35,
+    borderColor: COLORS.primary,
+    borderWidth: 5,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+    borderTopLeftRadius: 20,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+    borderTopRightRadius: 20,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 20,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    borderBottomRightRadius: 20,
+  },
+  hintText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 15,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  resultGlass: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    borderRadius: 20,
+    borderWidth: 0,
   },
   errorText: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: COLORS.error,
-      marginTop: 15,
-      textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.error,
+    marginTop: 20,
+    textAlign: 'center',
   },
-  modalOverlay: {
+  modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 25,
   },
   modalContent: {
     width: '100%',
-    backgroundColor: 'white',
-    borderRadius: 30,
     padding: 30,
     alignItems: 'center',
+    borderRadius: 35,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '900',
     color: COLORS.text,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   modalSub: {
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: 25,
+    fontWeight: '500',
   },
   ratingRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 25,
+    gap: 12,
+    marginBottom: 30,
+  },
+  inputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  inputIcon: {
+    marginTop: 5,
   },
   commentInput: {
-    width: '100%',
-    backgroundColor: COLORS.background,
-    borderRadius: 15,
-    padding: 15,
-    height: 100,
+    flex: 1,
+    marginLeft: 10,
+    height: 80,
     textAlignVertical: 'top',
     fontSize: 14,
     color: COLORS.text,
-    marginBottom: 25,
   },
   submitBtn: {
     width: '100%',
-    height: 55,
-    backgroundColor: COLORS.primary,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 15,
   },
-  submitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  skipBtn: {
+    padding: 5,
   },
   skipText: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  message: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    paddingHorizontal: 40,
+    lineHeight: 24,
   }
 });
 
