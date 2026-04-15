@@ -74,9 +74,13 @@ class EventBase(BaseModel):
     end_time: Optional[datetime] = None
     capacity: Optional[int] = None
     status: EventStatusEnum = EventStatusEnum.DRAFT
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    points_awarded: int = 0
 
 class EventCreate(EventBase):
     campaign_id: Optional[UUID] = None
+    org_id: Optional[UUID] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str] = None
@@ -86,10 +90,15 @@ class EventUpdate(BaseModel):
     capacity: Optional[int] = None
     status: Optional[EventStatusEnum] = None
     campaign_id: Optional[UUID] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    points_awarded: Optional[int] = None
+    org_id: Optional[UUID] = None
 
 class EventResponse(EventBase):
     id: UUID
     campaign_id: Optional[UUID] = None
+    org_id: Optional[UUID] = None
     qa_sessions: List['EventQAResponse'] = []
     incidents: List['EventIncidentResponse'] = []
     feedbacks: List['EventFeedbackResponse'] = []
@@ -181,6 +190,7 @@ class EventRegistrationResponse(EventRegistrationBase):
     event_id: UUID
     user_id: UUID
     check_in_time: Optional[datetime] = None
+    check_in_token: Optional[str] = None
 
     class Config:
         from_attributes = True

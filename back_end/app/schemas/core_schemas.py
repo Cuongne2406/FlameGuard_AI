@@ -80,10 +80,12 @@ class OrganizationBase(BaseModel):
     activity_points: int = 0
     avatar_url: Optional[str] = None
     icon: Optional[str] = None
-    classification: Optional[str] = None
     warning_message: Optional[str] = None
     warning_deadline: Optional[datetime] = None
     last_activity_at: Optional[datetime] = None
+    leader_user_id: Optional[UUID] = None
+    contact_email: Optional[str] = None
+    phone: Optional[str] = None
 
 class OrganizationCreate(OrganizationBase):
     pass
@@ -212,7 +214,10 @@ class UserBase(BaseModel):
     email_alerts_enabled: bool = True
     zalo_alerts_enabled: bool = True
     daily_digest_enabled: bool = False
-    signature_data: Optional[str] = None
+    class_name: Optional[str] = None
+    academic_year: Optional[int] = None
+    bio: Optional[str] = None
+    social_links: Optional[str] = None
     device_id: Optional[str] = None
     push_token: Optional[str] = None
 
@@ -232,8 +237,11 @@ class UserUpdate(BaseModel):
     email_alerts_enabled: Optional[bool] = None
     zalo_alerts_enabled: Optional[bool] = None
     daily_digest_enabled: Optional[bool] = None
-    signature_data: Optional[str] = None
     class_id: Optional[UUID] = None
+    class_name: Optional[str] = None
+    academic_year: Optional[int] = None
+    bio: Optional[str] = None
+    social_links: Optional[str] = None
     device_id: Optional[str] = None
     push_token: Optional[str] = None
     password: Optional[str] = None
@@ -244,10 +252,7 @@ class UserResponse(UserBase):
     last_login_at: Optional[date] = None
     level: int = 1
     training_score: int = 0
-    university: Optional[str] = None
-    address: Optional[str] = None
     class_id: Optional[UUID] = None
-    class_name: Optional[str] = None
     role_title: Optional[str] = None
     activity_count: int = 0
     award_count: int = 0

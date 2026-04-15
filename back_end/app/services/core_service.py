@@ -317,8 +317,19 @@ def create_user(db: Session, user_in: UserCreate):
         phone_number=user_in.phone_number,
         status=user_in.status,
         avatar_url=user_in.avatar_url,
+        class_id=user_in.class_id,
+        class_name=user_in.class_name,
+        academic_year=user_in.academic_year,
+        bio=user_in.bio,
+        social_links=user_in.social_links,
         password_hash=get_password_hash(user_in.password) if user_in.password else None
     )
+    
+    # Sync class_name if class_id is provided but class_name is missing
+    if db_user.class_id and not db_user.class_name:
+        org = db.query(Organization).filter(Organization.id == db_user.class_id).first()
+        if org:
+            db_user.class_name = org.name
     
     if user_in.role_ids:
         roles = db.query(Role).filter(Role.id.in_(user_in.role_ids)).all()
@@ -371,10 +382,11 @@ def format_user_dict(db: Session, user: User):
         "is_2fa_enabled": user.is_2fa_enabled or False,
         "level": user.level or 1,
         "training_score": user.training_score or 0,
-        "university": user.university or "ĐH Lạc Hồng",
-        "address": user.address or "Việt Nam",
         "class_id": user.class_id,
-        "class_name": user.study_class.name if user.study_class else None,
+        "class_name": user.class_name,
+        "academic_year": user.academic_year,
+        "bio": user.bio,
+        "social_links": user.social_links,
         "role_title": role_title or "Thành viên",
         "activity_count": activity_count,
         "award_count": award_count,
@@ -411,6 +423,12 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
 
     for key, value in update_data.items():
         setattr(db_user, key, value)
+        
+    # Logic: Sync class_name if class_id changed
+    if "class_id" in update_data:
+        org = db.query(Organization).filter(Organization.id == db_user.class_id).first()
+        if org:
+            db_user.class_name = org.name
         
     db.commit()
     db.refresh(db_user)

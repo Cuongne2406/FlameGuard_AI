@@ -67,6 +67,7 @@ class FundRequestBase(BaseModel):
     amount: Decimal
     reason: Optional[str] = None
     status: FundRequestStatusEnum = FundRequestStatusEnum.PENDING
+    evidence_urls: Optional[str] = None # JSON list of evidence images
 
 class FundRequestCreate(FundRequestBase):
     budget_id: UUID
@@ -79,6 +80,7 @@ class FundRequestUpdate(BaseModel):
     status: Optional[FundRequestStatusEnum] = None
     approved_by: Optional[UUID] = None
     approved_at: Optional[datetime] = None
+    evidence_urls: Optional[str] = None
 
 class FundRequestResponse(FundRequestBase):
     id: UUID

@@ -153,9 +153,11 @@ def register_for_event(db: Session, registration_in: EventRegistrationCreate):
         raise HTTPException(status_code=400, detail="User already registered for this event")
         
     # 4. Create Registration
+    import secrets
     db_registration = EventRegistration(
         **registration_in.dict(),
-        status=EventRegistrationStatus.PENDING
+        status=EventRegistrationStatus.PENDING,
+        check_in_token=secrets.token_urlsafe(16)
     )
     db.add(db_registration)
     db.commit()
