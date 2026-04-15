@@ -9,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -100,6 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
       } catch (e) {
         console.error('Logout error:', e);
+      }
+    },
+    refreshUser: async () => {
+      try {
+        const profile = await getCurrentUser();
+        setUser(profile);
+      } catch (e) {
+        console.error('Refresh user error:', e);
       }
     },
   };

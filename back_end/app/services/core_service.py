@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException
-from app.models.core import User, Role, Permission, Organization, AcademicTerm, UserOrganization, OrgType, ClubProposal
+from app.models.core import User, Role, Permission, Organization, AcademicTerm, UserOrganization, OrgType, ClubProposal, OrgStatus
 from app.schemas.core_schemas import (
     UserCreate, UserUpdate,
     RoleCreate, RoleUpdate,
@@ -406,10 +406,17 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     users = db.query(User).offset(skip).limit(limit).all()
     return [format_user_dict(db, u) for u in users]
 
-def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
+def update_user(db: Session, user_id: UUID, user_in: UserUpdate, is_admin: bool = False):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Logic: One-time profile update lock
+    if db_user.is_profile_updated and not is_admin:
+        raise HTTPException(
+            status_code=403, 
+            detail="Hồ sơ của bạn đã được xác thực và khóa. Vui lòng liên hệ Admin nếu cần thay đổi thông tin."
+        )
     
     update_data = user_in.dict(exclude_unset=True)
     
@@ -421,14 +428,21 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate):
         validate_password_policy(db, update_data["password"])
         db_user.password_hash = get_password_hash(update_data.pop("password"))
 
+    # Apply updates
+    is_completing = update_data.pop("is_completing", False)
     for key, value in update_data.items():
-        setattr(db_user, key, value)
+        if key != "is_profile_updated": # Prevent manual bypass
+            setattr(db_user, key, value)
         
     # Logic: Sync class_name if class_id changed
     if "class_id" in update_data:
         org = db.query(Organization).filter(Organization.id == db_user.class_id).first()
         if org:
             db_user.class_name = org.name
+            
+    # Automatically lock profile ONLY after a successful self-update with is_completing=True
+    if not is_admin and not db_user.is_profile_updated and is_completing:
+        db_user.is_profile_updated = True
         
     db.commit()
     db.refresh(db_user)

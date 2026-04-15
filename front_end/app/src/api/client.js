@@ -48,7 +48,6 @@ export const login = async (username, password) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Login error:', error);
         throw error;
     }
 };
@@ -58,7 +57,40 @@ export const getCurrentUser = async () => {
         const response = await apiClient.get('/users/me');
         return response.data;
     } catch (error) {
-        console.error('Get current user error:', error);
+        throw error;
+    }
+};
+
+export const updateUser = async (userData) => {
+    try {
+        const response = await apiClient.put('/users/me', userData);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const uploadAvatar = async (imageUri) => {
+    const formData = new FormData();
+    
+    // React Native FormData requires an object with uri, type, and name
+    const uriParts = imageUri.split('.');
+    const fileType = uriParts[uriParts.length - 1];
+    
+    formData.append('file', {
+      uri: imageUri,
+      name: `avatar.${fileType}`,
+      type: `image/${fileType}`,
+    });
+  
+    try {
+        const response = await apiClient.post('/users/me/avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
         throw error;
     }
 };
@@ -71,7 +103,6 @@ export const updatePushToken = async (token) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Update push token error:', error);
         throw error;
     }
 };

@@ -61,6 +61,7 @@ class User(Base):
     social_links = Column(String, nullable=True) # Store as JSON string or URL
     device_id = Column(String, nullable=True)
     push_token = Column(String, nullable=True)
+    is_profile_updated = Column(Boolean, default=False)
     
     # Settings & Profile
     is_2fa_enabled = Column(Boolean, default=False)

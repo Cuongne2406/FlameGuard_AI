@@ -220,6 +220,7 @@ class UserBase(BaseModel):
     social_links: Optional[str] = None
     device_id: Optional[str] = None
     push_token: Optional[str] = None
+    is_profile_updated: bool = False
 
 class UserCreate(UserBase):
     password: str
@@ -244,6 +245,8 @@ class UserUpdate(BaseModel):
     social_links: Optional[str] = None
     device_id: Optional[str] = None
     push_token: Optional[str] = None
+    is_profile_updated: Optional[bool] = None
+    is_completing: Optional[bool] = False
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
 

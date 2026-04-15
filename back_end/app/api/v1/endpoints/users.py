@@ -496,7 +496,7 @@ def update_user(
     user_id: UUID,
     user_in: UserUpdate,
 ):
-    return core_service.update_user(db=db, user_id=user_id, user_in=user_in)
+    return core_service.update_user(db=db, user_id=user_id, user_in=user_in, is_admin=True)
 
 @router.delete("/{user_id}")
 def delete_user(
