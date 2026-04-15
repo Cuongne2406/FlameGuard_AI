@@ -59,6 +59,7 @@ class FundRequest(Base):
     status = Column(Enum(FundRequestStatus), default=FundRequestStatus.PENDING)
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
+    evidence_urls = Column(Text, nullable=True) # JSON list of evidence images
     
     budget = relationship("Budget", back_populates="fund_requests")
     event = relationship("Event", back_populates="fund_requests")

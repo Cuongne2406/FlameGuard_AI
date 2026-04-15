@@ -53,8 +53,13 @@ class Event(Base):
     end_time = Column(DateTime(timezone=True))
     capacity = Column(Integer)
     status = Column(Enum(EventStatus), default=EventStatus.DRAFT)
+    description = Column(Text, nullable=True)
+    image_url = Column(String, nullable=True)
+    points_awarded = Column(Integer, default=0)
+    org_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
     
     campaign = relationship("Campaign", back_populates="events")
+    organization = relationship("Organization")
     registrations = relationship("EventRegistration", back_populates="event")
     fund_requests = relationship("FundRequest", back_populates="event")
     ai_predictions = relationship("AIPrediction", back_populates="event")
@@ -69,6 +74,7 @@ class EventRegistration(Base):
     event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     check_in_time = Column(DateTime(timezone=True), nullable=True)
+    check_in_token = Column(String, unique=True, nullable=True) # Unique token for secure QR check-in
     status = Column(Enum(EventRegistrationStatus), default=EventRegistrationStatus.REGISTERED)
     
     event = relationship("Event", back_populates="registrations")

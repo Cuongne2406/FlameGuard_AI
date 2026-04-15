@@ -54,9 +54,11 @@ class User(Base):
     last_login_at = Column(Date)
     level = Column(Integer, default=1)
     training_score = Column(Integer, default=0)
-    university = Column(String, default="ĐH Lạc Hồng")
-    address = Column(String, default="Đồng Nai")
     class_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)
+    class_name = Column(String, nullable=True) # Denormalized for display speed
+    academic_year = Column(Integer, nullable=True) # e.g. 2021
+    bio = Column(Text, nullable=True)
+    social_links = Column(String, nullable=True) # Store as JSON string or URL
     device_id = Column(String, nullable=True)
     push_token = Column(String, nullable=True)
     
@@ -67,7 +69,6 @@ class User(Base):
     email_alerts_enabled = Column(Boolean, default=True)
     zalo_alerts_enabled = Column(Boolean, default=True)
     daily_digest_enabled = Column(Boolean, default=False)
-    signature_data = Column(String, nullable=True) # Base64 or URL
     
     roles = relationship("Role", secondary=user_roles, back_populates="users")
     organizations = relationship("UserOrganization", back_populates="user")
@@ -131,15 +132,17 @@ class Organization(Base):
     
     # Extended fields for Classes & Clubs
     fee_percentage = Column(Numeric(5, 2), default=0.0)
-    activity_points = Column(Integer, default=0)
-    avatar_url = Column(String, nullable=True)
-    icon = Column(String, nullable=True) # For Clubs
-    classification = Column(String, nullable=True)
+    avatar_url = Column(String)
+    icon = Column(String)
     warning_message = Column(Text, nullable=True)
     warning_deadline = Column(DateTime, nullable=True)
     last_activity_at = Column(DateTime, nullable=True)
+    leader_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    contact_email = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
     
     parent = relationship("Organization", remote_side=[id], backref="children")
+    leader = relationship("User", foreign_keys=[leader_user_id])
     members = relationship("UserOrganization", back_populates="organization")
     campaigns = relationship("Campaign", back_populates="organization")
     budgets = relationship("Budget", back_populates="organization")
@@ -186,3 +189,26 @@ class ClubProposal(Base):
     
     organization = relationship("Organization")
     requester = relationship("User")
+
+class PointCategory(Base):
+    __tablename__ = "point_categories"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String, nullable=False) # e.g., Ethics, Academic, Community
+    max_score = Column(Integer, default=20)
+    description = Column(String)
+
+class PointLog(Base):
+    __tablename__ = "point_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    event_id = Column(UUID(as_uuid=True), ForeignKey("events.id"), nullable=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("point_categories.id"), nullable=True)
+    points = Column(Integer, nullable=False) # Positive or negative
+    reason = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    
+    user = relationship("User", backref="point_logs")
+    event = relationship("Event")
+    category = relationship("PointCategory")
