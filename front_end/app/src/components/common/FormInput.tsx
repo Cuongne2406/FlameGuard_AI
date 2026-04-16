@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle } from 'react-native';
-import { Controller, Control } from 'react-hook-form';
+import { Controller, Control, FieldValues, Path } from 'react-hook-form';
 import { COLORS, SHADOWS } from '../../constants/theme';
 
-interface FormInputProps {
-  control: Control<any>;
-  name: string;
+interface FormInputProps<T extends FieldValues> {
+  control: Control<T>;
+  name: Path<T>;
   placeholder: string;
   secureTextEntry?: boolean;
   leftIcon?: React.ReactNode;
@@ -16,7 +16,7 @@ interface FormInputProps {
   numberOfLines?: number;
 }
 
-const FormInput: React.FC<FormInputProps> = ({
+function FormInput<T extends FieldValues>({
   control,
   name,
   placeholder,
@@ -27,11 +27,11 @@ const FormInput: React.FC<FormInputProps> = ({
   keyboardType = 'default',
   multiline = false,
   numberOfLines = 1,
-}) => {
+}: FormInputProps<T>) {
   return (
     <Controller
       control={control}
-      name={name}
+      name={name as any}
       render={({ field: { onChange, onBlur, value }, fieldState: { error } }) => (
         <View style={[styles.container, style]}>
           <View style={[

@@ -1,8 +1,8 @@
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
   StatusBar,
   Image,
   Dimensions,
@@ -45,7 +45,7 @@ const HomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      
+
       {/* Header Section - Modern Gradient Header */}
       <LinearGradient
         colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]]}
@@ -65,7 +65,7 @@ const HomeScreen: React.FC = () => {
         </View>
 
         {/* User Score Summary Card - Now integrated into the header flow using GlassCard */}
-        <GlassCard 
+        <GlassCard
           style={styles.scoreCard}
           gradientColors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
         >
@@ -79,7 +79,7 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.scoreLabel}>LEVEL</Text>
               <Text style={styles.scoreValue}>{user?.level || 1}</Text>
             </View>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.scoreAction}
               onPress={() => router.push('/profile')}
             >
@@ -90,10 +90,10 @@ const HomeScreen: React.FC = () => {
         </GlassCard>
       </LinearGradient>
 
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          styles.scrollContent, 
+          styles.scrollContent,
           { paddingBottom: insets.bottom + 120 }
         ]}
       >
@@ -101,8 +101,8 @@ const HomeScreen: React.FC = () => {
         <View style={styles.searchContainer}>
           <View style={[styles.searchBar, SHADOWS.light]}>
             <Search size={20} color={COLORS.textSecondary} />
-            <TextInput 
-              placeholder="Tìm kiếm sự kiện, hoạt động..." 
+            <TextInput
+              placeholder="Tìm kiếm sự kiện, hoạt động..."
               style={styles.searchInput}
               placeholderTextColor={COLORS.textSecondary}
             />
@@ -132,10 +132,10 @@ const HomeScreen: React.FC = () => {
           <FlatList
             data={displayEvents.slice(0, 3)}
             renderItem={({ item }) => (
-              <EventCard 
-                event={item} 
-                horizontal 
-                onPress={() => router.push(`/event-detail/${item.id}`)} 
+              <EventCard
+                event={item}
+                horizontal
+                onPress={() => router.push(`/event-detail/${item.id}`)}
               />
             )}
             keyExtractor={item => item.id.toString()}
@@ -155,16 +155,16 @@ const HomeScreen: React.FC = () => {
 
         <View style={styles.activitiesList}>
           {loading ? (
-             <View>
+            <View>
               <EventSkeleton />
               <EventSkeleton />
-             </View>
+            </View>
           ) : (
-            displayEvents.map(event => (
-              <EventCard 
+            displayEvents.map((event: any) => (
+              <EventCard
                 key={event.id}
-                event={event} 
-                onPress={() => router.push(`/event-detail/${event.id}`)} 
+                event={event}
+                onPress={() => router.push(`/event-detail/${event.id}`)}
               />
             ))
           )}
@@ -175,7 +175,7 @@ const HomeScreen: React.FC = () => {
       </ScrollView>
 
       {/* Floating Scan QR Button */}
-      <TouchableOpacity 
+      <TouchableOpacity
         style={[styles.floatingScanBtn, SHADOWS.medium]}
         onPress={() => router.push('/scan-qr')}
       >
@@ -184,7 +184,7 @@ const HomeScreen: React.FC = () => {
           style={styles.scanGradient}
         >
           <View style={styles.scanIconBox}>
-            <QrCode size={24} color={COLORS.white} /> 
+            <QrCode size={24} color={COLORS.white} />
           </View>
           <Text style={styles.scanText}>Check-in</Text>
         </LinearGradient>

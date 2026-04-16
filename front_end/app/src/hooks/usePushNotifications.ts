@@ -12,10 +12,10 @@ export interface PushNotificationState {
 export const usePushNotifications = (): PushNotificationState => {
   const [expoPushToken, setExpoPushToken] = useState<string | undefined>();
   const [notification, setNotification] = useState<any | undefined>();
-  
+
   // Lưu trữ các subscription bằng useRef
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
 
   async function registerForPushNotificationsAsync() {
     // Chỉ nạp thư viện nếu KHÔNG phải Expo Go
@@ -27,7 +27,7 @@ export const usePushNotifications = (): PushNotificationState => {
     try {
       // Dynamic require để tránh crash module level
       const Notifications = require('expo-notifications');
-      
+
       let token;
 
       if (Platform.OS === 'android') {
@@ -55,20 +55,20 @@ export const usePushNotifications = (): PushNotificationState => {
       const projectId =
         Constants?.expoConfig?.extra?.eas?.projectId ||
         Constants?.easConfig?.projectId;
-        
+
       if (!projectId) {
-          console.log('Project ID not found in build config');
+        console.log('Project ID not found in build config');
       }
 
       token = (await Notifications.getExpoPushTokenAsync({
-          projectId,
+        projectId,
       })).data;
-      
+
       if (token) {
-          console.log('Expo Push Token obtained:', token);
-          await updatePushToken(token);
+        console.log('Expo Push Token obtained:', token);
+        await updatePushToken(token);
       }
-      
+
       return token;
     } catch (e) {
       console.log('Push registration error (Development Build required for full support):', e);

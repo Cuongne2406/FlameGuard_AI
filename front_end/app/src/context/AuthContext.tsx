@@ -16,8 +16,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userToken: null,
   isLoading: true,
-  login: async () => {},
-  logout: async () => {},
+  login: async () => { },
+  logout: async () => { },
+  refreshUser: async () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -52,9 +53,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('Failed to fetch user profile during bootstrap:', e);
           // Nếu token hết hạn hoặc lỗi, xóa token
           if (Platform.OS !== 'web') {
-              await SecureStore.deleteItemAsync('userToken');
+            await SecureStore.deleteItemAsync('userToken');
           } else {
-              localStorage.removeItem('userToken');
+            localStorage.removeItem('userToken');
           }
           setUserToken(null);
         }
@@ -75,9 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const data = await loginApi(username, password);
         if (data.access_token) {
           if (Platform.OS !== 'web') {
-             await SecureStore.setItemAsync('userToken', data.access_token);
+            await SecureStore.setItemAsync('userToken', data.access_token);
           } else {
-             localStorage.setItem('userToken', data.access_token);
+            localStorage.setItem('userToken', data.access_token);
           }
           setUserToken(data.access_token);
           // Sau khi login thành công, lấy thông tin user đầy đủ

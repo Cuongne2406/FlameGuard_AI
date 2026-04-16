@@ -5,7 +5,8 @@ import {
   StyleSheet, 
   FlatList,
   TouchableOpacity,
-  Platform
+  Platform,
+  StatusBar
 } from 'react-native';
 import { 
   Bell, 
@@ -14,7 +15,8 @@ import {
   Clock, 
   ChevronRight,
   Megaphone,
-  AlertCircle
+  AlertCircle,
+  CheckCheck
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -69,20 +71,20 @@ const NotificationsScreen = () => {
 
   const getIcon = (type: string) => {
     switch(type) {
-      case 'EVENT': return <Bell size={20} color={COLORS.primary} />;
-      case 'SCORE': return <MessageSquare size={20} color={COLORS.success} />;
-      case 'NEWS': return <Info size={20} color={COLORS.warning} />;
-      case 'URGENT': return <AlertCircle size={20} color={COLORS.error} />;
-      default: return <Bell size={20} color={COLORS.textSecondary} />;
+      case 'EVENT': return <Bell size={18} color={COLORS.primary} />;
+      case 'SCORE': return <MessageSquare size={18} color={COLORS.success} />;
+      case 'NEWS': return <Megaphone size={18} color={COLORS.warning} />;
+      case 'URGENT': return <AlertCircle size={18} color={COLORS.danger} />;
+      default: return <Info size={18} color={COLORS.textSecondary} />;
     }
   };
 
   const getIconBg = (type: string) => {
     switch(type) {
-      case 'EVENT': return 'rgba(67, 97, 238, 0.1)';
-      case 'SCORE': return 'rgba(76, 175, 80, 0.1)';
-      case 'NEWS': return 'rgba(255, 152, 0, 0.1)';
-      case 'URGENT': return 'rgba(239, 35, 60, 0.1)';
+      case 'EVENT': return COLORS.primary + '10';
+      case 'SCORE': return COLORS.success + '10';
+      case 'NEWS': return COLORS.warning + '10';
+      case 'URGENT': return COLORS.danger + '10';
       default: return COLORS.background;
     }
   };
@@ -105,37 +107,44 @@ const NotificationsScreen = () => {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
+      activeOpacity={0.7}
       onPress={() => !item.is_read && handleMarkRead(item.id)}
-      style={[styles.notificationCard, !item.is_read && styles.unreadCard, SHADOWS.light]}
+      style={[
+        styles.notificationCard, 
+        !item.is_read ? styles.unreadCard : styles.readCard, 
+        !item.is_read ? SHADOWS.medium : SHADOWS.light
+      ]}
     >
       <View style={[styles.iconContainer, { backgroundColor: getIconBg(item.type) }]}>
         {getIcon(item.type)}
       </View>
       <View style={styles.textContainer}>
         <View style={styles.headerRow}>
-          <Text style={[styles.title, !item.is_read && styles.unreadText]}>{item.title}</Text>
+          <Text style={[styles.title, !item.is_read && styles.unreadText]} numberOfLines={1}>{item.title}</Text>
           {!item.is_read && <View style={styles.unreadDot} />}
         </View>
         <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
         <View style={styles.timeRow}>
-          <Clock size={12} color={COLORS.textSecondary} />
+          <Clock size={12} color={COLORS.textMuted} />
           <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
         </View>
       </View>
-      <ChevronRight size={18} color={COLORS.border} />
+      <ChevronRight size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 15 }, SHADOWS.light]}>
+      <StatusBar barStyle="dark-content" />
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Thông báo</Text>
-          <TouchableOpacity onPress={handleReadAll}>
-            <Text style={styles.markRead}>Đọc tất cả</Text>
+          <TouchableOpacity onPress={handleReadAll} style={styles.readAllBtn}>
+            <CheckCheck size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.markRead}>Đã đọc hết</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.headerSub}>Chào mừng bạn quay lại với các tin tức mới nhất</Text>
+        <Text style={styles.headerSub}>Theo dõi những cập nhật quan trọng từ YouthHub</Text>
       </View>
 
       {loading ? (
@@ -151,15 +160,18 @@ const NotificationsScreen = () => {
           data={notifications}
           renderItem={renderItem}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
           }
           ListEmptyComponent={
-            <View style={{ marginTop: 100, alignItems: 'center' }}>
-              <Bell size={60} color={COLORS.border} />
-              <Text style={{ marginTop: 16, color: COLORS.textSecondary }}>Không có thông báo nào</Text>
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                 <Bell size={40} color={COLORS.textMuted} />
+              </View>
+              <Text style={styles.emptyTitle}>Hộp thư trống</Text>
+              <Text style={styles.emptySub}>Bạn không có thông báo nào trong lúc này.</Text>
             </View>
           }
         />
@@ -174,54 +186,68 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: SIZES.padding,
-    paddingBottom: 25,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
     backgroundColor: COLORS.surface,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
     zIndex: 10,
+    ...SHADOWS.light,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: COLORS.text,
+    letterSpacing: -1,
   },
   headerSub: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
+    lineHeight: 20,
+  },
+  readAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary + '10',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
   },
   markRead: {
-    fontSize: 14,
+    fontSize: 12,
     color: COLORS.primary,
-    fontWeight: '700',
+    fontWeight: '900',
   },
   listContent: {
-    padding: 16,
+    padding: 20,
+    paddingTop: 24,
   },
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 20,
-    marginBottom: 12,
-    ...(Platform.OS === 'ios' ? SHADOWS.light : { elevation: 2 })
+    padding: 18,
+    borderRadius: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  readCard: {
+    borderColor: '#F1F5F9',
   },
   unreadCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-    backgroundColor: '#F0F4FF',
+    borderColor: COLORS.primary + '20',
+    backgroundColor: COLORS.white,
   },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 50,
+    height: 50,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -234,36 +260,67 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
+    flex: 1,
   },
   unreadText: {
-    fontWeight: '800',
+    fontWeight: '900',
+    color: COLORS.black,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: COLORS.primary,
+    marginLeft: 8,
   },
   message: {
-    fontSize: 13,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 8,
-    lineHeight: 18,
+    marginBottom: 10,
+    lineHeight: 20,
+    fontWeight: '500',
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   timeText: {
     fontSize: 11,
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
+    fontWeight: '700',
+  },
+  emptyState: {
+    alignItems: 'center',
+    marginTop: 100,
+    paddingHorizontal: 40,
+  },
+  emptyIconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  emptySub: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    fontWeight: '600',
   }
 });
 

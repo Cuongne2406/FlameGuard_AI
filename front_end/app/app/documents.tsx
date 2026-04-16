@@ -142,7 +142,7 @@ export default function DocumentsScreen() {
             {documents.map((doc) => (
               <TouchableOpacity 
                 key={doc.id} 
-                style={[styles.docItem, SHADOWS.small]}
+                style={[styles.docItem, SHADOWS.light]}
                 onPress={() => setPreviewModal(true)}
               >
                 <View style={[styles.docIcon, { backgroundColor: doc.type === 'PDF' ? '#FFEBEE' : '#E3F2FD' }]}>
@@ -170,7 +170,7 @@ export default function DocumentsScreen() {
           </View>
           
           <ScrollView style={styles.previewScroll} contentContainerStyle={{ padding: 20 }}>
-            <View style={[styles.a4Paper, SHADOWS.large]}>
+            <View style={[styles.a4Paper, SHADOWS.heavy]}>
               <View style={styles.a4Header}>
                 <Text style={styles.a4LeftText}>ĐOÀN TNCS HỒ CHÍ MINH{'\n'}TRƯỜNG ĐH KỸ THUẬT</Text>
                 <Text style={styles.a4RightText}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM{'\n'}Độc lập - Tự do - Hạnh phúc</Text>
@@ -194,7 +194,7 @@ export default function DocumentsScreen() {
 
       <Modal visible={requestModal} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
-          <View style={[styles.bottomSheet, SHADOWS.large]}>
+          <View style={[styles.bottomSheet, SHADOWS.heavy]}>
             <Text style={styles.sheetTitle}>Tạo Yêu Cầu Mới</Text>
             
             <View style={styles.formGroup}>

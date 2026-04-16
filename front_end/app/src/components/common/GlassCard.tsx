@@ -19,7 +19,7 @@ const GlassCard: React.FC<GlassCardProps> = ({
   return (
     <View style={[styles.container, SHADOWS.light, style]}>
       <LinearGradient
-        colors={gradientColors}
+        colors={gradientColors as any}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}

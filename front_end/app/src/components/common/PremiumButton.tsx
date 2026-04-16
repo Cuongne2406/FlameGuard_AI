@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  TouchableOpacity, 
-  Text, 
-  StyleSheet, 
-  ActivityIndicator, 
-  ViewStyle, 
-  TextStyle, 
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  ViewStyle,
+  TextStyle,
   View,
   Platform
 } from 'react-native';
@@ -56,11 +56,11 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
   const isGhost = variant === 'ghost';
 
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       onPress={handlePress}
       disabled={disabled || loading}
       style={[
-        styles.container, 
+        styles.container,
         !isGhost && SHADOWS.medium,
         isGhost && styles.ghostBorder,
         disabled && styles.disabled,
@@ -68,7 +68,7 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
       ]}
     >
       <LinearGradient
-        colors={getColors()}
+        colors={getColors() as any}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.gradient}
@@ -78,7 +78,7 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
         ) : (
           <View style={styles.content}>
             <Text style={[
-              styles.text, 
+              styles.text,
               isGhost && { color: COLORS.primary },
               textStyle
             ]}>

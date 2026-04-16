@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
   TouchableOpacity,
   Dimensions,
   Platform,
@@ -13,11 +13,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
 import { useRouter } from 'expo-router';
-import { 
-  Award, 
-  Briefcase, 
-  Calendar, 
-  ChevronRight, 
+import {
+  Award,
+  Briefcase,
+  Calendar,
+  ChevronRight,
   ExternalLink,
   Settings as SettingsIcon,
   Share2,
@@ -37,7 +37,7 @@ const ProfileScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['profileStats'],
     queryFn: async () => {
@@ -92,7 +92,7 @@ const ProfileScreen = () => {
             <TouchableOpacity style={styles.circularButton}>
               <Share2 size={20} color={COLORS.white} />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.circularButton}
               onPress={() => router.push('/settings')}
             >
@@ -126,7 +126,7 @@ const ProfileScreen = () => {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={[
-                    styles.progressBarFill, 
+                    styles.progressBarFill,
                     { width: `${Math.min(((stats?.training_score || user.training_score || 0) / ((user.level || 1) * 1000)) * 100, 100)}%` }
                   ]}
                 />
@@ -141,7 +141,7 @@ const ProfileScreen = () => {
             <Text style={styles.sectionTitle}>Tiện ích mở rộng</Text>
           </View>
           <View style={styles.gridMenuContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.gridMenuItem, SHADOWS.light]}
               onPress={() => router.push('/awards')}
             >
@@ -151,7 +151,7 @@ const ProfileScreen = () => {
               <Text style={styles.gridMenuText}>Thành tích{'\n'}của tôi</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.gridMenuItem, SHADOWS.light]}
               onPress={() => router.push('/documents')}
             >
@@ -160,8 +160,8 @@ const ProfileScreen = () => {
               </LinearGradient>
               <Text style={styles.gridMenuText}>Dịch vụ{'\n'}Hành chính</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.gridMenuItem, SHADOWS.light, { opacity: 0.5 }]}
             >
               <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.gridMenuIcon}>
@@ -177,13 +177,23 @@ const ProfileScreen = () => {
               <BarChart
                 data={chartData}
                 width={width - 80}
-                height={200}
+                height={240}
                 yAxisLabel=""
                 yAxisSuffix=""
-                chartConfig={chartConfig}
-                verticalLabelRotation={0}
+                chartConfig={{
+                  ...chartConfig,
+                  propsForLabels: {
+                    fontSize: 10,
+                  },
+                }}
+                verticalLabelRotation={45}
                 fromZero={true}
                 showValuesOnTopOfBars={true}
+                style={{
+                  marginVertical: 8,
+                  borderRadius: 16,
+                  paddingRight: 10,
+                }}
               />
             </View>
           </GlassCard>
