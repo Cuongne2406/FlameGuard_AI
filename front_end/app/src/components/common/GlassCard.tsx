@@ -6,6 +6,7 @@ import { COLORS, SHADOWS } from '../../constants/theme';
 interface GlassCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
+  contentStyle?: ViewStyle;
   gradientColors?: string[];
   opacity?: number;
 }
@@ -13,6 +14,7 @@ interface GlassCardProps {
 const GlassCard: React.FC<GlassCardProps> = ({ 
   children, 
   style, 
+  contentStyle,
   gradientColors = ['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)'],
   opacity = 0.9
 }) => {
@@ -22,7 +24,7 @@ const GlassCard: React.FC<GlassCardProps> = ({
         colors={gradientColors as any}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+        style={[styles.gradient, contentStyle]}
       >
         {children}
       </LinearGradient>
@@ -34,9 +36,9 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: '#FFFFFF', // Use solid white to prevent Android shadow block from bleeding through
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: '#FFFFFF', // Solid edge
   },
   gradient: {
     padding: 20,

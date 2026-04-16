@@ -24,6 +24,8 @@ import { getMyNotifications, markNotificationRead, markAllNotificationsRead } fr
 import { RefreshControl } from 'react-native';
 import { NotificationSkeleton } from '../../src/components/SkeletonLoader';
 
+import MainHeader from '../../src/components/common/MainHeader';
+
 const NotificationsScreen = () => {
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = React.useState<any[]>([]);
@@ -135,17 +137,17 @@ const NotificationsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+      <StatusBar barStyle="light-content" />
+      <MainHeader>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Thông báo</Text>
           <TouchableOpacity onPress={handleReadAll} style={styles.readAllBtn}>
-            <CheckCheck size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+            <CheckCheck size={16} color={COLORS.white} style={{ marginRight: 6 }} />
             <Text style={styles.markRead}>Đã đọc hết</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.headerSub}>Theo dõi những cập nhật quan trọng từ YouthHub</Text>
-      </View>
+      </MainHeader>
 
       {loading ? (
         <View style={{ padding: 20 }}>
@@ -185,15 +187,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    backgroundColor: COLORS.surface,
-    borderBottomLeftRadius: 36,
-    borderBottomRightRadius: 36,
-    zIndex: 10,
-    ...SHADOWS.light,
-  },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -203,26 +196,26 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 30,
     fontWeight: '900',
-    color: COLORS.text,
+    color: COLORS.white,
     letterSpacing: -1,
   },
   headerSub: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '600',
     lineHeight: 20,
   },
   readAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary + '10',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 14,
   },
   markRead: {
     fontSize: 12,
-    color: COLORS.primary,
+    color: COLORS.white,
     fontWeight: '900',
   },
   listContent: {

@@ -26,6 +26,7 @@ import { getEvents } from '../../src/api/client';
 import { EventSkeleton } from '../../src/components/SkeletonLoader';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
+import MainHeader from '../../src/components/common/MainHeader';
 
 const { width } = Dimensions.get('window');
 
@@ -47,12 +48,7 @@ const HomeScreen: React.FC = () => {
       <StatusBar barStyle="light-content" />
 
       {/* Header Section - Modern Gradient Header */}
-      <LinearGradient
-        colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + 15 }]}
-      >
+      <MainHeader>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.welcomeText}>Chào buổi sáng,</Text>
@@ -88,7 +84,7 @@ const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </GlassCard>
-      </LinearGradient>
+      </MainHeader>
 
       <ScrollView
         showsVerticalScrollIndicator={false}

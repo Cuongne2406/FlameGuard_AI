@@ -19,6 +19,8 @@ import { getEvents } from '../../src/api/client';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
 
+import MainHeader from '../../src/components/common/MainHeader';
+
 const EventsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -41,12 +43,7 @@ const EventsScreen = () => {
       <StatusBar barStyle="light-content" />
       
       {/* Premium Header Gradient */}
-      <LinearGradient
-        colors={COLORS.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.header, { paddingTop: insets.top + 10 }]}
-      >
+      <MainHeader>
         <View style={styles.headerContent}>
           <View style={styles.titleRow}>
              <Sparkles size={24} color={COLORS.warning} style={{ marginRight: 10 }} />
@@ -54,7 +51,7 @@ const EventsScreen = () => {
           </View>
           <Text style={styles.headerSub}>Khám phá các hoạt động Đoàn - Hội mới nhất từ YouthHub</Text>
         </View>
-      </LinearGradient>
+      </MainHeader>
 
       {/* Modern Search Bar - Floating Style */}
       <View style={styles.searchSection}>

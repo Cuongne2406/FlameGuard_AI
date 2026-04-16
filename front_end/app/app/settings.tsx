@@ -231,17 +231,17 @@ const SettingsScreen = () => {
           <ChevronLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cài đặt hệ thống</Text>
-        <View style={{ width: 44 }}>
+        <View style={{ width: 44, height: 44 }}>
           {canEdit && !isEditing && (
-            <TouchableOpacity onPress={() => setIsEditing(true)}>
-              <Edit3 size={24} color={COLORS.primary} />
+            <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.backButton}>
+              <Edit3 size={20} color={COLORS.primary} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <GlassCard style={styles.profileCard}>
+        <GlassCard style={styles.profileCard} contentStyle={styles.profileCardContent}>
           <View style={styles.profileInfo}>
             <TouchableOpacity
               activeOpacity={canEdit ? 0.8 : 1}
@@ -368,7 +368,7 @@ const SettingsScreen = () => {
           <>
             <View style={styles.group}>
               <Text style={styles.groupTitle}>Thông tin tài khoản</Text>
-              <GlassCard style={styles.groupGlass}>
+              <GlassCard style={styles.groupGlass} contentStyle={{ paddingHorizontal: 5, paddingVertical: 10 }}>
                 <SettingItem icon={User} title="Họ và tên" value={user.full_name} showArrow={false} />
                 <View style={styles.divider} />
                 <SettingItem icon={Smartphone} title="Số điện thoại" value={user.phone_number || 'Chưa cập nhật'} showArrow={false} />
@@ -381,7 +381,7 @@ const SettingsScreen = () => {
 
             <View style={styles.group}>
               <Text style={styles.groupTitle}>Bảo mật & Định danh</Text>
-              <GlassCard style={styles.groupGlass}>
+              <GlassCard style={styles.groupGlass} contentStyle={{ paddingHorizontal: 5, paddingVertical: 10 }}>
                 <SettingItem
                   icon={Smartphone}
                   title="Thiết bị liên kết"
@@ -395,7 +395,7 @@ const SettingsScreen = () => {
 
             <View style={styles.group}>
               <Text style={styles.groupTitle}>Cá nhân hóa</Text>
-              <GlassCard style={styles.groupGlass}>
+              <GlassCard style={styles.groupGlass} contentStyle={{ paddingHorizontal: 5, paddingVertical: 10 }}>
                 <View style={styles.settingItem}>
                   <View style={styles.settingLeft}>
                     <View style={[styles.iconContainer, { backgroundColor: `${COLORS.secondary}15` }]}>
@@ -443,16 +443,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background, // Match screen background instead of harsh white
     zIndex: 100,
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.white, // Pop out slightly
     justifyContent: 'center',
     alignItems: 'center',
+    ...SHADOWS.light,
   },
   headerTitle: {
     fontSize: 18,
@@ -460,13 +461,17 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20, // Increase horizontal padding a bit
+    paddingVertical: 10, // Bring it closer to header
     paddingBottom: 60,
   },
   profileCard: {
-    marginBottom: 30,
-    padding: 30,
+    marginBottom: 35,
     borderRadius: 28,
+    borderWidth: 0, // Ensure no outer border causing thickness
+  },
+  profileCardContent: {
+    padding: 30, // Inner padding for GlassCard
   },
   profileInfo: {
     alignItems: 'center',
@@ -559,7 +564,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
   settingLeft: {
     flexDirection: 'row',
@@ -593,7 +599,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
-    marginHorizontal: 16,
+    marginHorizontal: 12,
   },
   editForm: {
     marginBottom: 30,

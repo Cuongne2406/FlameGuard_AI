@@ -33,6 +33,8 @@ import GlassCard from '../../src/components/common/GlassCard';
 
 const { width } = Dimensions.get('window');
 
+import MainHeader from '../../src/components/common/MainHeader';
+
 const ProfileScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -82,12 +84,7 @@ const ProfileScreen = () => {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
-        <LinearGradient
-          colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.header, { paddingTop: insets.top + 15 }]}
-        >
+        <MainHeader>
           <View style={styles.headerTop}>
             <TouchableOpacity style={styles.circularButton}>
               <Share2 size={20} color={COLORS.white} />
@@ -133,7 +130,7 @@ const ProfileScreen = () => {
               </View>
             </View>
           </View>
-        </LinearGradient>
+        </MainHeader>
 
         <View style={styles.content}>
           {/* Lưới Mini-App (Tiện ích mở rộng) */}
