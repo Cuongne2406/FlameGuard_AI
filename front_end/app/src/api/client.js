@@ -1,8 +1,11 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const API_URL = 'http://192.168.100.241:8000/api/v1'; // Update to your machine's IP for device testing
+const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
+const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
+const API_URL = envApiUrl || expoApiUrl || 'http://192.168.1.102:8000/api/v1';
 
 const apiClient = axios.create({
     baseURL: API_URL,
@@ -48,6 +51,9 @@ export const login = async (username, password) => {
         });
         return response.data;
     } catch (error) {
+        if (error?.message === 'Network Error') {
+            console.error(`Login network error. API_URL=${API_URL}`);
+        }
         throw error;
     }
 };
