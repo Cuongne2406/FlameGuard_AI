@@ -1,36 +1,49 @@
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   FlatList,
-  TouchableOpacity,
-  Platform,
-  StatusBar
+  Pressable,
+  StatusBar,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
-import { 
-  Bell, 
-  MessageSquare, 
-  Info, 
-  Clock, 
+import {
+  Bell,
+  Info,
+  Clock,
   ChevronRight,
   Megaphone,
   AlertCircle,
-  CheckCheck
+  CheckCheck,
+  Gift,
 } from 'lucide-react-native';
-import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
+import { COLORS, SHADOWS, UI } from '../../src/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../src/api/client';
-import { RefreshControl } from 'react-native';
 import { NotificationSkeleton } from '../../src/components/SkeletonLoader';
-
 import MainHeader from '../../src/components/common/MainHeader';
+
+const categoryTabs = ['Tất cả', 'Sự kiện', 'Hệ thống', 'Điểm'];
+
+const getNotificationCategory = (type: string) => {
+  switch (type) {
+    case 'EVENT':
+      return 'Sự kiện';
+    case 'SCORE':
+      return 'Điểm';
+    default:
+      return 'Hệ thống';
+  }
+};
 
 const NotificationsScreen = () => {
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
+  const [activeCategory, setActiveCategory] = React.useState('Tất cả');
 
   const fetchNotifications = async () => {
     try {
@@ -56,7 +69,7 @@ const NotificationsScreen = () => {
   const handleMarkRead = async (id: string) => {
     try {
       await markNotificationRead(id);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+      setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
     } catch (error) {
       console.error('Error marking read:', error);
     }
@@ -65,29 +78,39 @@ const NotificationsScreen = () => {
   const handleReadAll = async () => {
     try {
       await markAllNotificationsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (error) {
       console.error('Error marking all read:', error);
     }
   };
 
   const getIcon = (type: string) => {
-    switch(type) {
-      case 'EVENT': return <Bell size={18} color={COLORS.primary} />;
-      case 'SCORE': return <MessageSquare size={18} color={COLORS.success} />;
-      case 'NEWS': return <Megaphone size={18} color={COLORS.warning} />;
-      case 'URGENT': return <AlertCircle size={18} color={COLORS.danger} />;
-      default: return <Info size={18} color={COLORS.textSecondary} />;
+    switch (type) {
+      case 'EVENT':
+        return <Bell size={18} color={COLORS.primary} />;
+      case 'SCORE':
+        return <Gift size={18} color={COLORS.success} />;
+      case 'NEWS':
+        return <Megaphone size={18} color={COLORS.warning} />;
+      case 'URGENT':
+        return <AlertCircle size={18} color={COLORS.danger} />;
+      default:
+        return <Info size={18} color={COLORS.textSecondary} />;
     }
   };
 
   const getIconBg = (type: string) => {
-    switch(type) {
-      case 'EVENT': return COLORS.primary + '10';
-      case 'SCORE': return COLORS.success + '10';
-      case 'NEWS': return COLORS.warning + '10';
-      case 'URGENT': return COLORS.danger + '10';
-      default: return COLORS.background;
+    switch (type) {
+      case 'EVENT':
+        return COLORS.primary + '14';
+      case 'SCORE':
+        return COLORS.success + '14';
+      case 'NEWS':
+        return COLORS.warning + '14';
+      case 'URGENT':
+        return COLORS.danger + '14';
+      default:
+        return COLORS.surfaceMuted;
     }
   };
 
@@ -95,7 +118,7 @@ const NotificationsScreen = () => {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    
+
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -107,77 +130,125 @@ const NotificationsScreen = () => {
     return date.toLocaleDateString('vi-VN');
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      activeOpacity={0.7}
-      onPress={() => !item.is_read && handleMarkRead(item.id)}
-      style={[
-        styles.notificationCard, 
-        !item.is_read ? styles.unreadCard : styles.readCard, 
-        !item.is_read ? SHADOWS.medium : SHADOWS.light
-      ]}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: getIconBg(item.type) }]}>
-        {getIcon(item.type)}
-      </View>
-      <View style={styles.textContainer}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, !item.is_read && styles.unreadText]} numberOfLines={1}>{item.title}</Text>
-          {!item.is_read && <View style={styles.unreadDot} />}
+  const unreadCount = notifications.filter((item) => !item.is_read).length;
+  const filteredNotifications = notifications.filter((item) => {
+    if (activeCategory === 'Tất cả') {
+      return true;
+    }
+    return getNotificationCategory(item.type) === activeCategory;
+  });
+
+  const renderItem = ({ item }: { item: any }) => {
+    const category = getNotificationCategory(item.type);
+
+    return (
+      <Pressable
+        onPress={() => !item.is_read && handleMarkRead(item.id)}
+        style={({ pressed }) => [
+          styles.notificationCard,
+          item.is_read ? styles.readCard : styles.unreadCard,
+          pressed && styles.pressed,
+        ]}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: getIconBg(item.type) }]}>{getIcon(item.type)}</View>
+        <View style={styles.textContainer}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, !item.is_read && styles.unreadText]} numberOfLines={1}>
+              {item.title}
+            </Text>
+            {!item.is_read && <View style={styles.unreadDot} />}
+          </View>
+          <Text style={styles.message} numberOfLines={2}>
+            {item.message}
+          </Text>
+          <View style={styles.metaRow}>
+            <View style={styles.categoryChip}>
+              <Text style={styles.categoryText}>{category}</Text>
+            </View>
+            <View style={styles.timeRow}>
+              <Clock size={12} color={COLORS.textMuted} />
+              <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
+            </View>
+          </View>
         </View>
-        <Text style={styles.message} numberOfLines={2}>{item.message}</Text>
-        <View style={styles.timeRow}>
-          <Clock size={12} color={COLORS.textMuted} />
-          <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
-        </View>
-      </View>
-      <ChevronRight size={18} color={COLORS.textMuted} />
-    </TouchableOpacity>
-  );
+        <ChevronRight size={18} color={COLORS.textMuted} />
+      </Pressable>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <MainHeader>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>Thông báo</Text>
-          <TouchableOpacity onPress={handleReadAll} style={styles.readAllBtn}>
+          <View>
+            <Text style={styles.headerTitle}>Thông báo</Text>
+            <Text style={styles.headerSub}>Ưu tiên hiển thị thông báo chưa đọc và nhóm theo mục rõ ràng hơn.</Text>
+          </View>
+          <Pressable onPress={handleReadAll} style={({ pressed }) => [styles.readAllBtn, pressed && styles.pressed]}>
             <CheckCheck size={16} color={COLORS.white} style={{ marginRight: 6 }} />
-            <Text style={styles.markRead}>Đã đọc hết</Text>
-          </TouchableOpacity>
+            <Text style={styles.markRead}>Đọc hết</Text>
+          </Pressable>
         </View>
-        <Text style={styles.headerSub}>Theo dõi những cập nhật quan trọng từ YouthHub</Text>
+
+        <View style={styles.unreadSummary}>
+          <Text style={styles.unreadCount}>{unreadCount}</Text>
+          <Text style={styles.unreadLabel}>thông báo chưa đọc</Text>
+        </View>
       </MainHeader>
 
-      {loading ? (
-        <View style={{ padding: 20 }}>
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-          <NotificationSkeleton />
-        </View>
-      ) : (
-        <FlatList
-          data={notifications}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-          }
-          ListEmptyComponent={
+      <FlatList
+        data={filteredNotifications}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
+        ListHeaderComponent={
+          <View style={styles.filterWrap}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+              {categoryTabs.map((tab) => {
+                const active = tab === activeCategory;
+                const count =
+                  tab === 'Tất cả'
+                    ? notifications.length
+                    : notifications.filter((item) => getNotificationCategory(item.type) === tab).length;
+
+                return (
+                  <Pressable
+                    key={tab}
+                    onPress={() => setActiveCategory(tab)}
+                    style={({ pressed }) => [styles.filterChip, active && styles.filterChipActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.filterText, active && styles.filterTextActive]}>
+                      {tab} {count ? `(${count})` : ''}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            {loading && (
+              <View style={{ paddingTop: 12 }}>
+                <NotificationSkeleton />
+                <NotificationSkeleton />
+                <NotificationSkeleton />
+              </View>
+            )}
+          </View>
+        }
+        ListEmptyComponent={
+          !loading ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconCircle}>
-                 <Bell size={40} color={COLORS.textMuted} />
+                <Bell size={40} color={COLORS.textMuted} />
               </View>
               <Text style={styles.emptyTitle}>Hộp thư trống</Text>
-              <Text style={styles.emptySub}>Bạn không có thông báo nào trong lúc này.</Text>
+              <Text style={styles.emptySub}>Bạn không có thông báo nào trong nhóm này.</Text>
             </View>
-          }
-        />
-      )}
+          ) : null
+        }
+      />
     </View>
   );
 };
@@ -190,58 +261,104 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 30,
     fontWeight: '900',
     color: COLORS.white,
-    letterSpacing: -1,
+    marginBottom: 6,
   },
   headerSub: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
-    fontWeight: '600',
     lineHeight: 20,
+    maxWidth: '88%',
+  },
+  unreadSummary: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  unreadCount: {
+    color: COLORS.white,
+    fontSize: 32,
+    fontWeight: '900',
+  },
+  unreadLabel: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 14,
+    fontWeight: '600',
   },
   readAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
+    paddingVertical: 9,
+    borderRadius: UI.chipRadius,
   },
   markRead: {
     fontSize: 12,
     color: COLORS.white,
-    fontWeight: '900',
+    fontWeight: '800',
   },
   listContent: {
-    padding: 20,
-    paddingTop: 24,
+    padding: UI.screenPadding,
+    paddingTop: 0,
+  },
+  filterWrap: {
+    marginTop: 10,
+    marginBottom: 16,
+    zIndex: 20,
+  },
+  filterRow: {
+    gap: 10,
+    paddingBottom: 6,
+  },
+  filterChip: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: UI.chipRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  filterTextActive: {
+    color: COLORS.white,
   },
   notificationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
     padding: 18,
-    borderRadius: 24,
-    marginBottom: 16,
+    borderRadius: UI.cardRadius,
+    marginBottom: 14,
     borderWidth: 1,
+    ...SHADOWS.light,
   },
   readCard: {
-    borderColor: '#F1F5F9',
+    borderColor: COLORS.border,
   },
   unreadCard: {
-    borderColor: COLORS.primary + '20',
-    backgroundColor: COLORS.white,
+    borderColor: COLORS.primary + '25',
+    backgroundColor: '#FFFFFF',
   },
   iconContainer: {
     width: 50,
     height: 50,
-    borderRadius: 16,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -277,7 +394,23 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: 10,
     lineHeight: 20,
-    fontWeight: '500',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  categoryChip: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: UI.chipRadius,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  categoryText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '700',
   },
   timeRow: {
     flexDirection: 'row',
@@ -291,17 +424,19 @@ const styles = StyleSheet.create({
   },
   emptyState: {
     alignItems: 'center',
-    marginTop: 100,
+    marginTop: 80,
     paddingHorizontal: 40,
   },
   emptyIconCircle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: COLORS.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   emptyTitle: {
     fontSize: 18,
@@ -313,8 +448,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textMuted,
     textAlign: 'center',
-    fontWeight: '600',
-  }
+    lineHeight: 20,
+  },
+  pressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.96,
+  },
 });
 
 export default NotificationsScreen;

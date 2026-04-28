@@ -5,10 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  TouchableOpacity,
+  Pressable,
   Dimensions,
-  Platform,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
@@ -22,23 +21,51 @@ import {
   Settings as SettingsIcon,
   Share2,
   FileText,
-  LayoutGrid
+  LayoutGrid,
 } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
+import { COLORS, SIZES, SHADOWS, UI } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
 import apiClient from '../../src/api/client';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
+import MainHeader from '../../src/components/common/MainHeader';
 
 const { width } = Dimensions.get('window');
 
-import MainHeader from '../../src/components/common/MainHeader';
+const fallbackSkills = [
+  { subject: 'Bí thư', score: 80 },
+  { subject: 'Kỹ thuật', score: 70 },
+  { subject: 'Giao tiếp', score: 90 },
+  { subject: 'Sáng tạo', score: 60 },
+  { subject: 'Xã hội', score: 85 },
+];
+
+const badgeConfigs = [
+  {
+    name: 'Tiên phong',
+    colors: ['#FFD700', '#FDB931'],
+    icon: <Award size={24} color={COLORS.white} />,
+    detail: 'Tham gia đều các hoạt động nổi bật và hoàn thành tốt vai trò được giao.',
+  },
+  {
+    name: 'Chuyên cần',
+    colors: ['#4361EE', '#3A0CA3'],
+    icon: <Briefcase size={24} color={COLORS.white} />,
+    detail: 'Duy trì nhịp độ tham gia ổn định trong nhiều sự kiện liên tiếp.',
+  },
+  {
+    name: 'Tình nguyện',
+    colors: ['#4CAF50', '#2E7D32'],
+    icon: <Calendar size={24} color={COLORS.white} />,
+    detail: 'Đóng góp tích cực cho các chiến dịch cộng đồng và công tác hỗ trợ.',
+  },
+];
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [selectedSkillIndex, setSelectedSkillIndex] = React.useState(0);
+  const [selectedBadge, setSelectedBadge] = React.useState('Tiên phong');
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['profileStats'],
@@ -49,33 +76,42 @@ const ProfileScreen = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Handle case where user context or stats are loading, or user is null
   if (isLoading || !user) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
+  const skills = stats?.skills?.length
+    ? stats.skills.map((skill: any) => ({
+        subject: skill.subject,
+        score: skill.list_score || skill.A || 0,
+      }))
+    : fallbackSkills;
+
+  const selectedSkill = skills[selectedSkillIndex] || skills[0];
+  const activeBadge = badgeConfigs.find((badge) => badge.name === selectedBadge) || badgeConfigs[0];
+
   const chartData = {
-    labels: stats?.skills?.map((s: any) => s.subject) || ["Bí thư", "Kỹ thuật", "Giao tiếp", "Sáng tạo", "Xã hội"],
+    labels: skills.map((skill: any) => skill.subject),
     datasets: [
       {
-        data: stats?.skills?.map((s: any) => s.list_score || s.A) || [80, 70, 90, 60, 85]
-      }
-    ]
+        data: skills.map((skill: any) => skill.score),
+      },
+    ],
   };
 
   const chartConfig = {
     backgroundGradientFrom: COLORS.surface,
     backgroundGradientTo: COLORS.surface,
-    color: (opacity = 1) => `rgba(0, 82, 212, ${opacity})`, // Solid primary blue
+    color: (opacity = 1) => `rgba(79, 70, 229, ${opacity})`,
     strokeWidth: 2,
     barPercentage: 0.6,
     useShadowColorFromDataset: false,
     decimalPlaces: 0,
-    labelColor: (opacity = 1) => `rgba(43, 45, 66, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(30, 41, 59, ${opacity})`,
     fillShadowGradient: COLORS.primary,
     fillShadowGradientOpacity: 1,
   };
@@ -83,18 +119,17 @@ const ProfileScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Header */}
         <MainHeader>
           <View style={styles.headerTop}>
-            <TouchableOpacity style={styles.circularButton}>
+            <Pressable style={({ pressed }) => [styles.circularButton, pressed && styles.pressed]}>
               <Share2 size={20} color={COLORS.white} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.circularButton}
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.circularButton, pressed && styles.pressed]}
               onPress={() => router.push('/settings')}
             >
               <SettingsIcon size={20} color={COLORS.white} />
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           <View style={styles.profileInfo}>
@@ -109,12 +144,11 @@ const ProfileScreen = () => {
               <Text style={styles.idText}>MSSV: {user.student_id}</Text>
             </View>
 
-            {/* Level Progress Bar */}
             <View style={styles.progressContainer}>
               <View style={styles.progressHeader}>
                 <Text style={styles.progressTitle}>Tiến trình cấp độ</Text>
                 <Text style={styles.progressValue}>
-                  {stats?.training_score || user.training_score || 0}/{((user.level || 1) * 1000)} XP
+                  {stats?.training_score || user.training_score || 0}/{(user.level || 1) * 1000} XP
                 </Text>
               </View>
               <View style={styles.progressBarBg}>
@@ -124,7 +158,7 @@ const ProfileScreen = () => {
                   end={{ x: 1, y: 0 }}
                   style={[
                     styles.progressBarFill,
-                    { width: `${Math.min(((stats?.training_score || user.training_score || 0) / ((user.level || 1) * 1000)) * 100, 100)}%` }
+                    { width: `${Math.min((((stats?.training_score || user.training_score || 0) / ((user.level || 1) * 1000)) * 100), 100)}%` },
                   ]}
                 />
               </View>
@@ -133,42 +167,33 @@ const ProfileScreen = () => {
         </MainHeader>
 
         <View style={styles.content}>
-          {/* Lưới Mini-App (Tiện ích mở rộng) */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Tiện ích mở rộng</Text>
           </View>
           <View style={styles.gridMenuContainer}>
-            <TouchableOpacity
-              style={[styles.gridMenuItem, SHADOWS.light]}
-              onPress={() => router.push('/awards')}
-            >
+            <Pressable style={({ pressed }) => [styles.gridMenuItem, SHADOWS.light, pressed && styles.pressed]} onPress={() => router.push('/awards')}>
               <LinearGradient colors={['#FFD700', '#FDB931']} style={styles.gridMenuIcon}>
                 <Award size={24} color={COLORS.white} />
               </LinearGradient>
               <Text style={styles.gridMenuText}>Thành tích{'\n'}của tôi</Text>
-            </TouchableOpacity>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.gridMenuItem, SHADOWS.light]}
-              onPress={() => router.push('/documents')}
-            >
+            <Pressable style={({ pressed }) => [styles.gridMenuItem, SHADOWS.light, pressed && styles.pressed]} onPress={() => router.push('/documents')}>
               <LinearGradient colors={['#4361EE', '#3A0CA3']} style={styles.gridMenuIcon}>
                 <FileText size={24} color={COLORS.white} />
               </LinearGradient>
-              <Text style={styles.gridMenuText}>Dịch vụ{'\n'}Hành chính</Text>
-            </TouchableOpacity>
+              <Text style={styles.gridMenuText}>Dịch vụ{'\n'}hành chính</Text>
+            </Pressable>
 
-            <TouchableOpacity
-              style={[styles.gridMenuItem, SHADOWS.light, { opacity: 0.5 }]}
-            >
+            <Pressable style={({ pressed }) => [styles.gridMenuItem, SHADOWS.light, { opacity: 0.5 }, pressed && styles.pressed]}>
               <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.gridMenuIcon}>
                 <LayoutGrid size={24} color={COLORS.white} />
               </LinearGradient>
-              <Text style={styles.gridMenuText}>Thêm tính năng{'\n'}(Sắp ra mắt)</Text>
-            </TouchableOpacity>
+              <Text style={styles.gridMenuText}>Tính năng mới{'\n'}(Sắp ra mắt)</Text>
+            </Pressable>
           </View>
 
-          <GlassCard style={{ marginTop: 20 }}>
+          <GlassCard style={styles.glassSection}>
             <Text style={styles.sectionTitle}>Năng lực cá nhân</Text>
             <View style={styles.chartContainer}>
               <BarChart
@@ -184,52 +209,63 @@ const ProfileScreen = () => {
                   },
                 }}
                 verticalLabelRotation={45}
-                fromZero={true}
-                showValuesOnTopOfBars={true}
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                  paddingRight: 10,
-                }}
+                fromZero
+                showValuesOnTopOfBars
+                style={styles.chart}
               />
+            </View>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.skillChipRow}>
+              {skills.map((skill: any, index: number) => {
+                const active = index === selectedSkillIndex;
+                return (
+                  <Pressable
+                    key={skill.subject}
+                    onPress={() => setSelectedSkillIndex(index)}
+                    style={({ pressed }) => [styles.skillChip, active && styles.skillChipActive, pressed && styles.pressed]}
+                  >
+                    <Text style={[styles.skillChipText, active && styles.skillChipTextActive]}>{skill.subject}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.detailCard}>
+              <Text style={styles.detailLabel}>Chi tiết khi bấm</Text>
+              <Text style={styles.detailTitle}>{selectedSkill.subject}</Text>
+              <Text style={styles.detailValue}>{selectedSkill.score} điểm</Text>
             </View>
           </GlassCard>
 
-          {/* Badges Section */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Huy hiệu đạt được</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
-            <View style={styles.badgeItem}>
-              <LinearGradient colors={['#FFD700', '#FDB931']} style={styles.badgeCircle}>
-                <Award size={24} color={COLORS.white} />
-              </LinearGradient>
-              <Text style={styles.badgeName}>Tiên phong</Text>
-            </View>
-            <View style={styles.badgeItem}>
-              <LinearGradient colors={['#4361EE', '#3A0CA3']} style={styles.badgeCircle}>
-                <Briefcase size={24} color={COLORS.white} />
-              </LinearGradient>
-              <Text style={styles.badgeName}>Chuyên cần</Text>
-            </View>
-            <View style={styles.badgeItem}>
-              <LinearGradient colors={['#4CAF50', '#2E7D32']} style={styles.badgeCircle}>
-                <Calendar size={24} color={COLORS.white} />
-              </LinearGradient>
-              <Text style={styles.badgeName}>Tình nguyện</Text>
-            </View>
+            {badgeConfigs.map((badge) => (
+              <Pressable key={badge.name} onPress={() => setSelectedBadge(badge.name)} style={({ pressed }) => [styles.badgeItem, pressed && styles.pressed]}>
+                <LinearGradient colors={badge.colors} style={[styles.badgeCircle, selectedBadge === badge.name && styles.badgeCircleActive]}>
+                  {badge.icon}
+                </LinearGradient>
+                <Text style={styles.badgeName}>{badge.name}</Text>
+              </Pressable>
+            ))}
           </ScrollView>
 
-          {/* Certificates Section */}
+          <View style={styles.detailCard}>
+            <Text style={styles.detailLabel}>Huy hiệu đang chọn</Text>
+            <Text style={styles.detailTitle}>{activeBadge.name}</Text>
+            <Text style={styles.badgeDetailText}>{activeBadge.detail}</Text>
+          </View>
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Chứng nhận mới nhất</Text>
-            <TouchableOpacity>
+            <Pressable>
               <Text style={styles.viewAll}>Xem tất cả</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
 
           {stats?.recent_certificates?.map((cert: any) => (
-            <TouchableOpacity key={cert.id} style={[styles.certCard, SHADOWS.light]}>
+            <Pressable key={cert.id} style={({ pressed }) => [styles.certCard, SHADOWS.light, pressed && styles.pressed]}>
               <View style={styles.certIconContainer}>
                 <Award size={24} color={COLORS.primary} />
               </View>
@@ -243,25 +279,19 @@ const ProfileScreen = () => {
                   <Text style={styles.certMetaText}>{cert.issuer || 'Đoàn trường'}</Text>
                 </View>
               </View>
-              <ChevronRight size={20} color={COLORS.border} />
-            </TouchableOpacity>
+              <ChevronRight size={20} color={COLORS.borderStrong} />
+            </Pressable>
           ))}
 
-          {/* Digital ID Link */}
-          <TouchableOpacity style={styles.idLinkCard}>
-            <LinearGradient
-              colors={['#4361EE', '#3A0CA3']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.idLinkGradient}
-            >
+          <Pressable style={({ pressed }) => [styles.idLinkCard, pressed && styles.pressed]}>
+            <LinearGradient colors={['#4361EE', '#3A0CA3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.idLinkGradient}>
               <View>
                 <Text style={styles.idLinkTitle}>Thẻ Đoàn viên Điện tử</Text>
                 <Text style={styles.idLinkSub}>QR Code xác thực nhanh</Text>
               </View>
               <ExternalLink size={24} color={COLORS.white} />
             </LinearGradient>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </ScrollView>
     </View>
@@ -273,16 +303,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingBottom: 40,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    zIndex: 10,
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: SIZES.padding,
     gap: 12,
   },
   circularButton: {
@@ -337,36 +364,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 8,
   },
-  gridMenuContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingHorizontal: 5,
-  },
-  gridMenuItem: {
-    width: (width - SIZES.padding * 2 - 30) / 3, // 3 columns
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2, // For Android
-  },
-  gridMenuIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  gridMenuText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
   idText: {
     color: COLORS.white,
     fontSize: 12,
@@ -401,34 +398,114 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 4,
   },
-  facultyText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-  },
   content: {
     padding: SIZES.padding,
     marginTop: -20,
   },
-  sectionCard: {
-    backgroundColor: COLORS.surface,
-    padding: 20,
-    borderRadius: 24,
-    marginBottom: SIZES.padding,
-    ...(Platform.OS === 'ios' ? SHADOWS.light : { elevation: 2 })
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    marginTop: 10,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: COLORS.text,
+  },
+  gridMenuContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  gridMenuItem: {
+    width: (width - SIZES.padding * 2 - 30) / 3,
+    backgroundColor: COLORS.surface,
+    borderRadius: UI.cardRadius,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  gridMenuIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  gridMenuText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  glassSection: {
+    marginTop: 20,
   },
   chartContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     height: 180,
   },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+    paddingRight: 10,
+  },
+  skillChipRow: {
+    gap: 10,
+    paddingTop: 8,
+    paddingBottom: 6,
+  },
+  skillChip: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: UI.chipRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  skillChipActive: {
+    backgroundColor: COLORS.primary,
+  },
+  skillChipText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  skillChipTextActive: {
+    color: COLORS.white,
+  },
+  detailCard: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  detailLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  detailTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  detailValue: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
   badgesScroll: {
-    marginBottom: 25,
+    marginBottom: 20,
     paddingLeft: 5,
   },
   badgeItem: {
@@ -444,17 +521,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     ...SHADOWS.light,
   },
+  badgeCircleActive: {
+    transform: [{ scale: 1.06 }],
+  },
   badgeName: {
     fontSize: 12,
     fontWeight: '600',
     color: COLORS.textSecondary,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    marginTop: 10,
+  badgeDetailText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
   viewAll: {
     color: COLORS.primary,
@@ -466,8 +544,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 15,
-    borderRadius: SIZES.radius,
+    borderRadius: UI.cardRadius,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   certIconContainer: {
     width: 50,
@@ -500,13 +580,13 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.borderStrong,
     marginHorizontal: 8,
   },
   idLinkCard: {
     marginTop: 20,
     marginBottom: 40,
-    borderRadius: SIZES.radius * 1.5,
+    borderRadius: UI.cardRadius,
     overflow: 'hidden',
   },
   idLinkGradient: {
@@ -524,7 +604,11 @@ const styles = StyleSheet.create({
   idLinkSub: {
     color: 'rgba(255,255,255,0.7)',
     fontSize: 12,
-  }
+  },
+  pressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.96,
+  },
 });
 
 export default ProfileScreen;

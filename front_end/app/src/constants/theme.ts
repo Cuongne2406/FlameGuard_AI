@@ -12,8 +12,11 @@ export const COLORS = {
   textSecondary: '#64748B', // Slate 500
   textMuted: '#94A3B8',   // Slate 400
   border: '#F1F5F9',      // Slate 100
+  borderStrong: '#CBD5E1',
   white: '#FFFFFF',
   black: '#0F172A',       // Slate 900
+  overlay: 'rgba(15, 23, 42, 0.08)',
+  surfaceMuted: '#F8FAFC',
   gradient: ['#4F46E5', '#6366F1', '#818CF8'] // Indigo gradient
 };
 
@@ -26,6 +29,14 @@ export const SIZES = {
   h2: 24,
   h3: 18,
   body: 16,
+};
+
+export const UI = {
+  screenPadding: 20,
+  sectionGap: 24,
+  cardRadius: 24,
+  chipRadius: 999,
+  inputHeight: 54,
 };
 
 export const SHADOWS = {
@@ -65,5 +76,15 @@ export const SHADOWS = {
     shadowOpacity: 0.15,
     shadowRadius: 30,
     elevation: 10,
-  }
+  },
+  large: {
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 15,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
+  },
 };

@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import { QueryProvider } from '../src/context/QueryProvider';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { COLORS } from '../src/constants/theme';
@@ -28,7 +29,6 @@ function InitialLayout() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(tabs)';
     const inLoginGroup = segments[0] === 'login';
 
     if (!userToken && !inLoginGroup) {
@@ -38,7 +38,7 @@ function InitialLayout() {
       // Redirect to tabs if authenticated
       router.replace('/(tabs)');
     }
-  }, [userToken, isLoading, segments]);
+  }, [userToken, isLoading, segments, router]);
 
   if (isLoading) {
     return (
@@ -60,8 +60,6 @@ function InitialLayout() {
     </ThemeProvider>
   );
 }
-
-import { QueryProvider } from '../src/context/QueryProvider';
 
 export default function RootLayout() {
   return (

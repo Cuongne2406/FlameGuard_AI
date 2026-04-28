@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, SHADOWS } from '../../constants/theme';
+import { SHADOWS } from '../../constants/theme';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -16,7 +16,6 @@ const GlassCard: React.FC<GlassCardProps> = ({
   style, 
   contentStyle,
   gradientColors = ['rgba(255, 255, 255, 0.9)', 'rgba(255, 255, 255, 0.7)'],
-  opacity = 0.9
 }) => {
   return (
     <View style={[styles.container, SHADOWS.light, style]}>

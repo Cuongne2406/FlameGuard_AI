@@ -2,13 +2,12 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 import { 
-  Home, 
   Calendar, 
   Bell, 
   User,
   LayoutDashboard
 } from 'lucide-react-native';
-import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
+import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function TabLayout() {
   return (

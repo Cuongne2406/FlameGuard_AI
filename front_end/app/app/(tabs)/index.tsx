@@ -4,22 +4,25 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
-  Image,
-  Dimensions,
   FlatList,
-  TouchableOpacity,
+  Pressable,
   TextInput,
-  Platform,
-  ActivityIndicator
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bell, Search, Filter, Rocket, Sparkles, QrCode } from 'lucide-react-native';
+import {
+  Bell,
+  Search,
+  Sparkles,
+  QrCode,
+  ChevronRight,
+  Award,
+  BadgeCheck,
+} from 'lucide-react-native';
 
-// Import constants
-import { COLORS, SIZES, SHADOWS } from '../../src/constants/theme';
+import { COLORS, SHADOWS, SIZES, UI } from '../../src/constants/theme';
 import EventCard from '../../src/components/EventCard';
 import { useAuth } from '../../src/context/AuthContext';
 import { getEvents } from '../../src/api/client';
@@ -28,95 +31,94 @@ import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
 import MainHeader from '../../src/components/common/MainHeader';
 
-const { width } = Dimensions.get('window');
+const quickKeywords = ['Mùa hè xanh', 'Tình nguyện', 'Workshop AI'];
 
 const HomeScreen: React.FC = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+
   const { data: events, isLoading: loading } = useQuery({
     queryKey: ['events', 'home'],
-    queryFn: () => getEvents(0, 5),
+    queryFn: () => getEvents(0, 6),
     staleTime: 5 * 60 * 1000,
   });
 
-  // Since React Query handles undefined data before it loads, we provide a safe fallback for the render methods:
-  const displayEvents = events || [];
+  const filteredEvents = useMemo(() => {
+    const displayEvents = events || [];
+
+    if (!searchQuery.trim()) {
+      return displayEvents;
+    }
+
+    const query = searchQuery.toLowerCase();
+    return displayEvents.filter((event: any) => {
+      const title = (event.name || event.title || '').toLowerCase();
+      const organizer = (event.organization_name || event.organizer || '').toLowerCase();
+      const location = (event.location || '').toLowerCase();
+      return title.includes(query) || organizer.includes(query) || location.includes(query);
+    });
+  }, [events, searchQuery]);
+
+  const featuredEvents = filteredEvents.slice(0, 3);
+  const upcomingEvents = filteredEvents.slice(0, 5);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
 
-      {/* Header Section - Modern Gradient Header */}
       <MainHeader>
         <View style={styles.headerTop}>
-          <View>
+          <View style={styles.headerCopy}>
             <Text style={styles.welcomeText}>Chào buổi sáng,</Text>
-            <Text style={styles.userName}>{user?.full_name || 'Sinh viên'} ✨</Text>
+            <Text style={styles.userName}>{user?.full_name || 'Sinh viên'}</Text>
+            <Text style={styles.headerSub}>Hôm nay mình ưu tiên sự kiện mới, check-in nhanh và hồ sơ cá nhân của bạn.</Text>
           </View>
-          <TouchableOpacity style={styles.iconButton}>
-            <Bell size={24} color={COLORS.white} />
+          <Pressable style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]} onPress={() => router.push('/notifications')}>
+            <Bell size={22} color={COLORS.white} />
             <View style={styles.badge} />
-          </TouchableOpacity>
+          </Pressable>
         </View>
-
-        {/* User Score Summary Card - Now integrated into the header flow using GlassCard */}
-        <GlassCard
-          style={styles.scoreCard}
-          gradientColors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.85)']}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={styles.scoreInfo}>
-              <Text style={styles.scoreLabel}>ĐIỂM RÈN LUYỆN</Text>
-              <Text style={styles.scoreValue}>{user?.training_score || 0}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.scoreInfo}>
-              <Text style={styles.scoreLabel}>LEVEL</Text>
-              <Text style={styles.scoreValue}>{user?.level || 1}</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.scoreAction}
-              onPress={() => router.push('/profile')}
-            >
-              <Rocket size={18} color={COLORS.primary} />
-              <Text style={styles.actionText}>Review</Text>
-            </TouchableOpacity>
-          </View>
-        </GlassCard>
       </MainHeader>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + 120 }
-        ]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 120 }]}
       >
-        {/* Search Bar - Positioned outside header to avoid overlapping */}
-        <View style={styles.searchContainer}>
+        <View style={styles.searchSection}>
           <View style={[styles.searchBar, SHADOWS.light]}>
-            <Search size={20} color={COLORS.textSecondary} />
+            <Search size={18} color={COLORS.textSecondary} />
             <TextInput
-              placeholder="Tìm kiếm sự kiện, hoạt động..."
+              placeholder="Tìm sự kiện, địa điểm, đơn vị tổ chức..."
               style={styles.searchInput}
-              placeholderTextColor={COLORS.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor={COLORS.textMuted}
             />
           </View>
-          <TouchableOpacity style={[styles.filterButton, SHADOWS.light]}>
-            <Filter size={20} color={COLORS.white} />
-          </TouchableOpacity>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.keywordRow}>
+            {quickKeywords.map((keyword) => (
+              <Pressable
+                key={keyword}
+                onPress={() => setSearchQuery(keyword)}
+                style={({ pressed }) => [styles.keywordChip, pressed && styles.pressedChip]}
+              >
+                <Text style={styles.keywordText}>{keyword}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
-        {/* Hot Events Carousel */}
         <View style={styles.sectionHeader}>
           <View style={styles.sectionTitleRow}>
-            <Sparkles size={20} color={COLORS.warning} />
-            <Text style={styles.sectionTitle}>Sự kiện Nổi bật</Text>
+            <Sparkles size={18} color={COLORS.warning} />
+            <Text style={styles.sectionTitle}>Sự kiện nổi bật</Text>
           </View>
-          <TouchableOpacity onPress={() => router.push('/events')}>
+          <Pressable onPress={() => router.push('/events')}>
             <Text style={styles.viewAll}>Xem tất cả</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {loading ? (
@@ -126,27 +128,67 @@ const HomeScreen: React.FC = () => {
           </ScrollView>
         ) : (
           <FlatList
-            data={displayEvents.slice(0, 3)}
+            data={featuredEvents}
             renderItem={({ item }) => (
-              <EventCard
-                event={item}
-                horizontal
-                onPress={() => router.push(`/event-detail/${item.id}`)}
-              />
+              <EventCard event={item} horizontal onPress={() => router.push(`/event-detail/${item.id}`)} />
             )}
-            keyExtractor={item => item.id.toString()}
+            keyExtractor={(item) => item.id.toString()}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.carouselContent}
+            ListEmptyComponent={
+              <View style={styles.emptyInline}>
+                <Text style={styles.emptyInlineText}>Chưa có sự kiện phù hợp với từ khóa hiện tại.</Text>
+              </View>
+            }
           />
         )}
 
-        {/* Upcoming Activities */}
-        <View style={[styles.sectionHeader, { marginTop: SIZES.padding }]}>
+        <LinearGradient colors={['#F97316', '#EA580C']} style={[styles.checkInCard, SHADOWS.medium]}>
+          <View style={styles.checkInCopy}>
+            <View style={styles.checkInTag}>
+              <Text style={styles.checkInTagText}>CHECK-IN NHANH</Text>
+            </View>
+            <Text style={styles.checkInTitle}>Quét QR trong vài giây</Text>
+            <Text style={styles.checkInSub}>Nút check-in luôn sẵn ngay trang chủ để vào sự kiện nhanh hơn.</Text>
+          </View>
+          <Pressable style={({ pressed }) => [styles.checkInButton, pressed && styles.buttonPressed]} onPress={() => router.push('/scan-qr')}>
+            <QrCode size={20} color={COLORS.primary} />
+            <Text style={styles.checkInButtonText}>Mở máy quét</Text>
+          </Pressable>
+        </LinearGradient>
+
+        <GlassCard style={styles.profileSummary}>
+          <View style={styles.profileHeader}>
+            <View>
+              <Text style={styles.profileTitle}>Thông tin cá nhân</Text>
+              <Text style={styles.profileSub}>Theo dõi nhanh tiến độ và thành tích hiện tại.</Text>
+            </View>
+            <Pressable style={({ pressed }) => [styles.profileAction, pressed && styles.buttonPressed]} onPress={() => router.push('/profile')}>
+              <Text style={styles.profileActionText}>Mở hồ sơ</Text>
+              <ChevronRight size={16} color={COLORS.primary} />
+            </Pressable>
+          </View>
+
+          <View style={styles.summaryGrid}>
+            <Pressable style={({ pressed }) => [styles.summaryCard, pressed && styles.pressed]} onPress={() => router.push('/profile')}>
+              <Award size={18} color={COLORS.primary} />
+              <Text style={styles.summaryValue}>{user?.training_score || 0}</Text>
+              <Text style={styles.summaryLabel}>Điểm rèn luyện</Text>
+            </Pressable>
+            <Pressable style={({ pressed }) => [styles.summaryCard, pressed && styles.pressed]} onPress={() => router.push('/awards')}>
+              <BadgeCheck size={18} color={COLORS.success} />
+              <Text style={styles.summaryValue}>{user?.level || 1}</Text>
+              <Text style={styles.summaryLabel}>Cấp độ hiện tại</Text>
+            </Pressable>
+          </View>
+        </GlassCard>
+
+        <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Hoạt động sắp tới</Text>
-          <TouchableOpacity onPress={() => router.push('/events')}>
+          <Pressable onPress={() => router.push('/events')}>
             <Text style={styles.viewAll}>Xem tất cả</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <View style={styles.activitiesList}>
@@ -155,80 +197,64 @@ const HomeScreen: React.FC = () => {
               <EventSkeleton />
               <EventSkeleton />
             </View>
-          ) : (
-            displayEvents.map((event: any) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                onPress={() => router.push(`/event-detail/${event.id}`)}
-              />
+          ) : upcomingEvents.length ? (
+            upcomingEvents.map((event: any) => (
+              <EventCard key={event.id} event={event} onPress={() => router.push(`/event-detail/${event.id}`)} />
             ))
-          )}
-          {!loading && displayEvents.length === 0 && (
-            <Text style={{ textAlign: 'center', color: COLORS.textSecondary }}>Không có hoạt động nào sắp diễn ra.</Text>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>Hiện chưa có hoạt động nào sắp diễn ra.</Text>
+            </View>
           )}
         </View>
       </ScrollView>
-
-      {/* Floating Scan QR Button */}
-      <TouchableOpacity
-        style={[styles.floatingScanBtn, SHADOWS.medium]}
-        onPress={() => router.push('/scan-qr')}
-      >
-        <LinearGradient
-          colors={[COLORS.primary, '#3A0CA3']}
-          style={styles.scanGradient}
-        >
-          <View style={styles.scanIconBox}>
-            <QrCode size={24} color={COLORS.white} />
-          </View>
-          <Text style={styles.scanText}>Check-in</Text>
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingBottom: SIZES.padding * 2.5,
-    borderBottomLeftRadius: 35,
-    borderBottomRightRadius: 35,
-    zIndex: 1,
-  },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SIZES.padding,
-    marginBottom: SIZES.padding * 1.5,
+    alignItems: 'flex-start',
+    gap: 16,
+  },
+  headerCopy: {
+    flex: 1,
   },
   welcomeText: {
     color: 'rgba(255,255,255,0.8)',
     fontSize: SIZES.body,
+    marginBottom: 4,
   },
   userName: {
     color: COLORS.white,
-    fontSize: SIZES.h2,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  headerSub: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 14,
+    lineHeight: 20,
+    maxWidth: '90%',
   },
   iconButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 22.5,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   badge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
     width: 10,
     height: 10,
     borderRadius: 5,
@@ -236,93 +262,58 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.white,
   },
-  scoreCard: {
-    backgroundColor: COLORS.white,
-    marginHorizontal: SIZES.padding,
-    borderRadius: SIZES.radius * 2,
-    padding: SIZES.padding,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 5,
-    ...(Platform.OS === 'ios' ? SHADOWS.medium : { elevation: 6 })
-  },
-  scoreInfo: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  scoreLabel: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  scoreValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  divider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: COLORS.border,
-  },
-  scoreAction: {
-    backgroundColor: 'rgba(0, 82, 212, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  actionText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   scrollContent: {
     paddingBottom: SIZES.padding * 4,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: SIZES.padding,
-    marginTop: 20,
-    marginBottom: SIZES.padding,
-    gap: 12,
+  searchSection: {
+    marginTop: 10,
+    paddingHorizontal: UI.screenPadding,
+    marginBottom: UI.sectionGap,
+    zIndex: 20,
   },
   searchBar: {
-    flex: 1,
-    height: 55,
-    backgroundColor: COLORS.white,
-    borderRadius: SIZES.radius * 1.2,
+    height: UI.inputHeight,
+    backgroundColor: COLORS.surface,
+    borderRadius: UI.cardRadius,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: COLORS.border,
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
     color: COLORS.text,
-    height: '100%',
+    fontSize: 15,
+    fontWeight: '500',
   },
-  filterButton: {
-    width: 55,
-    height: 55,
-    backgroundColor: COLORS.primary,
-    borderRadius: SIZES.radius * 1.2,
-    justifyContent: 'center',
-    alignItems: 'center',
+  keywordRow: {
+    paddingTop: 14,
+    gap: 10,
+  },
+  keywordChip: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: UI.chipRadius,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  keywordText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pressedChip: {
+    backgroundColor: COLORS.surfaceMuted,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SIZES.padding,
-    marginBottom: SIZES.base * 2,
+    paddingHorizontal: UI.screenPadding,
+    marginBottom: 14,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -330,46 +321,156 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '800',
     color: COLORS.text,
   },
   viewAll: {
     color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   carouselContent: {
-    paddingLeft: SIZES.padding,
+    paddingLeft: UI.screenPadding,
+    paddingRight: 6,
   },
-  activitiesList: {
-    paddingHorizontal: SIZES.padding,
+  emptyInline: {
+    width: 240,
+    backgroundColor: COLORS.surface,
+    borderRadius: UI.cardRadius,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  floatingScanBtn: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    borderRadius: 30,
-    overflow: 'hidden',
+  emptyInlineText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
-  scanGradient: {
+  checkInCard: {
+    marginHorizontal: UI.screenPadding,
+    marginBottom: UI.sectionGap,
+    borderRadius: UI.cardRadius,
+    padding: 20,
+    gap: 18,
+  },
+  checkInCopy: {
+    gap: 8,
+  },
+  checkInTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: UI.chipRadius,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  checkInTagText: {
+    color: COLORS.white,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  checkInTitle: {
+    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  checkInSub: {
+    color: 'rgba(255,255,255,0.84)',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  checkInButton: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     gap: 10,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: UI.chipRadius,
   },
-  scanIconBox: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
+  checkInButtonText: {
+    color: COLORS.primary,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  profileSummary: {
+    marginHorizontal: UI.screenPadding,
+    marginBottom: UI.sectionGap,
+    padding: 20,
+    borderRadius: UI.cardRadius,
+  },
+  profileHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
   },
-  scanText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  }
+  profileTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  profileSub: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+  profileAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  profileActionText: {
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 20,
+    padding: 16,
+    gap: 8,
+  },
+  summaryValue: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  summaryLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  activitiesList: {
+    paddingHorizontal: UI.screenPadding,
+  },
+  emptyState: {
+    backgroundColor: COLORS.surface,
+    borderRadius: UI.cardRadius,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  pressed: {
+    transform: [{ scale: 0.985 }],
+    opacity: 0.96,
+  },
+  buttonPressed: {
+    transform: [{ scale: 0.98 }],
+  },
 });
 
 export default HomeScreen;

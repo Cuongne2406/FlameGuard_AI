@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS } from '../../constants/theme';
+import { COLORS, UI } from '../../constants/theme';
 
 interface MainHeaderProps {
   children: React.ReactNode;
@@ -31,13 +31,13 @@ const MainHeader: React.FC<MainHeaderProps> = ({ children, contentContainerStyle
 
 const styles = StyleSheet.create({
   header: {
-    paddingBottom: 45,
-    borderBottomLeftRadius: 35,
-    borderBottomRightRadius: 35,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
     zIndex: 10,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: UI.screenPadding,
     width: '100%',
   }
 });

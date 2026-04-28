@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { COLORS } from '../constants/theme';
+import { View, Animated, StyleSheet } from 'react-native';
+import { COLORS, SHADOWS, UI } from '../constants/theme';
 
 interface SkeletonProps {
   width?: any;
@@ -40,7 +40,7 @@ const SkeletonLoader = ({ width, height, borderRadius, style }: SkeletonProps) =
         {
           width: width,
           height: height,
-          backgroundColor: '#E1E9EE',
+          backgroundColor: COLORS.border,
           borderRadius: borderRadius || 4,
           opacity: opacity,
         },
@@ -84,9 +84,10 @@ const styles = StyleSheet.create({
   eventCard: {
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
-    padding: 15,
-    borderRadius: 20,
+    padding: 16,
+    borderRadius: UI.cardRadius,
     marginBottom: 15,
+    ...SHADOWS.light,
   },
   horizontalCard: {
     flexDirection: 'column',
@@ -98,8 +99,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: COLORS.surface,
     padding: 16,
-    borderRadius: 20,
+    borderRadius: UI.cardRadius,
     marginBottom: 12,
+    ...SHADOWS.light,
   }
 });
 
