@@ -6,8 +6,8 @@ import {
   ScrollView,
   Image,
   Pressable,
-  Dimensions,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BarChart } from 'react-native-chart-kit';
@@ -29,8 +29,6 @@ import apiClient from '../../src/api/client';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
 import MainHeader from '../../src/components/common/MainHeader';
-
-const { width } = Dimensions.get('window');
 
 const fallbackSkills = [
   { subject: 'Bí thư', score: 80 },
@@ -64,6 +62,7 @@ const badgeConfigs = [
 const ProfileScreen = () => {
   const router = useRouter();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const [selectedSkillIndex, setSelectedSkillIndex] = React.useState(0);
   const [selectedBadge, setSelectedBadge] = React.useState('Tiên phong');
 
@@ -93,9 +92,13 @@ const ProfileScreen = () => {
 
   const selectedSkill = skills[selectedSkillIndex] || skills[0];
   const activeBadge = badgeConfigs.find((badge) => badge.name === selectedBadge) || badgeConfigs[0];
+  const contentWidth = width - SIZES.padding * 2;
+  const chartWidth = Math.max(contentWidth - 40, skills.length * 72);
 
   const chartData = {
-    labels: skills.map((skill: any) => skill.subject),
+    labels: skills.map((skill: any) =>
+      skill.subject.length > 10 ? `${skill.subject.slice(0, 8).trim()}…` : skill.subject
+    ),
     datasets: [
       {
         data: skills.map((skill: any) => skill.score),
@@ -118,7 +121,7 @@ const ProfileScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <MainHeader>
           <View style={styles.headerTop}>
             <Pressable style={({ pressed }) => [styles.circularButton, pressed && styles.pressed]}>
@@ -196,23 +199,26 @@ const ProfileScreen = () => {
           <GlassCard style={styles.glassSection}>
             <Text style={styles.sectionTitle}>Năng lực cá nhân</Text>
             <View style={styles.chartContainer}>
-              <BarChart
-                data={chartData}
-                width={width - 80}
-                height={240}
-                yAxisLabel=""
-                yAxisSuffix=""
-                chartConfig={{
-                  ...chartConfig,
-                  propsForLabels: {
-                    fontSize: 10,
-                  },
-                }}
-                verticalLabelRotation={45}
-                fromZero
-                showValuesOnTopOfBars
-                style={styles.chart}
-              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScrollContent}>
+                <BarChart
+                  data={chartData}
+                  width={chartWidth}
+                  height={260}
+                  yAxisLabel=""
+                  yAxisSuffix=""
+                  chartConfig={{
+                    ...chartConfig,
+                    propsForLabels: {
+                      fontSize: 10,
+                    },
+                  }}
+                  verticalLabelRotation={0}
+                  fromZero
+                  withInnerLines
+                  showValuesOnTopOfBars
+                  style={styles.chart}
+                />
+              </ScrollView>
             </View>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.skillChipRow}>
@@ -370,7 +376,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   progressContainer: {
-    width: width * 0.7,
+    width: '100%',
+    maxWidth: 320,
     marginTop: 15,
   },
   progressHeader: {
@@ -402,6 +409,9 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
     marginTop: -20,
   },
+  scrollContent: {
+    paddingBottom: 24,
+  },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -418,10 +428,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
-    paddingHorizontal: 5,
+    gap: 12,
   },
   gridMenuItem: {
-    width: (width - SIZES.padding * 2 - 30) / 3,
+    flex: 1,
+    minHeight: 138,
     backgroundColor: COLORS.surface,
     borderRadius: UI.cardRadius,
     padding: 15,
@@ -449,19 +460,22 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   chartContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 180,
+    marginTop: 8,
+    marginHorizontal: -8,
+    minHeight: 290,
+  },
+  chartScrollContent: {
+    paddingHorizontal: 8,
   },
   chart: {
     marginVertical: 8,
     borderRadius: 16,
-    paddingRight: 10,
   },
   skillChipRow: {
     gap: 10,
     paddingTop: 8,
     paddingBottom: 6,
+    paddingRight: 8,
   },
   skillChip: {
     backgroundColor: COLORS.surfaceMuted,
@@ -570,6 +584,8 @@ const styles = StyleSheet.create({
   certMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 4,
   },
   certMetaText: {
     fontSize: 12,

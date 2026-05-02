@@ -38,10 +38,10 @@ import UserLayout from "../layouts/UserLayout";
 import UserDashboard from "../pages/user/Dashboard/Dashboard";
 import DigitalDocument from "../pages/user/DigitalDocument/DigitalDocument";
 import UserSetting from "../pages/user/Settings/UserSetting";
-import Profile from "../pages/user/Profile/Profile";
+import Profile from "../pages/user/profile/Profile";
 import Event from "../pages/user/Event/Event";
-import WalletPage from "../pages/user/Wallet/Wallet";
 import UserAwards from "../pages/user/Awards/UserAwards";
+import UserNotifications from "../pages/user/Notifications/Notifications";
 
 //public pages
 import PublicLayout from "../layouts/PublicLayout";
@@ -111,7 +111,7 @@ const AppRoutes = () => {
         <Route path="settings" element={<UserSetting />} />
         <Route path="profile" element={<Profile />} />
         <Route path="event" element={<Event />} />
-          <Route path="wallet" element={<WalletPage />} />
+          <Route path="notifications" element={<UserNotifications />} />
           <Route path="awards" element={<UserAwards />} />
         </Route>
       </Route>

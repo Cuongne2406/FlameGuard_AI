@@ -1,24 +1,38 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  CheckCircle2,
+  ChevronRight,
+  CreditCard,
+  Download,
+  FileText,
+  History,
+  Info,
+  Plus,
+  QrCode,
+  Wallet as WalletIcon,
+  X,
+} from "lucide-react";
 import { AuthContext } from "../../../context/AuthContext";
 import { financeService } from "../../../services/financeService";
-import {
-  Wallet,
-  Plus,
-  CreditCard,
-  BarChart3,
-  History,
-  CheckCircle2,
-  Clock,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Info,
-  Calendar,
-  X,
-  QrCode,
-  FileText,
-  Download,
-} from "lucide-react";
+import { userService } from "../../../services/userService";
+
+const Modal = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose} />
+    <div className="app-card relative z-10 w-full max-w-md overflow-hidden">
+      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-6">
+        <h3 className="text-base font-black text-slate-800">{title}</h3>
+        <button onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  </div>
+);
 
 const WalletPage = () => {
   const { user } = useContext(AuthContext);
@@ -32,462 +46,329 @@ const WalletPage = () => {
     const fetchData = async () => {
       try {
         const [transData, obliData, spentData] = await Promise.all([
-           financeService.getTransactions(),
-           userService.getObligations(),
-           userService.getSpendingStats()
+          financeService.getFacultyTransactions(),
+          userService.getObligations(),
+          userService.getSpendingStats(),
         ]);
-        setTransactions(transData);
-        setObligations(obliData);
-        setSpendingStats(spentData);
-      } catch (err) {
-        console.error(err);
+        setTransactions(Array.isArray(transData) ? transData : []);
+        setObligations(Array.isArray(obliData) ? obliData : []);
+        setSpendingStats(spentData || { total_expense: 0, data: [] });
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
-  const studentClass = user?.class_name || 'Đoàn Nhóm';
+  const normalizedTransactions = useMemo(
+    () =>
+      transactions.map((item) => {
+        const amount = Number(String(item.amount || "0").replace(/[^0-9.-]+/g, "")) || 0;
+        const isIncome =
+          item.type === "Thu" || item.type === "income" || item.type === "INCOME";
+        return {
+          ...item,
+          amount,
+          isIncome,
+        };
+      }),
+    [transactions]
+  );
+
+  const balance = normalizedTransactions.reduce(
+    (acc, item) => (item.isIncome ? acc + item.amount : acc - item.amount),
+    0
+  );
+
+  const totalExpense = normalizedTransactions.reduce(
+    (acc, item) => (item.isIncome ? acc : acc + item.amount),
+    0
+  );
+
+  const studentClass = user?.class_name || "Đoàn Nhóm";
   const nameParts = user?.full_name ? user.full_name.split(" ") : ["SV"];
   const firstName = nameParts[nameParts.length - 1].toUpperCase();
   const topUpCode = `NAP QUY ${firstName} ${studentClass}`;
-  
-  const balance = transactions.reduce((acc, t) => {
-    const amt = typeof t.amount === 'number' ? t.amount : Number(String(t.amount).replace(/[^0-9.-]+/g,"") || 0);
-    const isIncome = t.type === 'income' || t.type === 'Thu' || t.type === 'THU';
-    return isIncome ? acc + amt : acc - amt;
-  }, 0);
-
-  const totalExpense = transactions.reduce((acc, t) => {
-    const amt = typeof t.amount === 'number' ? t.amount : Number(String(t.amount).replace(/[^0-9.-]+/g,"") || 0);
-    const isExpense = t.type === 'expense' || t.type === 'Chi' || t.type === 'CHI';
-    return isExpense ? acc + amt : acc;
-  }, 0);
-
-  // Component Modal dùng chung để đồng bộ giao diện
-  const Modal = ({ title, onClose, children }) => (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">
-            {title}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-          >
-            <X size={20} className="text-slate-500" />
-          </button>
-        </div>
-        <div className="p-8">{children}</div>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* HEADER SECTION */}
-      <div className="flex flex-col gap-1">
-        <h2 className="text-2xl font-black text-slate-800">Ví Đoàn viên</h2>
-        <p className="text-slate-500 text-sm font-medium">
-          Quản lý quỹ lớp và tài chính cá nhân an toàn, minh bạch.
-        </p>
-      </div>
-
-      {/* BALANCE CARD (GRADIENT) */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-[2.5rem] p-8 text-white shadow-xl shadow-blue-200/50">
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 bg-white/20 backdrop-blur-md rounded-lg">
-                <Wallet size={20} />
+    <div className="space-y-6">
+      <section className="app-card overflow-hidden">
+        <div className="app-hero relative px-5 pb-8 pt-6 md:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
+          <div className="relative grid gap-5 lg:grid-cols-[1.3fr_0.85fr]">
+            <div>
+              <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-black text-white">
+                VÍ ĐOÀN VIÊN
               </div>
-              <span className="text-sm font-bold opacity-90 tracking-wide uppercase">
-                Ví của tôi
-              </span>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 w-fit mb-4">
-              <span className="text-[10px] font-black flex items-center gap-2">
-                <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                ĐÃ HOÀN THÀNH NGHĨA VỤ PHÍ THÁNG 03/2026
-              </span>
-            </div>
-
-            <h1 className="text-5xl font-black tracking-tight mb-2">
-              {balance.toLocaleString("vi-VN")}{" "}
-              <span className="text-2xl font-medium opacity-80">VNĐ</span>
-            </h1>
-            <p className="text-sm font-bold opacity-70 uppercase tracking-widest">
-              Số dư Quỹ lớp khả dụng
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setActiveModal("topup")}
-              className="flex flex-col items-center justify-center gap-2 p-4 bg-orange-500 hover:bg-orange-600 rounded-[1.5rem] transition-all shadow-lg shadow-orange-900/20 group"
-            >
-              <Plus
-                size={24}
-                className="group-hover:rotate-90 transition-transform"
-              />
-              <span className="text-xs font-black uppercase">Nạp quỹ lớp</span>
-            </button>
-            <button
-              onClick={() => setActiveModal("fee")}
-              className="flex flex-col items-center justify-center gap-2 p-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-[1.5rem] transition-all"
-            >
-              <CreditCard size={24} />
-              <span className="text-xs font-black uppercase">
-                Đóng Đoàn phí
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveModal("stats")}
-              className="col-span-2 flex items-center justify-center gap-2 p-4 bg-indigo-500/50 hover:bg-indigo-500/70 border border-white/10 rounded-[1.5rem] transition-all"
-            >
-              <BarChart3 size={20} />
-              <span className="text-xs font-black uppercase">
-                Xem sao kê lớp
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Abstract Background Shapes */}
-        <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-[-20%] left-[-5%] w-48 h-48 bg-purple-400/20 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT COLUMN: Nghĩa vụ */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wider">
-                <CheckCircle2 className="text-blue-600" size={18} /> Nghĩa vụ
-                Đoàn viên & Hội viên
-              </h4>
-              <button className="text-blue-600 text-[10px] font-black uppercase hover:underline">
-                Xem tất cả
-              </button>
-            </div>
-
-            <div className="space-y-4">
-               {obligations.length > 0 ? obligations.map((ob, idx) => (
-                 <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50/50 border border-transparent hover:border-blue-100 transition-all group">
-                   <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
-                     <span className="text-xl">🎓</span>
-                   </div>
-                   <div className="flex-1">
-                     <h5 className="text-sm font-bold text-slate-800">
-                       {ob.title}
-                     </h5>
-                     <p className="text-[11px] text-slate-400 font-medium tracking-tight">
-                       Hạn chót: {ob.due_date}
-                     </p>
-                   </div>
-                   <div className="text-right">
-                     <span className={`bg-emerald-50 text-emerald-600 text-[10px] font-black px-2 py-1 rounded uppercase flex items-center gap-1`}>
-                       <CheckCircle2 size={10} /> {ob.status === "APPROVED" ? "Đã duyệt" : "Chờ nộp"}
-                     </span>
-                     <p className="text-[9px] text-slate-400 mt-1 font-bold">
-                       {ob.amount.toLocaleString()} VNĐ
-                     </p>
-                   </div>
-                 </div>
-               )) : (
-                 <p className="text-xs text-slate-400 font-bold italic">Không có nghĩa vụ tài chính nào.</p>
-               )}
-            </div>
-          </div>
-
-          {/* Biểu đồ chi tiêu */}
-          <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wider">
-                <BarChart3 className="text-blue-600" size={18} /> Biểu đồ chi
-                tiêu của Lớp {studentClass}
-              </h4>
-              <Info size={16} className="text-slate-300" />
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium mb-8">
-              Dữ liệu được cập nhật tự động từ Ban Cán sự lớp.
-            </p>
-
-            <div className="flex flex-col md:flex-row items-center gap-12">
-              <div className="relative w-40 h-40">
-                <svg
-                  viewBox="0 0 36 36"
-                  className="w-full h-full transform -rotate-90"
-                >
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#e2e8f0"
-                    strokeWidth="3"
-                  />
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#2563eb"
-                    strokeWidth="4"
-                    strokeDasharray="50, 100"
-                  />
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#f97316"
-                    strokeWidth="4"
-                    strokeDasharray="30, 100"
-                    strokeDashoffset="-50"
-                  />
-                  <path
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                    fill="none"
-                    stroke="#94a3b8"
-                    strokeWidth="4"
-                    strokeDasharray="20, 100"
-                    strokeDashoffset="-80"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase leading-none">
-                    Tổng chi
-                  </span>
-                  <span className="text-lg font-black text-slate-800 tracking-tighter">
-                    {totalExpense > 0 ? `${(totalExpense / 1000000).toFixed(1)}tr` : '0đ'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex-1 space-y-4 w-full">
-                {(spendingStats.data.length > 0 ? spendingStats.data : [
-                  { label: "Hoạt động ngoại khóa", value: "50%", color: "bg-blue-600" },
-                  { label: "Cơ sơ vật chất", value: "30%", color: "bg-orange-500" },
-                  { label: "Dự phòng", value: "20%", color: "bg-slate-400" },
-                ]).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-2.5 h-2.5 rounded-full ${item.color || 'bg-slate-400'}`}
-                      ></div>
-                      <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">
-                        {item.label}
-                      </span>
-                    </div>
-                    <span className="text-xs font-black text-slate-800">
-                      {typeof item.value === 'number' ? `${item.value}%` : item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Lịch sử */}
-        <div className="lg:col-span-5">
-          <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm sticky top-24">
-            <div className="flex items-center justify-between mb-8">
-              <h4 className="text-sm font-black text-slate-800 flex items-center gap-2 uppercase tracking-wider">
-                <History className="text-blue-600" size={18} /> Lịch sử giao
-                dịch
-              </h4>
-              <button className="p-2 bg-slate-50 text-slate-400 rounded-lg hover:text-blue-600 transition-colors">
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {loading ? (
-                <p className="text-xs text-slate-400 font-bold text-center">Đang tải lịch sử...</p>
-              ) : transactions.length === 0 ? (
-                <p className="text-xs text-slate-400 font-bold text-center">Chưa có giao dịch nào.</p>
-              ) : (
-                transactions.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between group cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                            t.type === "income" || t.type === "THU"
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                            : "bg-red-50 text-red-500 border-red-100"
-                        }`}
-                      >
-                        {t.type === "income" || t.type === "THU" ? (
-                          <div className="flex items-center gap-1">
-                            <ArrowUpRight size={14} /> +
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <ArrowDownRight size={14} /> -
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <h6 className="text-[13px] font-black text-slate-800 leading-none mb-1 group-hover:text-blue-600 transition-colors">
-                          {t.title}
-                        </h6>
-                        <p className="text-[10px] text-slate-400 font-bold">
-                          {t.time}
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-[13px] font-black ${
-                        t.type === "income" ? "text-emerald-500" : "text-red-500"
-                      }`}
-                    >
-                      {t.type === "income" ? "+" : "-"}
-                      {Math.abs(t.amount).toLocaleString()} VNĐ
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <button className="w-full mt-8 py-3 text-[11px] font-black text-blue-600 hover:bg-blue-50 rounded-2xl transition-all uppercase tracking-widest border border-dashed border-blue-200">
-              Xem tất cả lịch sử
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* --- PHẦN MODAL BỔ SUNG --- */}
-
-      {/* 1. Modal Nạp Quỹ Lớp */}
-      {activeModal === "topup" && (
-        <Modal title="Nạp Quỹ Lớp" onClose={() => setActiveModal(null)}>
-          <div className="space-y-6 flex flex-col items-center">
-            <div className="w-full p-6 bg-orange-50 rounded-[2rem] border-2 border-dashed border-orange-200 flex flex-col items-center gap-4 text-center">
-              <div className="bg-white p-4 rounded-3xl shadow-sm border border-orange-100">
-                <QrCode size={180} className="text-slate-800" />
-              </div>
-              <p className="text-[10px] font-black text-orange-600 uppercase tracking-widest leading-relaxed">
-                Quét mã VietQR để thanh toán nhanh
-                <br />
-                Hệ thống tự động cộng tiền sau 1-2 phút
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
+                Tài chính cá nhân & quỹ lớp
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/82">
+                Trang ví trên web được kéo về đúng tinh thần app user: rõ số dư, thao tác nhanh và minh bạch giao dịch hơn.
+              </p>
+              <h3 className="mt-6 text-5xl font-black text-white">
+                {balance.toLocaleString("vi-VN")}
+                <span className="ml-2 text-2xl font-semibold text-white/80">VNĐ</span>
+              </h3>
+              <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-white/72">
+                Số dư khả dụng
               </p>
             </div>
-            <div className="w-full space-y-3">
-              <div className="flex justify-between items-center px-4 py-3 bg-slate-50 rounded-xl">
-                <span className="text-[10px] font-black text-slate-400 uppercase">
-                  Nội dung CK:
-                </span>
-                <span className="text-xs font-black text-blue-600">
-                  {topUpCode}
-                </span>
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+              <button
+                onClick={() => setActiveModal("topup")}
+                className="rounded-[24px] bg-orange-500 p-5 text-left text-white shadow-[0_16px_28px_rgba(234,88,12,0.22)]"
+              >
+                <Plus size={20} />
+                <p className="mt-5 text-sm font-black uppercase">Nạp quỹ lớp</p>
+              </button>
+              <button
+                onClick={() => setActiveModal("fee")}
+                className="rounded-[24px] bg-white/16 p-5 text-left text-white backdrop-blur"
+              >
+                <CreditCard size={20} />
+                <p className="mt-5 text-sm font-black uppercase">Đóng Đoàn phí</p>
+              </button>
+              <button
+                onClick={() => setActiveModal("stats")}
+                className="col-span-full rounded-[24px] bg-white/12 p-5 text-left text-white backdrop-blur"
+              >
+                <BarChart3 size={20} />
+                <p className="mt-5 text-sm font-black uppercase">Xem sao kê lớp</p>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 p-5 lg:grid-cols-[1.1fr_0.9fr] md:p-6">
+          <div className="space-y-6">
+            <div className="app-card p-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={18} className="text-indigo-600" />
+                <h3 className="text-lg font-black text-slate-800">Nghĩa vụ tài chính</h3>
+              </div>
+              <div className="mt-5 space-y-3">
+                {obligations.length > 0 ? (
+                  obligations.map((item, index) => (
+                    <div key={item.id || index} className="app-card-muted p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-black text-slate-800">{item.title}</p>
+                          <p className="mt-1 text-xs text-slate-500">Hạn chót: {item.due_date}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black uppercase text-emerald-600">
+                            {item.status === "APPROVED" ? "Đã duyệt" : "Chờ nộp"}
+                          </span>
+                          <p className="mt-1 text-xs font-bold text-slate-500">
+                            {Number(item.amount || 0).toLocaleString("vi-VN")} VNĐ
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="app-card-muted p-5 text-sm text-slate-500">
+                    Không có nghĩa vụ tài chính nào cần xử lý.
+                  </div>
+                )}
               </div>
             </div>
-            <button
-              onClick={() => setActiveModal(null)}
-              className="w-full py-4 bg-orange-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-orange-600 shadow-lg shadow-orange-100"
-            >
+
+            <div className="app-card p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BarChart3 size={18} className="text-indigo-600" />
+                  <h3 className="text-lg font-black text-slate-800">Thống kê chi tiêu</h3>
+                </div>
+                <Info size={16} className="text-slate-300" />
+              </div>
+
+              <div className="mt-6 flex flex-col gap-8 md:flex-row md:items-center">
+                <div className="relative mx-auto h-40 w-40">
+                  <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#E2E8F0"
+                      strokeWidth="3"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#4F46E5"
+                      strokeWidth="4"
+                      strokeDasharray="50, 100"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#F97316"
+                      strokeWidth="4"
+                      strokeDasharray="30, 100"
+                      strokeDashoffset="-50"
+                    />
+                    <path
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="#94A3B8"
+                      strokeWidth="4"
+                      strokeDasharray="20, 100"
+                      strokeDashoffset="-80"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                      Tổng chi
+                    </span>
+                    <span className="mt-2 text-xl font-black text-slate-800">
+                      {totalExpense.toLocaleString("vi-VN")}đ
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  {(spendingStats.data.length > 0
+                    ? spendingStats.data
+                    : [
+                        { label: "Hoạt động ngoại khóa", value: "50%", color: "bg-indigo-600" },
+                        { label: "Cơ sở vật chất", value: "30%", color: "bg-orange-500" },
+                        { label: "Dự phòng", value: "20%", color: "bg-slate-400" },
+                      ]
+                  ).map((item, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-2.5 w-2.5 rounded-full ${item.color || "bg-slate-400"}`} />
+                        <span className="text-sm font-semibold text-slate-600">{item.label}</span>
+                      </div>
+                      <span className="text-sm font-black text-slate-800">
+                        {typeof item.value === "number" ? `${item.value}%` : item.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="app-card p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <History size={18} className="text-indigo-600" />
+                <h3 className="text-lg font-black text-slate-800">Lịch sử giao dịch</h3>
+              </div>
+              <ChevronRight size={16} className="text-slate-300" />
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {loading ? (
+                [1, 2, 3].map((item) => <div key={item} className="app-card-muted h-20 animate-pulse" />)
+              ) : normalizedTransactions.length > 0 ? (
+                normalizedTransactions.map((item) => (
+                  <div key={item.id} className="app-card-muted p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-[16px] ${item.isIncome ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"}`}>
+                          {item.isIncome ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-800">{item.title}</p>
+                          <p className="mt-1 text-xs font-medium text-slate-500">{item.user || item.time || "Hệ thống"}</p>
+                        </div>
+                      </div>
+                      <span className={`text-sm font-black ${item.isIncome ? "text-emerald-600" : "text-rose-500"}`}>
+                        {item.isIncome ? "+" : "-"}
+                        {Math.abs(item.amount).toLocaleString("vi-VN")} VNĐ
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="app-card-muted p-5 text-sm text-slate-500">
+                  Chưa có giao dịch nào được ghi nhận.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {activeModal === "topup" && (
+        <Modal title="Nạp quỹ lớp" onClose={() => setActiveModal(null)}>
+          <div className="space-y-5 text-center">
+            <div className="rounded-[24px] border-2 border-dashed border-orange-200 bg-orange-50 p-5">
+              <div className="mx-auto flex h-[210px] w-[210px] items-center justify-center rounded-[24px] bg-white shadow-sm">
+                <QrCode size={180} className="text-slate-800" />
+              </div>
+            </div>
+            <div className="rounded-[20px] bg-slate-50 px-4 py-3 text-left">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Nội dung chuyển khoản</p>
+              <p className="mt-2 text-sm font-black text-indigo-600">{topUpCode}</p>
+            </div>
+            <button className="w-full rounded-full bg-orange-500 px-5 py-3 text-sm font-black text-white">
               Tôi đã chuyển khoản
             </button>
           </div>
         </Modal>
       )}
 
-      {/* 2. Modal Đóng Đoàn Phí */}
       {activeModal === "fee" && (
-        <Modal title="Đóng Đoàn Phí" onClose={() => setActiveModal(null)}>
-          <div className="space-y-6">
-            <div className="p-4 bg-blue-50 rounded-2xl flex gap-3">
-              <Info size={20} className="text-blue-600 shrink-0" />
-              <p className="text-[11px] font-medium text-blue-800 leading-normal">
-                Khoản phí này được nộp về văn phòng Đoàn trường để duy trì các
-                hoạt động phong trào và quyền lợi sinh viên năm học 2025-2026.
-              </p>
+        <Modal title="Đóng Đoàn phí" onClose={() => setActiveModal(null)}>
+          <div className="space-y-5">
+            <div className="rounded-[20px] bg-indigo-50 p-4 text-sm leading-7 text-indigo-800">
+              Khoản phí này được nộp về Đoàn trường để duy trì các hoạt động phong trào và quyền lợi sinh viên.
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 border border-slate-100 rounded-2xl">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">
-                    Mức nộp quy định
-                  </p>
-                  <p className="text-xl font-black text-slate-800">
-                    120.000 VNĐ
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                  <FileText size={20} />
-                </div>
-              </div>
+            <div className="rounded-[20px] border border-slate-100 bg-slate-50 p-5">
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">Mức nộp quy định</p>
+              <p className="mt-2 text-2xl font-black text-slate-800">120.000 VNĐ</p>
             </div>
-            <button
-              onClick={() => setActiveModal(null)}
-              className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-200"
-            >
+            <button className="w-full rounded-full bg-indigo-600 px-5 py-3 text-sm font-black text-white">
               Xác nhận thanh toán
             </button>
           </div>
         </Modal>
       )}
 
-      {/* 3. Modal Sao Kê */}
       {activeModal === "stats" && (
         <Modal title="Thống kê sao kê lớp" onClose={() => setActiveModal(null)}>
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                <p className="text-[10px] font-black text-emerald-600 uppercase mb-1">
-                  Tổng thu
-                </p>
-                <p className="text-lg font-black text-emerald-700">15.2tr</p>
+          <div className="space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[20px] bg-emerald-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-600">Tổng thu</p>
+                <p className="mt-2 text-xl font-black text-emerald-700">{balance.toLocaleString("vi-VN")}đ</p>
               </div>
-              <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                <p className="text-[10px] font-black text-red-500 uppercase mb-1">
-                  Tổng chi
-                </p>
-                <p className="text-lg font-black text-red-600">12.5tr</p>
+              <div className="rounded-[20px] bg-rose-50 p-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-500">Tổng chi</p>
+                <p className="mt-2 text-xl font-black text-rose-600">{totalExpense.toLocaleString("vi-VN")}đ</p>
               </div>
             </div>
 
             <div className="space-y-3">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                Báo cáo gần nhất
-              </p>
               {[
-                { name: "Báo cáo tài chính Tháng 02/2026", size: "1.2 MB" },
-                { name: "Sao kê chi tiết Tech Day 2026", size: "850 KB" },
-              ].map((file, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 border border-slate-50 hover:bg-slate-50 rounded-xl transition-all group cursor-pointer"
-                >
+                { name: "Báo cáo tài chính tháng gần nhất", size: "1.2 MB" },
+                { name: "Sao kê sự kiện gần nhất", size: "860 KB" },
+              ].map((file) => (
+                <div key={file.name} className="app-card-muted flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-slate-100 text-slate-500">
                       <Download size={16} />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-700">
-                        {file.name}
-                      </p>
-                      <p className="text-[9px] font-medium text-slate-400">
-                        {file.size}
-                      </p>
+                      <p className="text-sm font-bold text-slate-700">{file.name}</p>
+                      <p className="text-xs text-slate-400">{file.size}</p>
                     </div>
                   </div>
-                  <ChevronRight size={14} className="text-slate-300" />
+                  <ChevronRight size={16} className="text-slate-300" />
                 </div>
               ))}
             </div>
 
-            <button
-              onClick={() => setActiveModal(null)}
-              className="w-full py-4 border-2 border-slate-900 text-slate-900 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-900 hover:text-white transition-all"
-            >
-              Xem chi tiết trên Web
+            <button className="w-full rounded-full border border-slate-900 px-5 py-3 text-sm font-black text-slate-900">
+              Xem chi tiết trên web
             </button>
           </div>
         </Modal>

@@ -60,7 +60,7 @@ const NotificationBell = () => {
     };
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className={`relative ${isOpen ? "z-[120]" : "z-20"}`} ref={dropdownRef}>
             {/* --- CÁI CHUÔNG --- */}
             <button 
                 onClick={() => setIsOpen(!isOpen)}
@@ -81,7 +81,7 @@ const NotificationBell = () => {
 
             {/* --- MENU XỔ XUỐNG (DROPDOWN) --- */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 origin-top-right animate-fade-in-up">
+                <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-[130] origin-top-right animate-fade-in-up">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                         <h3 className="font-bold text-slate-800 dark:text-white">Thông báo</h3>
                         <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-medium">

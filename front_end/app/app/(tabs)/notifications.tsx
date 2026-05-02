@@ -181,7 +181,7 @@ const NotificationsScreen = () => {
       <StatusBar barStyle="light-content" />
       <MainHeader>
         <View style={styles.headerTop}>
-          <View>
+          <View style={styles.headerTextWrap}>
             <Text style={styles.headerTitle}>Thông báo</Text>
             <Text style={styles.headerSub}>Ưu tiên hiển thị thông báo chưa đọc và nhóm theo mục rõ ràng hơn.</Text>
           </View>
@@ -265,6 +265,10 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 16,
   },
+  headerTextWrap: {
+    flex: 1,
+    paddingRight: 4,
+  },
   headerTitle: {
     fontSize: 30,
     fontWeight: '900',
@@ -275,7 +279,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
     lineHeight: 20,
-    maxWidth: '88%',
   },
   unreadSummary: {
     flexDirection: 'row',
@@ -299,6 +302,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: UI.chipRadius,
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   markRead: {
     fontSize: 12,
@@ -317,6 +322,7 @@ const styles = StyleSheet.create({
   filterRow: {
     gap: 10,
     paddingBottom: 6,
+    paddingRight: 20,
   },
   filterChip: {
     backgroundColor: COLORS.surface,

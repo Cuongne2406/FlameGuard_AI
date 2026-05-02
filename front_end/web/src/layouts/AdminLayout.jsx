@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Bell, Info, ChevronRight, Check, Menu } from "lucide-react"; // Thêm Menu icon
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "../components/admin/Sidebar";
@@ -10,6 +10,7 @@ const AdminLayout = () => {
   const navigate = useNavigate();
 
   const [notifications, setNotifications] = useState([]);
+  const notificationRef = useRef(null);
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -21,6 +22,17 @@ const AdminLayout = () => {
       }
     };
     fetchNotifications();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleMarkAsRead = async (id, isRead) => {
@@ -49,7 +61,7 @@ const AdminLayout = () => {
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-4 md:px-8 shrink-0 relative z-30">
+        <header className="relative z-40 flex h-16 shrink-0 items-center justify-between border-b border-slate-100 bg-white px-4 md:px-8">
           <div className="flex items-center gap-4">
             {/* Nút Menu Hamburger - Chỉ hiện trên Mobile */}
             <button
@@ -63,7 +75,10 @@ const AdminLayout = () => {
 
           <div className="flex items-center gap-4">
             {/* Khu vực Thông báo */}
-            <div className="relative">
+            <div
+              ref={notificationRef}
+              className={`relative ${showNotifications ? "z-[120]" : "z-20"}`}
+            >
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
                 className={`p-2.5 rounded-xl transition-all relative ${
@@ -81,10 +96,10 @@ const AdminLayout = () => {
               {showNotifications && (
                 <>
                   <div
-                    className="fixed inset-0 z-10"
+                    className="fixed inset-0 z-[110]"
                     onClick={() => setShowNotifications(false)}
                   ></div>
-                  <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-20 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute right-0 top-full z-[130] mt-3 w-80 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl animate-in slide-in-from-top-2 duration-200">
                     <div className="p-4 border-b border-slate-50 flex justify-between items-center bg-white">
                       <h3 className="font-bold text-slate-800 text-sm">
                         Thông báo gần đây

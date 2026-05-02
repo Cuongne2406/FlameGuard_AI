@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Calendar, 
   Bell, 
@@ -10,26 +11,34 @@ import {
 import { COLORS, SHADOWS } from '../../src/constants/theme';
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const baseTabHeight = Platform.OS === 'ios' ? 58 : 62;
+  const bottomPadding = Platform.OS === 'ios' ? Math.max(insets.bottom, 16) : Math.max(insets.bottom, 10);
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textSecondary,
         headerShown: false,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
-          height: Platform.OS === 'ios' ? 100 : 80,
-          paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+          height: baseTabHeight + bottomPadding,
+          paddingBottom: bottomPadding,
           paddingTop: 10,
           ...SHADOWS.medium,
         },
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '700',
-          marginBottom: 4,
-        }
+          marginBottom: Platform.OS === 'ios' ? 0 : 2,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
       }}>
       <Tabs.Screen
         name="index"

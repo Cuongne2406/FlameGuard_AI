@@ -1,90 +1,90 @@
-import React, { useState, useEffect } from "react";
-import { documentService } from "../../../services/documentService";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
-  Search,
-  FileText,
-  BarChart2,
-  CreditCard,
-  ArrowRight,
-  Download,
-  Clock,
-  FileCheck,
-  Filter,
-  MessageSquare,
-  ChevronRight,
-  Printer,
-  X,
   CheckCircle,
+  ChevronRight,
   CloudUpload,
-  AlertCircle
+  Download,
+  FileText,
+  Filter,
+  Printer,
+  Search,
+  X,
 } from "lucide-react";
 import { AuthContext } from "../../../context/AuthContext";
 import { awardService } from "../../../services/awardService";
+import { documentService } from "../../../services/documentService";
+
+const tabs = ["Đoàn - Hội Khoa", "Đoàn Trường", "Mẫu đơn"];
 
 const DigitalDocument = () => {
-  const SHOW_PENDING = false; // Tạm thời ẩn mục Thủ tục đang xử lý
-
-
-  const { user } = React.useContext(AuthContext);
-  const [requests, setRequests] = useState([]);
+  const { user } = useContext(AuthContext);
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState(null);
-  const [activeTab, setActiveTab] = useState(0); // 0: Khoa, 1: Trường, 2: Mẫu đơn
-  
-  // State for SV5T Application Procedure
+  const [activeTab, setActiveTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    award_name: "Sinh viên 5 Tốt cấp Trường",
+    award_name: "Sinh viên 5 tốt cấp Trường",
     description: "",
-    evidence_url: ""
+    evidence_url: "",
   });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [reqData, docData] = await Promise.all([
-          documentService.getRequests(),
-          documentService.getDocuments()
-        ]);
-        setRequests(reqData);
-        setDocs(docData);
-      } catch (err) {
-        console.error(err);
+        const docData = await documentService.getDocuments();
+        setDocs(Array.isArray(docData) ? docData : []);
+      } catch (error) {
+        console.error(error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
   }, []);
 
-  const handleCreateRequest = async (type) => {
-    try {
-      const newReq = await documentService.createRequest(type);
-      setRequests([newReq, ...requests]);
-      alert("Đã gửi yêu cầu thành công!");
-    } catch (err) {
-      alert("Lỗi khi gửi yêu cầu.");
-    }
-  };
+  const filteredDocs = useMemo(() => {
+    let source = docs;
 
-  const handleApplyAward = async (e) => {
-    e.preventDefault();
+    source = source.filter((doc) => {
+      const title = (doc.title || "").toLowerCase();
+      const type = (doc.document_type || "").toLowerCase();
+      if (activeTab === 0) return !title.includes("trường") && !type.includes("form");
+      if (activeTab === 1) return title.includes("trường");
+      return title.includes("mẫu") || title.includes("đơn") || type.includes("form");
+    });
+
+    if (!searchQuery.trim()) return source;
+    const query = searchQuery.toLowerCase();
+    return source.filter((doc) => {
+      const title = (doc.title || "").toLowerCase();
+      const code = (doc.document_code || "").toLowerCase();
+      const content = (doc.purpose || "").toLowerCase();
+      return title.includes(query) || code.includes(query) || content.includes(query);
+    });
+  }, [activeTab, docs, searchQuery]);
+
+  const handleApplyAward = async (event) => {
+    event.preventDefault();
     setIsSubmitting(true);
+
     try {
       if (!user) {
-         alert("Vui lòng đăng nhập để nộp hồ sơ!");
-         return;
+        alert("Vui lòng đăng nhập để nộp hồ sơ!");
+        return;
       }
+
       await awardService.createAward({
         ...formData,
-        user_id: user.id
+        user_id: user.id,
       });
       setIsSubmitModalOpen(false);
       setFormData({ ...formData, description: "", evidence_url: "" });
       alert("Gửi hồ sơ xét duyệt thành công!");
-    } catch (err) {
+    } catch (error) {
       alert("Lỗi khi nộp hồ sơ. Vui lòng thử lại!");
     } finally {
       setIsSubmitting(false);
@@ -92,305 +92,205 @@ const DigitalDocument = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* 1. BREADCRUMB & HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Trang chủ <ChevronRight size={10} />{" "}
-            <span className="text-blue-600">Văn bản & Thủ tục</span>
-          </div>
-          <h2 className="text-2xl font-black text-slate-800">
-            Trung tâm Dịch vụ Hành chính Số
-          </h2>
-          <p className="text-slate-500 text-sm font-medium">
-            Quản lý hồ sơ, yêu cầu văn bản và theo dõi tiến độ xử lý trực tuyến.
-          </p>
-        </div>
-
-        <div className="relative w-full md:w-80">
-          <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Tìm kiếm loại giấy tờ, biểu mẫu..."
-            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl text-xs focus:ring-2 focus:ring-blue-100 outline-none shadow-sm"
-          />
-        </div>
-      </div>
-
-      {/* 2. QUICK SERVICES (1-CLICK) */}
-
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* 3. TRẠNG THÁI ĐANG XỬ LÝ (4/12) */}
-        {SHOW_PENDING && (
-          <div className="lg:col-span-4">
-          <div className="bg-white rounded-[2rem] border-2 border-blue-100 p-8 shadow-sm relative overflow-hidden">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                <Clock size={20} />
+    <div className="space-y-6">
+      <section className="app-card overflow-hidden">
+        <div className="app-hero relative px-5 pb-8 pt-6 md:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
+          <div className="relative grid gap-5 lg:grid-cols-[1.3fr_0.85fr]">
+            <div>
+              <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-black text-white">
+                DỊCH VỤ HÀNH CHÍNH
               </div>
-              <h4 className="text-sm font-black text-slate-800 uppercase">
-                Thủ tục đang xử lý
-              </h4>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping ml-auto"></div>
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
+                Văn bản & Thủ tục
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/82">
+                Web user đang đi theo app: tài liệu rõ ràng hơn, thao tác nộp hồ sơ và xem văn bản gọn hơn.
+              </p>
             </div>
 
-            <div className="space-y-6">
-              {loading ? (
-                <p className="text-xs text-slate-400 font-bold">Đang tải yêu cầu...</p>
-              ) : requests.length === 0 ? (
-                <p className="text-xs text-slate-400 font-bold">Chưa có thủ tục nào đang xử lý.</p>
-              ) : (
-                requests.map(req => {
-                  // Logic mapping trạng thái
-                  const statusMap = {
-                    'PENDING': { text: 'Chờ tiếp nhận', progress: 20, time: 'Dự kiến: 24h' },
-                    'PROCESSING': { text: 'Đang xử lý', progress: 60, time: 'Dự kiến: 4h' },
-                    'APPROVED': { text: 'Đã hoàn tất', progress: 100, time: 'Đã xử lý xong' },
-                    'REJECTED': { text: 'Đã từ chối', progress: 0, time: 'Vui lòng kiểm tra lý do' }
-                  };
-                  const s = statusMap[req.status] || statusMap['PENDING'];
-
-                  return (
-                    <div key={req.id} className="space-y-6 border-b border-slate-100 pb-6 mb-6 last:border-0 last:pb-0 last:mb-0">
-                      <div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                          Mã HS: #{req.id.toString().slice(0, 8)}
-                        </span>
-                        <h5 className="font-black text-slate-800 text-base mt-1">
-                          {req.title || req.document_type}
-                        </h5>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-end">
-                          <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded">
-                            {s.text}
-                          </span>
-                          <span className="text-blue-600 font-black text-sm">{s.progress}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                          <div className={`bg-blue-600 h-full rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]`} style={{ width: `${s.progress}%` }}></div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
-                        <Clock size={14} /> {s.time}
-                      </div>
-
-                      <button className="w-full py-3 bg-slate-50 text-slate-500 rounded-xl text-[10px] font-black border border-slate-100 hover:bg-slate-100 transition-colors">
-                        XEM CHI TIẾT TIẾN ĐỘ
-                      </button>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-        )}
-
-        {/* 4. DANH SÁCH VĂN BẢN (8/12) */}
-        <div className={SHOW_PENDING ? "lg:col-span-8" : "lg:col-span-12"}>
-          <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-              <div className="flex gap-4 border-b border-slate-50">
-                {["Đoàn - Hội Khoa", "Đoàn Trường", "Mẫu đơn"].map((tab, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveTab(i)}
-                    className={`pb-4 text-xs font-black uppercase tracking-widest transition-all
-                    ${activeTab === i ? "text-blue-600 border-b-2 border-blue-600" : "text-slate-400 hover:text-slate-600"}
-                  `}
-                  >
-                    {tab}
-                  </button>
-                ))}
+            <div className="app-gradient-panel flex flex-col justify-between gap-4 px-5 py-5 text-white">
+              <div>
+                <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-black">
+                  NỘP HỒ SƠ NHANH
+                </div>
+                <h3 className="mt-3 text-2xl font-black">Sinh viên 5 tốt online</h3>
+                <p className="mt-2 text-sm leading-6 text-white/84">
+                  Tạo đường dẫn minh chứng và nộp hồ sơ trực tiếp trên web giống mạch thao tác ở app.
+                </p>
               </div>
-              <button className="p-2 text-slate-400 hover:text-blue-600 transition-colors">
-                <Filter size={20} />
+              <button
+                onClick={() => setIsSubmitModalOpen(true)}
+                className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-orange-600"
+              >
+                <CloudUpload size={18} />
+                Mở biểu mẫu
               </button>
             </div>
-
-            <div className="space-y-4">
-              {loading ? (
-                <p className="text-xs text-slate-400 font-bold">Đang tải văn bản...</p>
-              ) : (
-                <>
-                  {/* injected Procedure Card - Only show in "Mẫu đơn" tab */}
-                  {activeTab === 2 && (
-                    <div
-                      onClick={() => setIsSubmitModalOpen(true)}
-                      className="flex items-center gap-5 p-5 rounded-2xl bg-orange-50/50 hover:bg-orange-50 transition-all group cursor-pointer border border-orange-100 hover:border-orange-200 hover:shadow-sm"
-                    >
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-[12px] shrink-0 shadow-sm bg-orange-100 text-orange-600">
-                        FORM
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded text-[9px] font-black bg-orange-500 text-white uppercase tracking-widest leading-none">THỦ TỤC ĐIỆN TỬ</span>
-                        </div>
-                        <h5 className="text-sm font-black text-slate-800 group-hover:text-amber-600 transition-colors mt-1">
-                          Nộp minh chứng xét duyệt Danh hiệu Sinh viên 5 Tốt (Online)
-                        </h5>
-                        <p className="text-[11px] text-slate-500 font-medium mt-1">
-                          Dành cho sinh viên đã đủ điều kiện theo văn bản quy định.
-                        </p>
-                      </div>
-                      <ChevronRight
-                        size={18}
-                        className="text-orange-300 group-hover:text-orange-600 group-hover:translate-x-1 transition-all shrink-0"
-                      />
-                    </div>
-                  )}
-
-                  {/* Standard docs filtered by active tab */}
-                  {docs.filter(doc => {
-                    const title = (doc.title || "").toLowerCase();
-                    const type = (doc.document_type || "").toLowerCase();
-                    // Basic heuristic filter (if no DB category is strictly enforced)
-                    if (activeTab === 0) return !title.includes("trường") && !title.includes("mẫu") && !title.includes("đơn") && !type.includes("form");
-                    if (activeTab === 1) return title.includes("trường") || type.includes("trường");
-                    if (activeTab === 2) return title.includes("mẫu") || title.includes("đơn") || type.includes("form");
-                    return true;
-                  }).map((doc) => (
-                    <div
-                      key={doc.id}
-                    onClick={() => setSelectedDoc(doc)}
-                    className="flex items-center gap-5 p-5 rounded-2xl hover:bg-slate-50 transition-all group cursor-pointer border border-transparent hover:border-blue-100 hover:shadow-sm"
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-[12px] shrink-0 shadow-sm
-                      ${(doc.document_type || "pdf").toLowerCase().includes("pdf") ? "bg-red-50 text-red-500" : (doc.document_type || "doc").toLowerCase().includes("doc") ? "bg-blue-50 text-blue-600" : "bg-emerald-50 text-emerald-600"}
-                    `}
-                    >
-                      {doc.document_type && doc.document_type.toLowerCase().includes("pdf") 
-                          ? "PDF" 
-                          : doc.document_type && doc.document_type.toLowerCase().includes("doc") 
-                            ? "DOC" 
-                            : "TXT"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h5 className="text-sm font-black text-slate-700 group-hover:text-blue-600 transition-colors truncate">
-                        {doc.title || "Tài liệu không tên"}
-                      </h5>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase truncate">
-                          Mã: {doc.document_code || "CHƯA CÓ MÃ"}
-                        </span>
-                        <span className="w-1 h-1 bg-slate-200 rounded-full shrink-0"></span>
-                        <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                          {doc.request_date ? new Date(doc.request_date).toLocaleDateString('vi-VN') : "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronRight
-                      size={18}
-                      className="text-slate-300 group-hover:text-blue-600 group-hover:translate-x-1 transition-all shrink-0"
-                    />
-                  </div>
-                ))}
-                </>
-              )}
-            </div>
-
-            <button className="w-full mt-6 py-3 text-[10px] font-black text-blue-600 uppercase tracking-[0.2em] hover:underline">
-              Xem tất cả văn bản
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* FAB (Floating Action Button) - Trợ lý AI */}
-      {/* <button className="fixed bottom-8 right-8 flex items-center gap-3 px-6 py-4 bg-white rounded-full shadow-2xl border border-blue-50 group hover:scale-105 transition-all z-50">
-        <span className="text-xs font-black text-slate-700">
-          Hỏi Trợ lý DYUS về thủ tục
-        </span>
-        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-200">
-          <MessageSquare size={20} fill="currentColor" />
+        <div className="space-y-6 p-5 md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-3">
+              {tabs.map((tab, index) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(index)}
+                  className={index === activeTab ? "app-chip app-chip-active" : "app-chip"}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex w-full items-center gap-3 md:w-auto">
+              <div className="flex flex-1 items-center gap-3 rounded-full border border-slate-100 bg-white px-4 py-3 md:min-w-[320px]">
+                <Search size={18} className="text-slate-400" />
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Tìm văn bản, mã tài liệu..."
+                  className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                />
+              </div>
+              <button className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400">
+                <Filter size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {activeTab === 2 && (
+              <button
+                onClick={() => setIsSubmitModalOpen(true)}
+                className="app-card flex w-full items-center gap-4 p-5 text-left hover:-translate-y-0.5"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-orange-100 text-orange-600">
+                  <CloudUpload size={20} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="inline-flex rounded-full bg-orange-500 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
+                    Thủ tục điện tử
+                  </span>
+                  <p className="mt-3 text-sm font-black text-slate-800">
+                    Nộp minh chứng xét duyệt Danh hiệu Sinh viên 5 tốt
+                  </p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Biểu mẫu nhanh dành cho sinh viên đủ điều kiện.
+                  </p>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-orange-400" />
+              </button>
+            )}
+
+            {loading ? (
+              [1, 2, 3].map((item) => <div key={item} className="app-card h-24 animate-pulse" />)
+            ) : filteredDocs.length > 0 ? (
+              filteredDocs.map((doc) => (
+                <button
+                  key={doc.id}
+                  onClick={() => setSelectedDoc(doc)}
+                  className="app-card flex w-full items-center gap-4 p-5 text-left hover:-translate-y-0.5"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-indigo-50 text-indigo-600">
+                    <FileText size={20} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black text-slate-800">
+                      {doc.title || "Tài liệu không tên"}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">
+                      Mã: {doc.document_code || "Chưa có"} •{" "}
+                      {doc.request_date
+                        ? new Date(doc.request_date).toLocaleDateString("vi-VN")
+                        : "Không rõ ngày"}
+                    </p>
+                  </div>
+                  <ChevronRight size={18} className="shrink-0 text-slate-300" />
+                </button>
+              ))
+            ) : (
+              <div className="rounded-[28px] border border-slate-100 bg-white px-6 py-16 text-center shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-slate-50 text-slate-300">
+                  <FileText size={28} />
+                </div>
+                <p className="mt-5 text-sm font-bold uppercase tracking-[0.22em] text-slate-400">
+                  Chưa có văn bản phù hợp
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </button> */}
+      </section>
 
-      {/* DOCUMENT VIEWER MODAL */}
       {selectedDoc && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
-          {/* Overlay */}
-          <div 
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" 
-            onClick={() => setSelectedDoc(null)}
-          ></div>
-
-          {/* Modal Container */}
-          <div className="relative bg-white w-full max-w-4xl h-full max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 border border-slate-100">
-            {/* Header Toolbar */}
-            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 backdrop-blur-md z-10">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedDoc(null)} />
+          <div className="app-card relative z-10 flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-4">
               <div className="flex items-center gap-3">
-                <div className="bg-red-50 text-red-600 p-2 rounded-xl shrink-0">
-                  <FileText size={16} />
+                <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-indigo-50 text-indigo-600">
+                  <FileText size={18} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-black text-slate-800 tracking-wide">TRÍCH XUẤT VĂN BẢN</h4>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">
-                    Số hiệu: {selectedDoc.document_code || 'N/A'}
-                  </span>
+                  <h4 className="text-sm font-black text-slate-800">Trích xuất văn bản</h4>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Số hiệu: {selectedDoc.document_code || "N/A"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-xl text-slate-500 text-[10px] font-bold shadow-sm transition-all border border-transparent hover:border-slate-200">
-                  <Download size={14} /> TẢI VỀ
+                <button className="rounded-full p-2 text-slate-400 hover:bg-white">
+                  <Download size={16} />
                 </button>
-                <button className="flex items-center gap-2 px-3 py-2 hover:bg-white rounded-xl text-slate-500 text-[10px] font-bold shadow-sm transition-all border border-transparent hover:border-slate-200">
-                  <Printer size={14} /> IN (PDF)
+                <button className="rounded-full p-2 text-slate-400 hover:bg-white">
+                  <Printer size={16} />
                 </button>
-                <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                <button 
-                  className="p-2 bg-red-50 hover:bg-red-100 rounded-xl text-red-500 transition-all cursor-pointer" 
-                  onClick={() => setSelectedDoc(null)}
-                >
+                <button onClick={() => setSelectedDoc(null)} className="rounded-full p-2 text-slate-400 hover:bg-white">
                   <X size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Viewer Pane (Giấy A4) */}
-            <div className="flex-1 overflow-auto p-4 md:p-8 bg-slate-200/50 custom-scrollbar">
-              <div className="bg-white mx-auto w-full max-w-2xl min-h-[800px] shadow-lg md:p-12 p-6 flex flex-col gap-6 relative">
-                {/* Quốc hiệu Tiêu ngữ */}
-                <div className="flex justify-between items-start text-[10px] md:text-xs font-bold text-slate-800">
-                  <div className="text-center">ĐOÀN TNCS HỒ CHÍ MINH<br />TRƯỜNG ĐH KỸ THUẬT<br />***</div>
-                  <div className="text-center">
-                    <span className="font-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</span><br />
-                    <span className="underline underline-offset-4">Độc lập - Tự do - Hạnh phúc</span>
+            <div className="flex-1 overflow-auto bg-slate-100 p-4 md:p-8">
+              <div className="mx-auto max-w-3xl bg-white p-8 shadow-[0_18px_40px_rgba(15,23,42,0.08)] md:p-12">
+                <div className="flex justify-between text-center text-xs font-bold text-slate-700">
+                  <div>
+                    ĐOÀN TNCS HỒ CHÍ MINH
+                    <br />
+                    TRƯỜNG ĐẠI HỌC
+                  </div>
+                  <div>
+                    CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                    <br />
+                    Độc lập - Tự do - Hạnh phúc
                   </div>
                 </div>
 
-                {/* Tiêu đề văn bản */}
-                <div className="text-center mt-12 mb-8 space-y-2">
-                  <h3 className="text-base md:text-lg font-black text-slate-900 uppercase">
-                    {selectedDoc.document_type || "VĂN BẢN LƯU HÀNH NỘI BỘ"}
+                <div className="mt-12 text-center">
+                  <h3 className="text-lg font-black uppercase text-slate-900">
+                    {selectedDoc.document_type || "Văn bản hành chính"}
                   </h3>
-                  <p className="text-xs md:text-sm font-bold text-slate-700 w-3/4 mx-auto leading-relaxed">
-                    V/v {selectedDoc.title || 'Không có tiêu đề trích yếu'}
+                  <p className="mt-2 text-base font-bold text-slate-700">
+                    V/v {selectedDoc.title || "Không có tiêu đề"}
                   </p>
                 </div>
 
-                {/* Nội dung */}
-                <div className="space-y-4 text-xs md:text-sm leading-8 text-slate-800 text-justify">
-                  <p className="whitespace-pre-wrap">{selectedDoc.purpose || "Chưa có nội dung chi tiết được soạn thảo trong văn bản này."}</p>
+                <div className="mt-10 whitespace-pre-wrap text-sm leading-8 text-slate-700">
+                  {selectedDoc.purpose || "Chưa có nội dung chi tiết được cập nhật trong văn bản này."}
                 </div>
 
-                {/* Chữ ký số điện tử */}
-                <div className="absolute bottom-16 md:bottom-24 right-8 md:right-16 rotate-[-10deg] opacity-90 border-4 border-red-600 p-3 md:p-4 rounded-xl text-center select-none pointer-events-none">
-                  <div className="text-red-600 font-black text-[10px] md:text-xs uppercase tracking-widest">Ký bởi: ADMIN HỆ THỐNG</div>
-                  <div className="text-red-600 font-bold text-[9px] md:text-[10px] mt-1">
-                    Ngày phê duyệt: {new Date(selectedDoc.request_date).toLocaleDateString('vi-VN')}
+                <div className="mt-16 flex justify-end">
+                  <div className="rounded-[18px] border-4 border-rose-500 p-4 text-center text-rose-600">
+                    <p className="text-xs font-black uppercase">Ký bởi hệ thống</p>
+                    <p className="mt-2 text-[11px] font-bold">
+                      {selectedDoc.request_date
+                        ? new Date(selectedDoc.request_date).toLocaleDateString("vi-VN")
+                        : "Không rõ ngày"}
+                    </p>
+                    <CheckCircle className="mx-auto mt-2" size={20} />
                   </div>
-                  <CheckCircle className="mx-auto mt-2 text-red-600" size={24} />
-                  <div className="text-red-600 font-black text-[7px] mt-1 opacity-50 uppercase">Digital Signature Verified</div>
                 </div>
               </div>
             </div>
@@ -398,109 +298,72 @@ const DigitalDocument = () => {
         </div>
       )}
 
-      {/* FORM NỘP HỒ SƠ MODAL */}
       {isSubmitModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div 
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300"
-            onClick={() => setIsSubmitModalOpen(false)}
-          />
-          <div className="relative bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100">
-            {/* Modal Header */}
-            <div className="bg-slate-50 p-8 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-200">
-                  <CloudUpload size={24} />
+        <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsSubmitModalOpen(false)} />
+          <div className="app-card relative z-10 w-full max-w-xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-orange-500 text-white">
+                  <CloudUpload size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-slate-800">Thủ tục Nộp Hồ sơ</h3>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">Trực tuyến</p>
+                  <h3 className="text-lg font-black text-slate-800">Nộp hồ sơ trực tuyến</h3>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
+                    Sinh viên 5 tốt
+                  </p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsSubmitModalOpen(false)}
-                className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400"
-              >
-                <X size={20} />
+              <button onClick={() => setIsSubmitModalOpen(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <form onSubmit={handleApplyAward} className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  Danh hiệu nộp đơn
-                </label>
-                <input 
-                  type="text" 
-                  readOnly 
-                  value={formData.award_name}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-500 outline-none"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  Link minh chứng (Google Drive / PDF) <span className="text-red-500">*</span>
-                </label>
-                <div className="relative group">
-                  <CloudUpload className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-orange-500 transition-colors" size={20} />
-                  <input 
-                    required
-                    type="url" 
-                    placeholder="https://drive.google.com/..."
-                    value={formData.evidence_url}
-                    onChange={(e) => setFormData({...formData, evidence_url: e.target.value})}
-                    className="w-full bg-white border border-slate-200 rounded-2xl pl-14 pr-5 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400 italic ml-1">* Đảm bảo link đã được mở quyền truy cập công khai.</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                  Ghi chú bổ sung
-                </label>
-                <textarea 
-                  rows={3}
-                  placeholder="Mô tả tóm tắt các thành tích nổi bật của bạn..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-orange-500/10 focus:border-orange-500 transition-all shadow-sm resize-none"
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex gap-4 pt-4">
-                <button 
+            <form onSubmit={handleApplyAward} className="space-y-5 p-6">
+              <input
+                readOnly
+                value={formData.award_name}
+                className="w-full rounded-[20px] border border-slate-100 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-600 outline-none"
+              />
+              <input
+                required
+                type="url"
+                value={formData.evidence_url}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, evidence_url: event.target.value }))
+                }
+                placeholder="https://drive.google.com/..."
+                className="w-full rounded-[20px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 outline-none focus:border-orange-300"
+              />
+              <textarea
+                rows={4}
+                value={formData.description}
+                onChange={(event) =>
+                  setFormData((prev) => ({ ...prev, description: event.target.value }))
+                }
+                placeholder="Mô tả ngắn gọn thành tích và hồ sơ của bạn..."
+                className="w-full resize-none rounded-[20px] border border-slate-200 bg-white px-5 py-4 text-sm font-semibold text-slate-700 outline-none focus:border-orange-300"
+              />
+              <div className="flex gap-3">
+                <button
                   type="button"
                   onClick={() => setIsSubmitModalOpen(false)}
-                  className="flex-1 py-4 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors"
+                  className="flex-1 rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-500"
                 >
-                  Hủy bỏ
+                  Hủy
                 </button>
-                <button 
+                <button
                   disabled={isSubmitting}
                   type="submit"
-                  className="flex-[2] py-4 bg-orange-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-orange-200 hover:bg-orange-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                  className="flex-[1.5] rounded-full bg-orange-500 px-5 py-3 text-sm font-black text-white"
                 >
-                  {isSubmitting ? "Đang gửi..." : (
-                    <>
-                      Xác nhận Nộp đơn <ChevronRight size={16} />
-                    </>
-                  )}
+                  {isSubmitting ? "Đang gửi..." : "Xác nhận nộp hồ sơ"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* FOOTER CỦA HỆ THỐNG */}
-      <footer className="text-center py-4 text-[9px] text-slate-400 font-bold uppercase tracking-widest opacity-50">
-        © 2026 Digital Youth Union System (DYUS). Designed for the next
-        generation.
-      </footer>
     </div>
   );
 };
