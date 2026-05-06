@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const API_URL = envApiUrl || expoApiUrl || 'http://192.168.1.102:8000/api/v1';
+const API_URL = envApiUrl || expoApiUrl || 'http://192.168.10.35:8000/api/v1';
 
 const apiClient = axios.create({
     baseURL: API_URL,
@@ -78,17 +78,17 @@ export const updateUser = async (userData) => {
 
 export const uploadAvatar = async (imageUri) => {
     const formData = new FormData();
-    
+
     // React Native FormData requires an object with uri, type, and name
     const uriParts = imageUri.split('.');
     const fileType = uriParts[uriParts.length - 1];
-    
+
     formData.append('file', {
-      uri: imageUri,
-      name: `avatar.${fileType}`,
-      type: `image/${fileType}`,
+        uri: imageUri,
+        name: `avatar.${fileType}`,
+        type: `image/${fileType}`,
     });
-  
+
     try {
         const response = await apiClient.post('/users/me/avatar', formData, {
             headers: {
@@ -174,7 +174,7 @@ export const getUserRegistrations = async (userId) => {
 // Cập nhật trạng thái tham gia sự kiện (Check-in)
 export const updateRegistrationStatus = async (registrationId, status) => {
     try {
-        const response = await apiClient.put(`/events/registrations/${registrationId}/approve`); 
+        const response = await apiClient.put(`/events/registrations/${registrationId}/approve`);
         // Note: The backend endpoint is named 'approve' but it can be used for check-in
         return response.data;
     } catch (error) {
