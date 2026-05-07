@@ -40,10 +40,12 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-font",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "extra": {
-      "apiUrl": "http://192.168.10.35:8000/api/v1"
+      "apiUrl": "http://192.168.10.181:8000/api/v1"
     },
     "experiments": {
       "typedRoutes": true,
