@@ -1,10 +1,12 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import Login from "../components/Login";
 // admin pages
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
-import Organization from "../pages/admin/Organization/Organization";
-import Campaigns from "../pages/admin/Campaigns/Campaigns";
+import CampaignsPage from "../pages/admin/Campaigns/CampaignsPage";
+import CampaignListPage from "../pages/admin/Campaigns/CampaignListPage";
+import CampaignTimelinePage from "../pages/admin/Campaigns/CampaignTimelinePage";
+import CampaignCalendarPage from "../pages/admin/Campaigns/CampaignCalendarPage";
 import Finance from "../pages/admin/Finance/Finance";
 import Awards from "../pages/admin/Awards/Awards";
 import DigitalDocuments from "../pages/admin/DigitalDocuments/DigitalDocument";
@@ -14,6 +16,10 @@ import UserProfile from "../pages/admin/UserProfile/UserProfile";
 import UserActivityLog from "../components/admin/Profile/UserActivityLog";
 import AdminLayout from "../layouts/AdminLayout";
 import NotificationManager from "../pages/admin/notification_management/NotificationManager";
+import OrganizationsPage from "../pages/admin/Organizations/OrganizationsPage";
+import OrgChartPage from "../pages/admin/Organizations/OrgChartPage";
+import UnitsPage from "../pages/admin/Organizations/UnitsPage";
+import MembersPage from "../pages/admin/Organizations/MembersPage";
 
 // admin sub pages
 import SubAdminLayout from "../pages/admin_sub/SubAdminLayout";
@@ -63,15 +69,25 @@ const AppRoutes = () => {
         <Route element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
-        <Route path="organization" element={<Organization />} />
-        <Route path="campaigns" element={<Campaigns />} />
-        <Route path="finance" element={<Finance />} />
-        <Route path="awards" element={<Awards />} />
-        <Route path="documents" element={<DigitalDocuments />} />
-        <Route path="ai" element={<AIIntelligence />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="activity-log" element={<UserActivityLog />} />
+          <Route
+            path="organization"
+            element={<Navigate to="/admin/organizations" replace />}
+          />
+          <Route path="organizations" element={<OrganizationsPage />} />
+          <Route path="organizations/org-chart" element={<OrgChartPage />} />
+          <Route path="organizations/units" element={<UnitsPage />} />
+          <Route path="organizations/members" element={<MembersPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="campaigns/list" element={<CampaignListPage />} />
+          <Route path="campaigns/timeline" element={<CampaignTimelinePage />} />
+          <Route path="campaigns/calendar" element={<CampaignCalendarPage />} />
+          <Route path="finance" element={<Finance />} />
+          <Route path="awards" element={<Awards />} />
+          <Route path="documents" element={<DigitalDocuments />} />
+          <Route path="ai" element={<AIIntelligence />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<UserProfile />} />
+          <Route path="activity-log" element={<UserActivityLog />} />
           <Route path="notifications" element={<NotificationManager />} />
         </Route>
       </Route>
