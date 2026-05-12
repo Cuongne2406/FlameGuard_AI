@@ -76,8 +76,8 @@ class OrganizationBase(BaseModel):
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
     status: OrgStatusEnum = OrgStatusEnum.ACTIVE
-    fee_percentage: float = 0.0
-    activity_points: int = 0
+    fee_percentage: Optional[float] = 0.0
+    activity_points: Optional[int] = 0
     avatar_url: Optional[str] = None
     icon: Optional[str] = None
     warning_message: Optional[str] = None

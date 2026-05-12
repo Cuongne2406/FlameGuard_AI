@@ -325,8 +325,14 @@ def create_user(db: Session, user_in: UserCreate):
         password_hash=get_password_hash(user_in.password) if user_in.password else None
     )
     
-    # Sync class_name if class_id is provided but class_name is missing
-    if db_user.class_id and not db_user.class_name:
+    db.add(db_user)
+    db.flush()
+
+    # Auto-resolve class_name if provided
+    if user_in.class_name:
+        _resolve_and_assign_class(db, db_user, user_in.class_name)
+    elif db_user.class_id and not db_user.class_name:
+        # Fallback to sync class_name if class_id is provided but class_name is missing
         org = db.query(Organization).filter(Organization.id == db_user.class_id).first()
         if org:
             db_user.class_name = org.name
@@ -335,10 +341,53 @@ def create_user(db: Session, user_in: UserCreate):
         roles = db.query(Role).filter(Role.id.in_(user_in.role_ids)).all()
         db_user.roles = roles
 
-    db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def _resolve_and_assign_class(db: Session, user: User, class_name: str):
+    if not class_name:
+        return
+
+    org = db.query(Organization).filter(
+        Organization.name == class_name,
+        Organization.type == OrgType.CLASS
+    ).first()
+
+    if not org:
+        org = Organization(
+            name=class_name,
+            type=OrgType.CLASS,
+            status=OrgStatus.ACTIVE
+        )
+        db.add(org)
+        db.flush() # Flush to get org.id without committing the entire transaction yet
+    
+    user.class_id = org.id
+    user.class_name = org.name
+
+    # Only assign UserOrganization if user has an id (after flush/commit of user)
+    if user.id:
+        from app.models.core import UserOrganization
+        db_assign = db.query(UserOrganization).filter(
+            UserOrganization.user_id == user.id,
+            UserOrganization.organization_id == org.id
+        ).first()
+
+        if not db_assign:
+            # Lấy chức danh mặc định
+            from app.models.settings import SystemSetting
+            title_setting = db.query(SystemSetting).filter(SystemSetting.key == "DEFAULT_MEMBER_TITLE").first()
+            default_title = title_setting.value if title_setting and title_setting.value else "Đoàn viên"
+
+            db_assign = UserOrganization(
+                user_id=user.id,
+                organization_id=org.id,
+                title=default_title,
+                is_primary=False,
+                joined_date=datetime.now().date()
+            )
+            db.add(db_assign)
 
 def format_user_dict(db: Session, user: User):
     from app.models.events import EventRegistration
@@ -430,12 +479,20 @@ def update_user(db: Session, user_id: UUID, user_in: UserUpdate, is_admin: bool 
 
     # Apply updates
     is_completing = update_data.pop("is_completing", False)
+    class_name_updated = "class_name" in update_data
+    class_name_val = update_data.get("class_name")
+
     for key, value in update_data.items():
         if key != "is_profile_updated": # Prevent manual bypass
             setattr(db_user, key, value)
         
-    # Logic: Sync class_name if class_id changed
-    if "class_id" in update_data:
+    db.flush() # Flush user changes before resolving class so user.id is safe to use
+
+    # Auto-resolve class_name if provided
+    if class_name_updated and class_name_val:
+        _resolve_and_assign_class(db, db_user, class_name_val)
+    elif "class_id" in update_data:
+        # Fallback: Sync class_name if class_id changed
         org = db.query(Organization).filter(Organization.id == db_user.class_id).first()
         if org:
             db_user.class_name = org.name
@@ -575,6 +632,34 @@ def get_classes_list_detailed(db: Session):
             "lastSeen": cls.last_activity_at.strftime("%H:%M %d/%m") if cls.last_activity_at else "Chưa có",
             "avatar": cls.avatar_url or f"https://ui-avatars.com/api/?name={cls.name}&background=random",
             "alert": cls.warning_message is not None
+        })
+    return results
+
+def get_organization_members(db: Session, org_id: UUID):
+    members = db.query(User).join(UserOrganization).filter(
+        UserOrganization.organization_id == org_id
+    ).order_by(User.full_name.asc()).all()
+    
+    results = []
+    for u in members:
+        # Lấy title trong tổ chức này
+        org_rel = next((uo for uo in u.organizations if str(uo.organization_id) == str(org_id)), None)
+        if org_rel and org_rel.title:
+            title = org_rel.title
+        else:
+            from app.models.settings import SystemSetting
+            title_setting = db.query(SystemSetting).filter(SystemSetting.key == "DEFAULT_MEMBER_TITLE").first()
+            title = title_setting.value if title_setting and title_setting.value else "Đoàn viên"
+        
+        results.append({
+            "id": str(u.id),
+            "student_id": u.student_id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "phone_number": u.phone_number,
+            "status": u.status.value if u.status else "ACTIVE",
+            "avatar_url": u.avatar_url,
+            "title": title
         })
     return results
 

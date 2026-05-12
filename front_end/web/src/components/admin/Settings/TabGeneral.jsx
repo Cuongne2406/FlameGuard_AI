@@ -306,6 +306,27 @@ const TabGeneral = ({ onUpdate }) => {
             </div>
           </div>
         </SectionCard>
+
+        {/* Tự động hóa */}
+        <SectionCard
+          title="Tự động hóa (Automation)"
+          icon={<Globe size={16} className="text-blue-600" />}
+        >
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Chức danh mặc định cho sinh viên
+              </label>
+              <input
+                type="text"
+                placeholder="Ví dụ: Đoàn viên"
+                value={settings.DEFAULT_MEMBER_TITLE || ""}
+                onChange={(e) => handleChange("DEFAULT_MEMBER_TITLE", e.target.value)}
+                className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+        </SectionCard>
       </div>
     </div>
   );

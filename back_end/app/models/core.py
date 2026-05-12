@@ -141,6 +141,8 @@ class Organization(Base):
     leader_user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     contact_email = Column(String, nullable=True)
     phone = Column(String, nullable=True)
+    activity_points = Column(Integer, default=0)
+    classification = Column(String, nullable=True)
     
     parent = relationship("Organization", remote_side=[id], backref="children")
     leader = relationship("User", foreign_keys=[leader_user_id])
@@ -213,3 +215,5 @@ class PointLog(Base):
     user = relationship("User", backref="point_logs")
     event = relationship("Event")
     category = relationship("PointCategory")
+
+

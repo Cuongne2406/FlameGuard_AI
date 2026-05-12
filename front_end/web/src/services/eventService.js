@@ -60,5 +60,8 @@ export const eventService = {
 
   approveRegistration: (registrationId) => apiClient(`/events/registrations/${registrationId}/approve`, { method: 'PUT' }),
 
-  getEventSummary: (eventId) => apiClient(`/events/${eventId}/summary`, { method: 'GET' })
+  getEventSummary: (eventId) => apiClient(`/events/${eventId}/summary`, { method: 'GET' }),
+
+  getEventLiveStats: (eventId) => apiClient(`/events/${eventId}/live-stats`, { method: 'GET' }),
+  getEventFeedbackStats: (eventId) => apiClient(`/events/${eventId}/feedback-stats`, { method: 'GET' })
 };

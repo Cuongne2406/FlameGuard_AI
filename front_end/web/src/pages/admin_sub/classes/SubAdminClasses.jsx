@@ -59,6 +59,11 @@ const SubAdminClasses = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [classToDelete, setClassToDelete] = useState(null);
 
+    // View Members
+    const [showMembersModal, setShowMembersModal] = useState(false);
+    const [classMembers, setClassMembers] = useState([]);
+    const [loadingMembers, setLoadingMembers] = useState(false);
+
     // Dropdown menu
     const [openDropdownId, setOpenDropdownId] = useState(null);
 
@@ -195,6 +200,23 @@ const SubAdminClasses = () => {
             setToast({ message: '✅ Đã xóa chi đoàn!', type: 'success' });
         } catch (err) {
             setToast({ message: '❌ Lỗi khi xóa', type: 'error' });
+        }
+    };
+
+    // Xem danh sách sinh viên
+    const handleViewMembers = async (cls) => {
+        setSelectedClass(cls);
+        setShowMembersModal(true);
+        setLoadingMembers(true);
+        setOpenDropdownId(null);
+        try {
+            const members = await organizationService.getOrganizationMembers(cls.id);
+            setClassMembers(members);
+        } catch (error) {
+            setToast({ message: 'Lỗi tải danh sách sinh viên', type: 'error' });
+            setClassMembers([]);
+        } finally {
+            setLoadingMembers(false);
         }
     };
 
@@ -420,6 +442,13 @@ const SubAdminClasses = () => {
                                                     <div className="absolute right-0 mt-2 w-36 md:w-40 bg-white rounded-xl shadow-xl border border-slate-200 z-50">
                                                         <div className="py-2">
                                                             <button
+                                                                onClick={() => handleViewMembers(cls)}
+                                                                className="w-full text-left px-3 md:px-4 py-2 text-xs md:text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                                                            >
+                                                                <span className="material-symbols-outlined">group</span>
+                                                                Danh sách
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleEditClick(cls)}
                                                                 className="w-full text-left px-3 md:px-4 py-2 text-xs md:text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                                                             >
@@ -527,6 +556,47 @@ const SubAdminClasses = () => {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Modal Danh sách Sinh viên */}
+            <Modal isOpen={showMembersModal} onClose={() => setShowMembersModal(false)} title={`Danh sách lớp ${selectedClass?.name}`} size="lg">
+                <div className="py-2 max-h-[60vh] overflow-y-auto">
+                    {loadingMembers ? (
+                        <p className="text-center text-sm text-slate-500 py-8">Đang tải danh sách...</p>
+                    ) : classMembers.length === 0 ? (
+                        <p className="text-center text-sm text-slate-500 py-8">Chưa có sinh viên nào trong lớp này.</p>
+                    ) : (
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-100 bg-slate-50">
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">MSSV</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chức vụ</th>
+                                    <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {classMembers.map((m, idx) => (
+                                    <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-4 py-3 text-sm font-medium text-slate-500">{idx + 1}</td>
+                                        <td className="px-4 py-3 text-sm font-bold text-slate-700">{m.student_id || '---'}</td>
+                                        <td className="px-4 py-3 text-sm font-black text-slate-800">{m.full_name}</td>
+                                        <td className="px-4 py-3 text-xs font-bold text-blue-600 bg-blue-50/30 rounded-lg inline-block mt-2 ml-2">{m.title}</td>
+                                        <td className="px-4 py-3 text-center text-sm">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase ${m.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                                                {m.status === 'ACTIVE' ? 'Hoạt động' : 'Đã khóa'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+                <div className="flex justify-end pt-6 border-t border-slate-100">
+                    <Button variant="outline" onClick={() => setShowMembersModal(false)}>Đóng</Button>
+                </div>
             </Modal>
 
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

@@ -116,3 +116,10 @@ def get_classes_list(db: Session = Depends(get_db)):
     Lấy danh sách Chi đoàn kèm chi tiết trạng thái, nhân sự, đoàn phí.
     """
     return core_service.get_classes_list_detailed(db)
+
+@router.get("/{org_id}/members")
+def get_organization_members(org_id: UUID, db: Session = Depends(get_db)):
+    """
+    Lấy danh sách thành viên của một tổ chức/lớp, được sắp xếp theo tên.
+    """
+    return core_service.get_organization_members(db, org_id)

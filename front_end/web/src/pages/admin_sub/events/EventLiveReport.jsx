@@ -14,22 +14,25 @@ const EventLiveReport = () => {
     const [registrations, setRegistrations] = useState([]);
     const [qaList, setQaList] = useState([]);
     const [incidentList, setIncidentList] = useState([]);
+    const [chartData, setChartData] = useState([0, 0, 0, 0, 0]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchReportData = async () => {
             try {
                 setLoading(true);
-                const [evt, regs, qas, incs] = await Promise.all([
+                const [evt, regs, qas, incs, liveStats] = await Promise.all([
                     eventService.getEvent(id),
                     eventService.getEventRegistrations(id),
                     eventService.getEventQA(id),
-                    eventService.getEventIncidents(id)
+                    eventService.getEventIncidents(id),
+                    eventService.getEventLiveStats(id)
                 ]);
                 setEventData(evt);
                 setRegistrations(regs);
                 setQaList(qas);
                 setIncidentList(incs);
+                if (liveStats && liveStats.length > 0) setChartData(liveStats);
             } catch (err) {
                 console.error("Failed to fetch live report data", err);
                 setToast({ message: 'Lỗi tải dữ liệu giám sát', type: 'error' });
@@ -55,7 +58,7 @@ const EventLiveReport = () => {
         { label: 'Tương tác Q&A', val: qaList.length.toString(), sub: `${qaList.filter(q => q.is_answered).length} đã xử lý`, icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
     ];
 
-    const chartData = [20, 45, 78, 92, 65]; // Mock for now, but ready for logic
+
     const rankings = [
         { rank: 1, name: 'Lớp 21CNTT1', percent: 95 },
         { rank: 2, name: 'Lớp 22CNTT2', percent: 88 },
@@ -167,11 +170,11 @@ const EventLiveReport = () => {
                         </select>
                     </div>
                     <div className="h-64 flex items-end gap-1.5 px-4 relative">
-                        {/* Chart bars (giữ nguyên) */}
+                        {/* Chart bars */}
                         {chartData.map((h, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                                <div className={`w-full rounded-t-lg transition-all duration-700 ${i === 3 ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-blue-200 group-hover:bg-blue-400'}`} style={{ height: `${h}%` }}>
-                                    {i === 3 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 uppercase">Peak</div>}
+                                <div className={`w-full rounded-t-lg transition-all duration-700 ${Math.max(...chartData) === h && h > 0 ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-blue-200 group-hover:bg-blue-400'}`} style={{ height: `${h > 0 ? (h / Math.max(...chartData)) * 100 : 0}%` }}>
+                                    {Math.max(...chartData) === h && h > 0 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 uppercase">Peak</div>}
                                 </div>
                             </div>
                         ))}

@@ -102,6 +102,19 @@ const SubAdminClubs = () => {
         }
     };
 
+    const handleDeleteClub = async () => {
+        if (!selectedClub) return;
+        try {
+            await organizationService.deleteOrganization(selectedClub.id);
+            setClubs(clubs.filter(c => c.id !== selectedClub.id));
+            setShowManageModal(false);
+            setSelectedClub(null);
+            handleAction('Đã xóa CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi xóa CLB', type: 'error' });
+        }
+    };
+
     const handleSupportRequest = () => {
         const newProposal = {
             id: `prop-${Date.now()}`,
@@ -129,7 +142,9 @@ const SubAdminClubs = () => {
 
     const handleRejectProposal = async (proposal) => {
         try {
-            // Re-using common service or adding one if needed, for now logic remains UI-only or mock-delete
+            // Note: Since there is no API endpoint to reject/delete proposal currently,
+            // we will simulate the rejection and remove it from UI state.
+            // Ideally, there should be `organizationService.rejectClubProposal(proposal.id)`
             setProposals(proposals.filter(p => p.id !== proposal.id));
             if (selectedProposal?.id === proposal.id) setShowDetailModal(false);
             handleAction('Đã từ chối đề xuất!');
@@ -378,6 +393,7 @@ const SubAdminClubs = () => {
                         <Input label="Số lượng thành viên" value={selectedClub.members} onChange={(e) => setSelectedClub({ ...selectedClub, members: e.target.value })} />
                         <Input label="Sự kiện sắp tới" value={selectedClub.nextEvent || ''} onChange={(e) => setSelectedClub({ ...selectedClub, nextEvent: e.target.value })} />
                         <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            <Button variant="danger" className="flex-1" onClick={handleDeleteClub}>Xóa CLB</Button>
                             <Button variant="outline" className="flex-1" onClick={() => setShowManageModal(false)}>Hủy</Button>
                             <Button variant="primary" className="flex-1" onClick={handleManageClub}>Lưu thay đổi</Button>
                         </div>

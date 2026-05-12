@@ -232,3 +232,19 @@ def create_event_feedback(
     if str(event_id) != str(feedback_in.event_id):
         raise HTTPException(status_code=400, detail="Event ID mismatch")
     return event_service.create_feedback(db=db, feedback_in=feedback_in)
+
+@router.get("/{event_id}/live-stats")
+def get_event_live_stats(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event_live_stats(db=db, event_id=event_id)
+
+@router.get("/{event_id}/feedback-stats")
+def get_event_feedback_stats(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event_feedback_stats(db=db, event_id=event_id)

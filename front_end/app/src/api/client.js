@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const API_URL = envApiUrl || expoApiUrl || 'http://192.168.10.35:8000/api/v1';
+const API_URL = envApiUrl || expoApiUrl || 'http://192.168.10.30:8000/api/v1';
 
 const apiClient = axios.create({
     baseURL: API_URL,

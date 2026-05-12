@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Filter,
   UserPlus,
+  Users,
   CheckCircle2,
   Loader2,
 } from "lucide-react";
@@ -36,6 +37,10 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // View Members
+  const [unitMembers, setUnitMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   // --- FETCH DATA ---
   const fetchUnits = async () => {
@@ -195,6 +200,21 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
       }
     } catch (error) {
       console.error("Delete failed", error);
+    }
+  };
+
+  const handleViewMembers = async (unit) => {
+    setSelectedUnit(unit);
+    setModalStep("members");
+    setLoadingMembers(true);
+    try {
+        const members = await organizationService.getOrganizationMembers(unit.id);
+        setUnitMembers(members);
+    } catch (error) {
+        console.error("Lỗi tải danh sách", error);
+        setUnitMembers([]);
+    } finally {
+        setLoadingMembers(false);
     }
   };
 
@@ -405,6 +425,13 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                     <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => handleViewMembers(unit)}
+                          title="Danh sách sinh viên"
+                          className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
+                        >
+                          <Users size={16} />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedUnit(unit);
                             setNewUnitName(unit.name);
@@ -465,6 +492,7 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                 {modalStep === "edit" && "Chỉnh sửa đơn vị"}
                 {modalStep === "delete" && "Xác nhận xóa"}
                 {modalStep === "success" && "Thông báo"}
+                {modalStep === "members" && `Danh sách ${selectedUnit?.name}`}
               </h3>
               <button
                 onClick={handleCloseModal}
@@ -624,6 +652,46 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                   <p className="text-sm text-slate-400 mt-2">
                     Dữ liệu đã được cập nhật thành công vào hệ thống.
                   </p>
+                </div>
+              )}
+
+              {modalStep === "members" && (
+                <div className="py-2 max-h-[60vh] overflow-y-auto w-full">
+                    {loadingMembers ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-4">
+                            <Loader2 className="animate-spin" size={30} />
+                            <p className="font-bold">Đang tải danh sách...</p>
+                        </div>
+                    ) : unitMembers.length === 0 ? (
+                        <p className="text-center text-sm text-slate-500 py-8 font-bold">Chưa có sinh viên nào trong đơn vị này.</p>
+                    ) : (
+                        <div className="overflow-x-auto w-full">
+                            <table className="w-full text-left border-collapse min-w-[500px]">
+                                <thead>
+                                    <tr className="border-b border-slate-100 bg-slate-50">
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">MSSV</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chức vụ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {unitMembers.map((m, idx) => (
+                                        <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-slate-500">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-sm font-bold text-slate-700">{m.student_id || '---'}</td>
+                                            <td className="px-4 py-3 text-sm font-black text-slate-800">{m.full_name}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-xs font-bold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg">
+                                                    {m.title}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
               )}
             </div>
