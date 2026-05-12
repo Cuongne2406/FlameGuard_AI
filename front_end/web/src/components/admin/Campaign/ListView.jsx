@@ -14,7 +14,7 @@ import { systemService } from "../../../services/systemService";
 import { campaignService } from "../../../services/campaignService";
 import { Edit2, Trash } from "lucide-react";
 
-const ListView = () => {
+const ListView = ({ triggerCreateModal, onModalClose }) => {
   // 1. State quản lý hiển thị Modal
   const [modalMode, setModalMode] = useState({ open: false, type: "create", data: null });
 
@@ -66,6 +66,12 @@ const ListView = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (triggerCreateModal) {
+      setModalMode({ open: true, type: "create", data: null });
+    }
+  }, [triggerCreateModal]);
 
   useEffect(() => {
     if (modalMode.type === "edit" && modalMode.data) {
@@ -254,7 +260,13 @@ const ListView = () => {
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="font-bold text-slate-700">{modalMode.type === "edit" ? "Cập nhật chiến dịch" : "Tạo chiến dịch mới"}</h3>
-              <button onClick={() => setModalMode({ ...modalMode, open: false })} className="p-1 hover:bg-slate-200 rounded-full transition-colors">
+              <button
+                onClick={() => {
+                  setModalMode({ ...modalMode, open: false });
+                  if (onModalClose) onModalClose();
+                }}
+                className="p-1 hover:bg-slate-200 rounded-full transition-colors"
+              >
                 <X size={20} className="text-slate-500" />
               </button>
             </div>
@@ -364,7 +376,15 @@ const ListView = () => {
             </div>
 
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-              <button onClick={() => setModalMode({ ...modalMode, open: false })} className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700">Hủy</button>
+              <button
+                onClick={() => {
+                  setModalMode({ ...modalMode, open: false });
+                  if (onModalClose) onModalClose();
+                }}
+                className="px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-700"
+              >
+                Hủy
+              </button>
               <button 
                 onClick={handleSave}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-200 transition-all active:scale-95"
