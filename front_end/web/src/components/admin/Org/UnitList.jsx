@@ -86,7 +86,6 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
 
   const handleCloseModal = () => {
     setModalStep("none");
-    setCreatedOrgId(null);
     setSelectedLeader(null);
     setUserSearchTerm("");
     if (onModalClose) onModalClose();

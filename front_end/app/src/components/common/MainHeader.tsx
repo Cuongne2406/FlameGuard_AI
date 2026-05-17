@@ -11,10 +11,15 @@ interface MainHeaderProps {
 
 const MainHeader: React.FC<MainHeaderProps> = ({ children, contentContainerStyle }) => {
   const insets = useSafeAreaInsets();
+  const gradientColors: readonly [string, string, string] = [
+    COLORS.gradient[0],
+    COLORS.gradient[1],
+    COLORS.gradient[2],
+  ];
 
   return (
     <LinearGradient
-      colors={[COLORS.gradient[0], COLORS.gradient[1], COLORS.gradient[2]] || COLORS.gradient}
+      colors={gradientColors}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[

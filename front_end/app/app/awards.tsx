@@ -1,32 +1,35 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Modal, 
-  TextInput,
-  Platform
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Modal,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  ArrowLeft, 
-  Trophy, 
-  Award, 
-  Star, 
-  BookOpen, 
+import {
+  ArrowLeft,
+  Trophy,
+  Award,
+  Star,
+  BookOpen,
   Heart,
   CloudUpload,
   X,
   CheckCircle2,
   Clock,
-  Briefcase
+  Briefcase,
 } from 'lucide-react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { COLORS, SHADOWS, SIZES } from '../src/constants/theme';
-import { useForm, Controller } from 'react-hook-form';
+import { useAuth } from '../src/context/AuthContext';
+import { createAward, getAwards } from '../src/api/client';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import FormInput from '../src/components/common/FormInput';
@@ -34,69 +37,124 @@ import PremiumButton from '../src/components/common/PremiumButton';
 import GlassCard from '../src/components/common/GlassCard';
 
 const awardRequestSchema = z.object({
-  description: z.string().min(10, 'Mô tả quá ngắn. Vui lòng ghi chi tiết hơn.'),
-  link: z.string().url('Vui lòng nhập đúng định dạng link Drive (http://... hoặc https://...)')
+  description: z.string().min(10, 'Mo ta qua ngan. Vui long ghi chi tiet hon.'),
+  link: z.string().url('Vui long nhap dung dinh dang link Drive.'),
 });
 
 type AwardRequestFormData = z.infer<typeof awardRequestSchema>;
 
+const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  PENDING: {
+    label: 'DANG CHO',
+    color: '#FF9800',
+    bg: '#FFF3E0',
+    icon: <Clock size={24} color="#FF9800" />,
+  },
+  APPROVED: {
+    label: 'DA DUYET',
+    color: '#4CAF50',
+    bg: '#E8F5E9',
+    icon: <CheckCircle2 size={24} color="#4CAF50" />,
+  },
+};
+
 export default function AwardsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<AwardRequestFormData>({
+  const { control, handleSubmit, reset } = useForm<AwardRequestFormData>({
     resolver: zodResolver(awardRequestSchema),
     defaultValues: {
       description: '',
-      link: ''
-    }
+      link: '',
+    },
+  });
+
+  const { data: awards = [] } = useQuery({
+    queryKey: ['mobile-awards'],
+    queryFn: getAwards,
+    enabled: !!user,
+  });
+
+  const myAwards = useMemo(
+    () => (Array.isArray(awards) ? awards.filter((item: any) => item.user_id === user?.id) : []),
+    [awards, user?.id]
+  );
+
+  const summary = useMemo(
+    () => ({
+      total: myAwards.length,
+      approved: myAwards.filter((item: any) => item.status === 'APPROVED').length,
+      pending: myAwards.filter((item: any) => item.status === 'PENDING').length,
+    }),
+    [myAwards]
+  );
+
+  const submitMutation = useMutation({
+    mutationFn: (data: AwardRequestFormData) =>
+      createAward({
+        user_id: user?.id,
+        award_name: 'Sinh vien 5 tot cap Truong',
+        description: data.description,
+        evidence_url: data.link,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['mobile-awards'] });
+      setModalVisible(false);
+      reset();
+      Alert.alert('Thanh cong', 'Da gui ho so xet duyet thanh cong.');
+    },
+    onError: () => {
+      Alert.alert('Loi', 'Khong the gui ho so luc nay.');
+    },
   });
 
   const onSubmit = (data: AwardRequestFormData) => {
-    setModalVisible(false);
-    reset();
-    alert('Đã gửi hồ sơ xét duyệt thành công!');
+    if (!user?.id) {
+      Alert.alert('Thong bao', 'Vui long dang nhap lai de nop ho so.');
+      return;
+    }
+    submitMutation.mutate(data);
   };
 
-  const badges = [
-    { id: 1, name: 'Đạo đức tốt', icon: <Heart size={32} color="#fff" />, colors: ['#E63946', '#CD1A2A'] },
-    { id: 2, name: 'Học tập tốt', icon: <BookOpen size={32} color="#fff" />, colors: ['#4361EE', '#3A0CA3'] },
-    { id: 3, name: 'Thể lực tốt', icon: <Award size={32} color="#fff" />, colors: ['#4CAF50', '#2E7D32'] },
-    { id: 4, name: 'Tình nguyện tốt', icon: <Star size={32} color="#fff" />, colors: ['#FF9800', '#F57C00'] },
-    { id: 5, name: 'Hội nhập tốt', icon: <Briefcase size={32} color="#fff" />, colors: ['#9C27B0', '#7B1FA2'] },
+  const badges: Array<{ id: number; name: string; icon: React.ReactNode; colors: readonly [string, string] }> = [
+    { id: 1, name: 'Dao duc tot', icon: <Heart size={32} color="#fff" />, colors: ['#E63946', '#CD1A2A'] },
+    { id: 2, name: 'Hoc tap tot', icon: <BookOpen size={32} color="#fff" />, colors: ['#4361EE', '#3A0CA3'] },
+    { id: 3, name: 'The luc tot', icon: <Award size={32} color="#fff" />, colors: ['#4CAF50', '#2E7D32'] },
+    { id: 4, name: 'Tinh nguyen tot', icon: <Star size={32} color="#fff" />, colors: ['#FF9800', '#F57C00'] },
+    { id: 5, name: 'Hoi nhap tot', icon: <Briefcase size={32} color="#fff" />, colors: ['#9C27B0', '#7B1FA2'] },
   ];
 
   return (
     <View style={styles.container}>
-      {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Trung tâm Thành tích</Text>
+        <Text style={styles.headerTitle}>Trung tam Thanh tich</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* HERO SECTION */}
-        <LinearGradient
-          colors={['#1e3c72', '#2a5298']}
-          style={[styles.heroCard, SHADOWS.medium]}
-        >
+        <LinearGradient colors={['#1e3c72', '#2a5298']} style={[styles.heroCard, SHADOWS.medium]}>
           <View style={styles.heroContent}>
             <View>
               <View style={styles.tagContainer}>
-                <Text style={styles.tagText}>NĂM HỌC 2025-2026</Text>
+                <Text style={styles.tagText}>NAM HOC 2025-2026</Text>
               </View>
-              <Text style={styles.heroTitle}>Sinh viên 5 Tốt</Text>
-              <Text style={styles.heroSub}>Bạn đã đạt 2/5 tiêu chí cấp Trường.</Text>
+              <Text style={styles.heroTitle}>Sinh vien 5 tot</Text>
+              <Text style={styles.heroSub}>
+                Ban dang co {summary.approved}/5 moc da duoc duyet ho so tren he thong.
+              </Text>
             </View>
             <Trophy size={64} color="#FFD700" opacity={0.9} />
           </View>
 
-          <PremiumButton 
-            title="Nộp hồ sơ minh chứng ngay"
+          <PremiumButton
+            title="Nop ho so minh chung ngay"
             onPress={() => setModalVisible(true)}
             variant="secondary"
             icon={<CloudUpload size={18} color={COLORS.white} />}
@@ -104,47 +162,41 @@ export default function AwardsScreen() {
           />
         </LinearGradient>
 
-        {/* LỊCH SỬ HỒ SƠ */}
-        <Text style={styles.sectionTitle}>Tiến trình Xét duyệt</Text>
+        <Text style={styles.sectionTitle}>Tien trinh Xet duyet</Text>
         <GlassCard style={{ marginBottom: 30 }}>
-          <View style={styles.historyItem}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(255, 152, 0, 0.1)' }]}>
-              <Clock size={24} color="#FF9800" />
-            </View>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyTitle}>Sinh viên 5 Tốt - Đợt 1</Text>
-              <Text style={styles.historyDate}>Nộp lúc: 15/04/2026</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: '#FFF3E0' }]}>
-              <Text style={[styles.statusText, { color: '#FF9800' }]}>ĐANG CHỜ</Text>
-            </View>
-          </View>
-          
-          <View style={styles.divider} />
-
-          <View style={styles.historyItem}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
-              <CheckCircle2 size={24} color="#4CAF50" />
-            </View>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyTitle}>Thanh niên Tiên tiến</Text>
-              <Text style={styles.historyDate}>Duyệt lúc: 10/01/2026</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={[styles.statusText, { color: '#4CAF50' }]}>ĐÃ DUYỆT</Text>
-            </View>
-          </View>
+          {myAwards.length > 0 ? (
+            myAwards.map((item: any, index: number) => {
+              const config = statusConfig[item.status] || statusConfig.PENDING;
+              return (
+                <View key={item.id}>
+                  <View style={styles.historyItem}>
+                    <View style={[styles.iconBox, { backgroundColor: config.bg }]}>{config.icon}</View>
+                    <View style={styles.historyInfo}>
+                      <Text style={styles.historyTitle}>{item.award_name}</Text>
+                      <Text style={styles.historyDate}>
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleDateString('vi-VN')
+                          : 'Chua co ngay nop'}
+                      </Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: config.bg }]}>
+                      <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+                    </View>
+                  </View>
+                  {index < myAwards.length - 1 && <View style={styles.divider} />}
+                </View>
+              );
+            })
+          ) : (
+            <Text style={styles.historyDate}>Ban chua co ho so xet duyet nao.</Text>
+          )}
         </GlassCard>
 
-        {/* BADGES COLLECTION */}
-        <Text style={styles.sectionTitle}>Phòng Truyền thống</Text>
+        <Text style={styles.sectionTitle}>Phong Truyen thong</Text>
         <View style={styles.badgesGrid}>
           {badges.map((badge) => (
             <View key={badge.id} style={styles.badgeWrapper}>
-              <LinearGradient
-                colors={badge.colors}
-                style={[styles.badgeCircle, SHADOWS.medium]}
-              >
+              <LinearGradient colors={badge.colors} style={[styles.badgeCircle, SHADOWS.medium]}>
                 {badge.icon}
               </LinearGradient>
               <Text style={styles.badgeName}>{badge.name}</Text>
@@ -153,33 +205,21 @@ export default function AwardsScreen() {
         </View>
       </ScrollView>
 
-      {/* MODAL NỘP ĐƠN */}
       <Modal visible={modalVisible} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.bottomSheet, SHADOWS.large]}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Nộp Hồ sơ Minh chứng</Text>
+              <Text style={styles.sheetTitle}>Nop Ho so Minh chung</Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                 <X size={24} color={COLORS.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <FormInput 
-              control={control}
-              name="description"
-              placeholder="Ngắn gọn các hoạt động nổi bật..."
-              multiline
-              numberOfLines={3}
-            />
+            <FormInput control={control} name="description" placeholder="Mo ta ngan gon cac hoat dong noi bat..." multiline numberOfLines={3} />
+            <FormInput control={control} name="link" placeholder="Link Drive (https://drive.google.com/...)" />
 
-            <FormInput 
-              control={control}
-              name="link"
-              placeholder="Link Drive (https://drive.google.com/...)"
-            />
-
-            <PremiumButton 
-              title="GỬI XÉT DUYỆT"
+            <PremiumButton
+              title={submitMutation.isPending ? 'DANG GUI...' : 'GUI XET DUYET'}
               onPress={handleSubmit(onSubmit)}
               style={{ marginTop: 10 }}
             />
@@ -205,12 +245,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.text },
   scrollContent: { padding: SIZES.padding, paddingBottom: 100 },
-  
-  heroCard: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 30,
-  },
+  heroCard: { borderRadius: 24, padding: 24, marginBottom: 30 },
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -228,19 +263,7 @@ const styles = StyleSheet.create({
   tagText: { color: COLORS.white, fontSize: 10, fontWeight: 'bold' },
   heroTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', marginBottom: 4 },
   heroSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, maxWidth: '80%' },
-  applyBtn: {
-    backgroundColor: '#FFD700',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  applyBtnText: { color: '#1e3c72', fontSize: 14, fontWeight: 'bold', textTransform: 'uppercase' },
-
   sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 15, marginTop: 10 },
-  card: { backgroundColor: COLORS.surface, borderRadius: 20, padding: 20, marginBottom: 30 },
   historyItem: { flexDirection: 'row', alignItems: 'center' },
   iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   historyInfo: { flex: 1, marginLeft: 15 },
@@ -249,32 +272,26 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 10, fontWeight: 'bold' },
   divider: { height: 1, backgroundColor: 'rgba(0,0,0,0.05)', marginVertical: 15 },
-  
   badgesGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   badgeWrapper: { width: '30%', alignItems: 'center', marginBottom: 20 },
   badgeCircle: {
-    width: 70, height: 70, borderRadius: 35,
-    justifyContent: 'center', alignItems: 'center',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
   badgeName: { fontSize: 12, fontWeight: '600', color: COLORS.text, textAlign: 'center' },
-
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   bottomSheet: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30,
-    padding: SIZES.padding, paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: SIZES.padding,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
   sheetTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text },
   closeBtn: { padding: 5, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 15 },
-  formGroup: { marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 8, textTransform: 'uppercase' },
-  input: {
-    backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#E9ECEF',
-    borderRadius: 16, padding: 15, fontSize: 15, color: COLORS.text,
-  },
-  submitBtn: { backgroundColor: COLORS.primary, paddingVertical: 18, borderRadius: 16, alignItems: 'center', marginTop: 10 },
-  submitBtnText: { color: COLORS.white, fontSize: 14, fontWeight: '800', tracking: 1 },
 });

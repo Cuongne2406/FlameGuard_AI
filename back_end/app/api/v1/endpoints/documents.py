@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
@@ -40,7 +41,12 @@ def read_documents(
     # Note: In a real app, use permission-based checks.
     is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
     if not is_admin:
-        query = query.filter(DigitalDocument.is_public == True)
+        query = query.filter(
+            or_(
+                DigitalDocument.is_public == True,
+                DigitalDocument.user_id == current_user.id
+            )
+        )
         
     return query.order_by(DigitalDocument.request_date.desc()).offset(skip).limit(limit).all()
 

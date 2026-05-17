@@ -25,7 +25,7 @@ import {
 import { COLORS, SHADOWS, SIZES, UI } from '../../src/constants/theme';
 import EventCard from '../../src/components/EventCard';
 import { useAuth } from '../../src/context/AuthContext';
-import { getEvents } from '../../src/api/client';
+import { getEvents, getMyNotifications } from '../../src/api/client';
 import { EventSkeleton } from '../../src/components/SkeletonLoader';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
@@ -44,6 +44,17 @@ const HomeScreen: React.FC = () => {
     queryFn: () => getEvents(0, 6),
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: notifications } = useQuery({
+    queryKey: ['notifications', 'me'],
+    queryFn: () => getMyNotifications(0, 50),
+    refetchInterval: 15000,
+  });
+
+  const unreadCount = useMemo(() => {
+    if (!notifications) return 0;
+    return notifications.filter((n: any) => !n.is_read).length;
+  }, [notifications]);
 
   const filteredEvents = useMemo(() => {
     const displayEvents = events || [];
@@ -77,7 +88,13 @@ const HomeScreen: React.FC = () => {
           </View>
           <Pressable style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]} onPress={() => router.push('/notifications')}>
             <Bell size={22} color={COLORS.white} />
-            <View style={styles.badge} />
+            {unreadCount > 0 && (
+              <View style={[styles.badge, { width: undefined, minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4, justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: COLORS.white, fontSize: 10, fontWeight: 'bold' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </MainHeader>

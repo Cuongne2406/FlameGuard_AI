@@ -43,6 +43,7 @@ class AwardUpdate(BaseModel):
     awarded_date: Optional[date] = None
     points: Optional[int] = None
     assessment: Optional[dict] = None
+    comments: Optional[str] = None
 
 class AwardResponse(AwardBase):
     id: UUID

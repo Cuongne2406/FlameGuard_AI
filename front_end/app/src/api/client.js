@@ -264,4 +264,44 @@ export const submitFeedback = async (eventId, rating, comment, userId) => {
     }
 };
 
+export const getAwards = async () => {
+    try {
+        const response = await apiClient.get('/awards/');
+        return response.data;
+    } catch (error) {
+        console.error('Get awards error:', error);
+        throw error;
+    }
+};
+
+export const createAward = async (data) => {
+    try {
+        const response = await apiClient.post('/awards/', data);
+        return response.data;
+    } catch (error) {
+        console.error('Create award error:', error);
+        throw error;
+    }
+};
+
+export const getDocuments = async () => {
+    try {
+        const response = await apiClient.get('/digital-documents/');
+        return response.data;
+    } catch (error) {
+        console.error('Get documents error:', error);
+        throw error;
+    }
+};
+
+export const createDocumentRequest = async (data) => {
+    try {
+        const response = await apiClient.post('/digital-documents/', data);
+        return response.data;
+    } catch (error) {
+        console.error('Create document request error:', error);
+        throw error;
+    }
+};
+
 export default apiClient;

@@ -30,6 +30,18 @@ const SubAdminNotifications = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const handleNewNotification = (event) => {
+      const newNotif = event.detail;
+      setNotifications((prev) => [newNotif, ...prev]);
+    };
+
+    window.addEventListener("newNotification", handleNewNotification);
+    return () => {
+      window.removeEventListener("newNotification", handleNewNotification);
+    };
+  }, []);
+
   // For demonstration, use autoModeration items from Admin Analysis as feedbacks
   // if not available, default to empty array
   const feedbacks = data?.autoModeration || [];

@@ -133,6 +133,8 @@ class Organization(Base):
     
     # Extended fields for Classes & Clubs
     fee_percentage = Column(Numeric(5, 2), default=0.0)
+    activity_points = Column(Integer, default=0)
+    classification = Column(String, nullable=True)
     avatar_url = Column(String)
     icon = Column(String)
     warning_message = Column(Text, nullable=True)

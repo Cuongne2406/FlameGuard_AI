@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getMyNotifications, markNotificationRead, markAllNotificationsRead } from '../../src/api/client';
 import { NotificationSkeleton } from '../../src/components/SkeletonLoader';
 import MainHeader from '../../src/components/common/MainHeader';
+import { useQuery } from '@tanstack/react-query';
 
 const categoryTabs = ['Tất cả', 'Sự kiện', 'Hệ thống', 'Điểm'];
 
@@ -45,25 +46,22 @@ const NotificationsScreen = () => {
   const [refreshing, setRefreshing] = React.useState(false);
   const [activeCategory, setActiveCategory] = React.useState('Tất cả');
 
-  const fetchNotifications = async () => {
-    try {
-      const data = await getMyNotifications();
-      setNotifications(data);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const { data: queryNotifications, refetch, isFetching } = useQuery({
+    queryKey: ['notifications', 'me'],
+    queryFn: () => getMyNotifications(0, 50),
+    refetchInterval: 15000,
+  });
 
   React.useEffect(() => {
-    fetchNotifications();
-  }, []);
+    if (queryNotifications) {
+      setNotifications(queryNotifications);
+      setLoading(false);
+    }
+  }, [queryNotifications]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchNotifications();
+    refetch().finally(() => setRefreshing(false));
   };
 
   const handleMarkRead = async (id: string) => {

@@ -38,7 +38,12 @@ const fallbackSkills = [
   { subject: 'Xã hội', score: 85 },
 ];
 
-const badgeConfigs = [
+const badgeConfigs: Array<{
+  name: string;
+  colors: readonly [string, string];
+  icon: React.ReactNode;
+  detail: string;
+}> = [
   {
     name: 'Tiên phong',
     colors: ['#FFD700', '#FDB931'],

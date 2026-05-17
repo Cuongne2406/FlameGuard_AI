@@ -25,6 +25,50 @@ const UserLayout = () => {
   }, []);
 
   useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    const apiBase = import.meta.env.VITE_API_URL || 'http://192.168.1.102:8000/api/v1';
+    const wsBase = apiBase.replace(/^http/, 'ws');
+    const wsUrl = `${wsBase}/notifications/ws?token=${token}`;
+
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log("User Notification WebSocket connected!");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const newNotification = JSON.parse(event.data);
+        console.log("Received new WebSocket notification:", newNotification);
+        setNotifications((prev) => [newNotification, ...prev]);
+        window.dispatchEvent(new CustomEvent("newNotification", { detail: newNotification }));
+
+        if (Notification.permission === "granted") {
+          new Notification(newNotification.title, {
+            body: newNotification.message,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse WebSocket message:", e);
+      }
+    };
+
+    ws.onclose = () => {
+      console.log("User Notification WebSocket disconnected!");
+    };
+
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
         setShowNotifications(false);
@@ -91,7 +135,9 @@ const UserLayout = () => {
                 >
                   <Bell size={22} />
                   {unreadCount > 0 && (
-                    <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500" />
+                    <span className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full border-2 border-white bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
                   )}
                 </button>
 

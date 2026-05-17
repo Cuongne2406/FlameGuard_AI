@@ -3,7 +3,7 @@ import { apiClient } from './apiClient';
 export const notificationService = {
   getNotifications: (params) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : '';
-    return apiClient(`/notifications/${query}`, { method: 'GET' });
+    return apiClient(`/notifications/me${query}`, { method: 'GET' });
   },
   
   markAsRead: (id) => apiClient(`/notifications/${id}/read`, { method: 'PUT' }),

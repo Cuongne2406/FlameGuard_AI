@@ -3,12 +3,13 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.schemas.award_schemas import (
     AwardCreate, AwardUpdate, AwardResponse,
     AwardCriteriaCreate, AwardCriteriaResponse
 )
 from app.models.awards import Award, AwardCriteria, AwardStatus
+from app.models.core import User
 from app.services import award_service
 
 router = APIRouter()
@@ -18,16 +19,27 @@ def create_award(
     *,
     db: Session = Depends(get_db),
     award_in: AwardCreate,
+    current_user: User = Depends(get_current_active_user),
 ):
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin and award_in.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot create award application for another user")
     return award_service.create_award_application(db=db, award_in=award_in)
 
 @router.get("/", response_model=List[AwardResponse])
 def read_awards(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
-    return award_service.get_awards_list(db, skip=skip, limit=limit)
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    return award_service.get_awards_list(
+        db,
+        skip=skip,
+        limit=limit,
+        user_id=None if is_admin else current_user.id
+    )
 
 @router.get("/stats")
 def read_award_stats(

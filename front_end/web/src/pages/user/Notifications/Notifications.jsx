@@ -80,6 +80,18 @@ const UserNotifications = () => {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    const handleNewNotification = (event) => {
+      const newNotif = event.detail;
+      setNotifications((prev) => [newNotif, ...prev]);
+    };
+
+    window.addEventListener("newNotification", handleNewNotification);
+    return () => {
+      window.removeEventListener("newNotification", handleNewNotification);
+    };
+  }, []);
+
   const unreadCount = notifications.filter((item) => !item.is_read).length;
 
   const filteredNotifications = useMemo(() => {

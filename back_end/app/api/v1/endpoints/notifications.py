@@ -1,14 +1,45 @@
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
+from jose import jwt
 
 from app.api.deps import get_db, get_current_active_user
 from app.schemas.notification_schemas import NotificationResponse, NotificationUpdate
 from app.services import notification_service
 from app.models.core import User
+from app.core.config import settings
+from app.schemas.core_schemas import TokenPayload
+from app.core.websocket import manager
 
 router = APIRouter()
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket, token: str = None):
+    if not token:
+        await websocket.close(code=1008)
+        return
+    try:
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        token_data = TokenPayload(**payload)
+        user_id = UUID(token_data.sub)
+    except Exception as e:
+        print(f"WebSocket auth failed: {e}")
+        await websocket.close(code=1008)
+        return
+        
+    await manager.connect(user_id, websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(user_id, websocket)
+    except Exception as e:
+        print(f"WebSocket error for user {user_id}: {e}")
+        manager.disconnect(user_id, websocket)
 
 @router.get("/me", response_model=List[NotificationResponse])
 def get_my_notifications(

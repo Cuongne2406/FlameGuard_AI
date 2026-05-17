@@ -37,6 +37,7 @@ import { updateUser, uploadAvatar } from '../src/api/client';
 import GlassCard from '../src/components/common/GlassCard';
 import PremiumButton from '../src/components/common/PremiumButton';
 import FormInput from '../src/components/common/FormInput';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SettingFormInputProps {
   label: string;
@@ -92,11 +93,13 @@ interface SettingItemProps {
 const SettingsScreen = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   const { user, logout, refreshUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(true);
 
   const [formData, setFormData] = useState({
@@ -184,7 +187,14 @@ const SettingsScreen = () => {
         {
           "text": "Đăng xuất",
           "onPress": async () => {
-            await logout();
+            setIsLoggingOut(true);
+            try {
+              await logout();
+              await queryClient.clear();
+              router.replace('/login');
+            } finally {
+              setIsLoggingOut(false);
+            }
           },
           "style": "destructive"
         }
@@ -418,6 +428,8 @@ const SettingsScreen = () => {
               <PremiumButton
                 title="Đăng xuất khỏi YouthHub"
                 onPress={handleLogout}
+                loading={isLoggingOut}
+                disabled={isLoggingOut}
                 variant="danger"
                 icon={<LogOut size={20} color={COLORS.white} />}
                 style={styles.logoutBtn}

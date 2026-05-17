@@ -97,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await SecureStore.deleteItemAsync('userToken');
         } else {
           localStorage.removeItem('userToken');
+          localStorage.removeItem('accessToken');
         }
         setUserToken(null);
         setUser(null);
