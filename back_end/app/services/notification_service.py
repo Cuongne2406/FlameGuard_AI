@@ -21,6 +21,7 @@ async def send_realtime_notification(notification: Notification, push_token: str
     
     # 2. Send Mobile Push Notification (via Expo)
     if push_token:
+        # pyrefly: ignore [missing-import]
         import httpx
         url = "https://exp.host/--/api/v2/push/send"
         payload = {
