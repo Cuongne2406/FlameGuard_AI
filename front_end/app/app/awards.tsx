@@ -24,11 +24,13 @@ import {
   CheckCircle2,
   Clock,
   Briefcase,
+  Lock,
 } from 'lucide-react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, SHADOWS, SIZES } from '../src/constants/theme';
 import { useAuth } from '../src/context/AuthContext';
-import { createAward, getAwards } from '../src/api/client';
+import { createAward, getAwards, getCurrentAwardCampaignConfig } from '../src/api/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -43,6 +45,18 @@ const awardRequestSchema = z.object({
 
 type AwardRequestFormData = z.infer<typeof awardRequestSchema>;
 
+const defaultCampaign = {
+  award_name: 'Sinh vien 5 tot cap Truong',
+  title: 'Sinh vien 5 tot',
+  academic_year: '2025-2026',
+  description: 'He thong dang mo cong nhan ho so minh chung truc tuyen.',
+  status_tag: 'Dang dien ra',
+  submission_open: true,
+  button_label: 'Nop ho so minh chung ngay',
+  deadline: null as string | null,
+  remaining_days: null as number | null,
+};
+
 const statusConfig: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   PENDING: {
     label: 'DANG CHO',
@@ -55,6 +69,12 @@ const statusConfig: Record<string, { label: string; color: string; bg: string; i
     color: '#4CAF50',
     bg: '#E8F5E9',
     icon: <CheckCircle2 size={24} color="#4CAF50" />,
+  },
+  REJECTED: {
+    label: 'TU CHOI',
+    color: '#E53935',
+    bg: '#FFEBEE',
+    icon: <X size={24} color="#E53935" />,
   },
 };
 
@@ -73,11 +93,34 @@ export default function AwardsScreen() {
     },
   });
 
-  const { data: awards = [] } = useQuery({
-    queryKey: ['mobile-awards'],
-    queryFn: getAwards,
+  const {
+    data: campaignConfig = defaultCampaign,
+    refetch: refetchCampaignConfig,
+  } = useQuery({
+    queryKey: ['mobile-award-campaign-config'],
+    queryFn: getCurrentAwardCampaignConfig,
     enabled: !!user,
+    refetchInterval: 10000,
+    refetchOnMount: 'always',
   });
+
+  const {
+    data: awards = [],
+    refetch: refetchAwards,
+  } = useQuery({
+    queryKey: ['mobile-awards', campaignConfig.award_name],
+    queryFn: () => getAwards({ award_name: campaignConfig.award_name }),
+    enabled: !!user && !!campaignConfig.award_name,
+    refetchInterval: 10000,
+    refetchOnMount: 'always',
+  });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchCampaignConfig();
+      refetchAwards();
+    }, [refetchCampaignConfig, refetchAwards])
+  );
 
   const myAwards = useMemo(
     () => (Array.isArray(awards) ? awards.filter((item: any) => item.user_id === user?.id) : []),
@@ -97,24 +140,29 @@ export default function AwardsScreen() {
     mutationFn: (data: AwardRequestFormData) =>
       createAward({
         user_id: user?.id,
-        award_name: 'Sinh vien 5 tot cap Truong',
+        award_name: campaignConfig.award_name,
         description: data.description,
         evidence_url: data.link,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mobile-awards'] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['mobile-awards'] });
       setModalVisible(false);
       reset();
       Alert.alert('Thanh cong', 'Da gui ho so xet duyet thanh cong.');
     },
-    onError: () => {
-      Alert.alert('Loi', 'Khong the gui ho so luc nay.');
+    onError: (error: any) => {
+      const message = error?.response?.data?.detail || 'Khong the gui ho so luc nay.';
+      Alert.alert('Loi', message);
     },
   });
 
   const onSubmit = (data: AwardRequestFormData) => {
     if (!user?.id) {
       Alert.alert('Thong bao', 'Vui long dang nhap lai de nop ho so.');
+      return;
+    }
+    if (!campaignConfig.submission_open) {
+      Alert.alert('Thong bao', 'Dot nop ho so hien dang tam dong.');
       return;
     }
     submitMutation.mutate(data);
@@ -127,6 +175,10 @@ export default function AwardsScreen() {
     { id: 4, name: 'Tinh nguyen tot', icon: <Star size={32} color="#fff" />, colors: ['#FF9800', '#F57C00'] },
     { id: 5, name: 'Hoi nhap tot', icon: <Briefcase size={32} color="#fff" />, colors: ['#9C27B0', '#7B1FA2'] },
   ];
+
+  const deadlineText = campaignConfig.deadline
+    ? new Date(campaignConfig.deadline).toLocaleDateString('vi-VN')
+    : 'Chua cap nhat';
 
   return (
     <View style={styles.container}>
@@ -141,24 +193,33 @@ export default function AwardsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <LinearGradient colors={['#1e3c72', '#2a5298']} style={[styles.heroCard, SHADOWS.medium]}>
           <View style={styles.heroContent}>
-            <View>
+            <View style={styles.heroTextWrap}>
               <View style={styles.tagContainer}>
-                <Text style={styles.tagText}>NAM HOC 2025-2026</Text>
+                <Text style={styles.tagText}>{campaignConfig.academic_year || 'NAM HOC HIEN HANH'}</Text>
               </View>
-              <Text style={styles.heroTitle}>Sinh vien 5 tot</Text>
-              <Text style={styles.heroSub}>
-                Ban dang co {summary.approved}/5 moc da duoc duyet ho so tren he thong.
-              </Text>
+              <Text style={styles.heroTitle}>{campaignConfig.title}</Text>
+              <Text style={styles.heroSub}>{campaignConfig.description}</Text>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaText}>Han chot: {deadlineText}</Text>
+                {campaignConfig.remaining_days !== null ? (
+                  <Text style={styles.metaText}>Con lai: {campaignConfig.remaining_days} ngay</Text>
+                ) : null}
+              </View>
             </View>
             <Trophy size={64} color="#FFD700" opacity={0.9} />
           </View>
 
           <PremiumButton
-            title="Nop ho so minh chung ngay"
+            title={campaignConfig.submission_open ? campaignConfig.button_label : 'Dot nop dang dong'}
             onPress={() => setModalVisible(true)}
+            disabled={!campaignConfig.submission_open}
             variant="secondary"
-            icon={<CloudUpload size={18} color={COLORS.white} />}
-            style={{ height: 48 }}
+            icon={
+              campaignConfig.submission_open
+                ? <CloudUpload size={18} color={COLORS.white} />
+                : <Lock size={18} color={COLORS.white} />
+            }
+            style={{ height: 48, opacity: campaignConfig.submission_open ? 1 : 0.7 }}
           />
         </LinearGradient>
 
@@ -175,7 +236,7 @@ export default function AwardsScreen() {
                       <Text style={styles.historyTitle}>{item.award_name}</Text>
                       <Text style={styles.historyDate}>
                         {item.created_at
-                          ? new Date(item.created_at).toLocaleDateString('vi-VN')
+                          ? `Nop ngay ${new Date(item.created_at).toLocaleDateString('vi-VN')}`
                           : 'Chua co ngay nop'}
                       </Text>
                     </View>
@@ -188,7 +249,7 @@ export default function AwardsScreen() {
               );
             })
           ) : (
-            <Text style={styles.historyDate}>Ban chua co ho so xet duyet nao.</Text>
+            <Text style={styles.historyDate}>Ban chua co ho so xet duyet nao trong dot hien tai.</Text>
           )}
         </GlassCard>
 
@@ -215,6 +276,12 @@ export default function AwardsScreen() {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.currentCampaignCard}>
+              <Text style={styles.currentCampaignLabel}>Dot hien tai</Text>
+              <Text style={styles.currentCampaignTitle}>{campaignConfig.award_name}</Text>
+              <Text style={styles.currentCampaignSub}>Han chot: {deadlineText}</Text>
+            </View>
+
             <FormInput control={control} name="description" placeholder="Mo ta ngan gon cac hoat dong noi bat..." multiline numberOfLines={3} />
             <FormInput control={control} name="link" placeholder="Link Drive (https://drive.google.com/...)" />
 
@@ -222,6 +289,7 @@ export default function AwardsScreen() {
               title={submitMutation.isPending ? 'DANG GUI...' : 'GUI XET DUYET'}
               onPress={handleSubmit(onSubmit)}
               style={{ marginTop: 10 }}
+              disabled={!campaignConfig.submission_open}
             />
           </View>
         </View>
@@ -249,9 +317,11 @@ const styles = StyleSheet.create({
   heroContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 20,
+    gap: 16,
   },
+  heroTextWrap: { flex: 1, paddingRight: 6 },
   tagContainer: {
     backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 8,
@@ -261,8 +331,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tagText: { color: COLORS.white, fontSize: 10, fontWeight: 'bold' },
-  heroTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', marginBottom: 4 },
-  heroSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, maxWidth: '80%' },
+  heroTitle: { color: COLORS.white, fontSize: 24, fontWeight: '900', marginBottom: 6 },
+  heroSub: { color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: 20 },
+  metaRow: { marginTop: 10, gap: 4 },
+  metaText: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700' },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: COLORS.text, marginBottom: 15, marginTop: 10 },
   historyItem: { flexDirection: 'row', alignItems: 'center' },
   iconBox: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
@@ -291,7 +363,17 @@ const styles = StyleSheet.create({
     padding: SIZES.padding,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
-  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 },
   sheetTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text },
   closeBtn: { padding: 5, backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 15 },
+  currentCampaignCard: {
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F7F9FC',
+    marginBottom: 16,
+  },
+  currentCampaignLabel: { fontSize: 11, fontWeight: '800', color: COLORS.textSecondary, marginBottom: 6 },
+  currentCampaignTitle: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  currentCampaignSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
 });

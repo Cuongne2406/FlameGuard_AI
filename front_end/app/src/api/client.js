@@ -264,12 +264,32 @@ export const submitFeedback = async (eventId, rating, comment, userId) => {
     }
 };
 
-export const getAwards = async () => {
+export const getAwards = async (params = {}) => {
     try {
-        const response = await apiClient.get('/awards/');
+        const response = await apiClient.get('/awards/', { params });
         return response.data;
     } catch (error) {
         console.error('Get awards error:', error);
+        throw error;
+    }
+};
+
+export const getCurrentAwardCampaignConfig = async () => {
+    try {
+        const response = await apiClient.get('/awards/config/current');
+        return response.data;
+    } catch (error) {
+        console.error('Get award campaign config error:', error);
+        throw error;
+    }
+};
+
+export const getAwardCampaignHistory = async (limit = 20) => {
+    try {
+        const response = await apiClient.get('/awards/config/history', { params: { limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Get award campaign history error:', error);
         throw error;
     }
 };

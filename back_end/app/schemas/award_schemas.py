@@ -54,3 +54,44 @@ class AwardResponse(AwardBase):
 
     class Config:
         from_attributes = True
+
+class AwardCampaignConfigBase(BaseModel):
+    award_name: str
+    title: str
+    academic_year: Optional[str] = None
+    short_label: Optional[str] = None
+    description: Optional[str] = None
+    deadline: Optional[date] = None
+    status_tag: Optional[str] = "Dang dien ra"
+    submission_open: bool = True
+    button_label: Optional[str] = "Nop ho so minh chung ngay"
+
+class AwardCampaignConfigUpdate(BaseModel):
+    award_name: Optional[str] = None
+    title: Optional[str] = None
+    academic_year: Optional[str] = None
+    short_label: Optional[str] = None
+    description: Optional[str] = None
+    deadline: Optional[date] = None
+    status_tag: Optional[str] = None
+    submission_open: Optional[bool] = None
+    button_label: Optional[str] = None
+
+class AwardCampaignConfigResponse(AwardCampaignConfigBase):
+    remaining_days: Optional[int] = None
+
+
+class AwardCampaignHistoryItem(BaseModel):
+    award_name: str
+    title: str
+    academic_year: Optional[str] = None
+    short_label: Optional[str] = None
+    description: Optional[str] = None
+    deadline: Optional[date] = None
+    status_tag: Optional[str] = None
+    submission_open: bool = True
+    button_label: Optional[str] = None
+    remaining_days: Optional[int] = None
+    changed_at: Optional[str] = None
+    changed_by_user_id: Optional[str] = None
+    changed_by_name: Optional[str] = None
