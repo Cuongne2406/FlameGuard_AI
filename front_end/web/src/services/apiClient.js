@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.10.30:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.100.241:8000/api/v1';
 
 /**
  * Generic API client handling JSON parsing and Authentication tokens.

@@ -236,3 +236,23 @@ def get_award_stats(db: Session, timescale: str = "Tháng này"):
         "rankings": rankings,
         "warningClass": warning_class
     }
+
+def get_full_leaderboard(db: Session):
+    """
+    Lấy toàn bộ danh sách xếp hạng thi đua của các đơn vị (Chi đoàn/Lớp).
+    """
+    rankings_query = db.query(Organization).filter(Organization.type == OrgType.CLASS).order_by(desc(Organization.activity_points)).all()
+    
+    rankings = []
+    for i, org in enumerate(rankings_query):
+        rankings.append({
+            "rank": i + 1,
+            "id": str(org.id),
+            "class": org.name,
+            "university": org.name,
+            "dept": "Khoa CNTT",
+            "score": org.activity_points,
+            "trend": "Tăng hạng" if i % 2 == 0 else "Ổn định",
+            "trendColor": "text-emerald-500" if i % 2 == 0 else "text-slate-400"
+        })
+    return rankings

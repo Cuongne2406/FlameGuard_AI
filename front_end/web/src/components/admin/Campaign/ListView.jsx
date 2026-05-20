@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   ChevronDown,
@@ -15,6 +16,7 @@ import { campaignService } from "../../../services/campaignService";
 import { Edit2, Trash } from "lucide-react";
 
 const ListView = ({ triggerCreateModal, onModalClose }) => {
+  const navigate = useNavigate();
   // 1. State quản lý hiển thị Modal
   const [modalMode, setModalMode] = useState({ open: false, type: "create", data: null });
 
@@ -212,7 +214,7 @@ const ListView = ({ triggerCreateModal, onModalClose }) => {
         </div>
 
         <button
-          onClick={() => setModalMode({ open: true, type: "create", data: null })}
+          onClick={() => navigate("/admin/campaigns/create")}
           className="flex items-center gap-2 bg-[#0061D5] text-white px-5 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-200"
         >
           <Plus size={18} /> Thêm mới
@@ -237,7 +239,7 @@ const ListView = ({ triggerCreateModal, onModalClose }) => {
                 <React.Fragment key={activity.id}>
                   <ParentRow 
                     {...activity} 
-                    onEdit={() => setModalMode({ open: true, type: "edit", data: activity })}
+                    onEdit={() => navigate(`/admin/campaigns/edit/${activity.id}`)}
                     onDelete={() => handleDelete(activity.id)}
                   />
                   {activity.subActivities?.map((sub) => (

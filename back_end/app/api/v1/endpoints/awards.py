@@ -36,6 +36,10 @@ def read_award_stats(
 ):
     return award_service.get_award_stats(db=db, timescale=timescale)
 
+@router.get("/leaderboard")
+def read_award_leaderboard(db: Session = Depends(get_db)):
+    return award_service.get_full_leaderboard(db=db)
+
 @router.get("/{award_id}", response_model=AwardResponse)
 def read_award(
     award_id: UUID,

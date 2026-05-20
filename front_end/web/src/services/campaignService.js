@@ -27,6 +27,7 @@ export const campaignService = {
     }
   },
 
+  getCampaign: (id) => apiClient(`/campaigns/${id}`),
   createCampaign: (data) => apiClient('/campaigns', { method: 'POST', body: JSON.stringify(data) }),
   updateCampaign: (id, data) => apiClient(`/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteCampaign: (id) => apiClient(`/campaigns/${id}`, { method: 'DELETE' }),

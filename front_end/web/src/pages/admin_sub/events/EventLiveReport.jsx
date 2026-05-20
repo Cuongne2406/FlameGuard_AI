@@ -100,7 +100,7 @@ const EventLiveReport = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
                     <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <button onClick={() => navigate('/admin_sub/events')} className="hover:text-blue-600">Sự kiện Khoa</button>
+                        <button onClick={() => navigate(-1)} className="hover:text-blue-600">‹ Quay lại</button>
                         <span>/</span>
                         <span className="text-blue-600 underline">Giám sát Trực tiếp</span>
                     </nav>

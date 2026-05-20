@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from sqlalchemy import func
+from datetime import datetime, timedelta
 from app.api.deps import get_db
 from app.models.core import User, Organization
 from app.models.finance import Budget
@@ -30,8 +31,16 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
     if total_budget > 0:
         budget_left_percent = round(((total_budget - used_budget) / total_budget) * 100)
 
-    # 4. Active Events
-    active_events = db.query(Event).filter(Event.status == "LIVE").count()
+    # 4. Events this week
+    today = datetime.utcnow().date()
+    # Get Monday of current week
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    events_this_week = db.query(Event).filter(
+        Event.start_time >= datetime.combine(start_of_week, datetime.min.time()),
+        Event.start_time <= datetime.combine(end_of_week, datetime.max.time())
+    ).count()
+    week_label = f"{start_of_week.strftime('%d/%m')} - {end_of_week.strftime('%d/%m/%Y')}"
 
     # 5. Timeline Events (Real data from DB)
     upcoming_events = db.query(Event).order_by(Event.start_time.asc()).limit(3).all()
@@ -99,8 +108,9 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
             "totalBudget": total_budget,
             "usedBudget": used_budget,
             "budgetLeftPercent": budget_left_percent,
-            "activeEvents": active_events,
-            "memberGrowth": "+5.2% so với kỳ trước", # Vẫn giữ tạm cho UI đẹp
+            "eventsThisWeek": events_this_week,
+            "eventsThisWeekLabel": week_label,
+            "memberGrowth": "+5.2% so với kỳ trước",
         },
         "timelines": timelines_data,
         "risks": risks_data,

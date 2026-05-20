@@ -21,6 +21,15 @@ export const awardService = {
     }
   },
 
+  getLeaderboard: async () => {
+    try {
+      const res = await apiClient('/awards/leaderboard');
+      return Array.isArray(res) ? res : [];
+    } catch {
+      return [];
+    }
+  },
+
   updateAwardAssessment: async (studentId, data) => {
     return apiClient(`/awards/${studentId}`, { method: 'PUT', body: JSON.stringify(data) });
   },

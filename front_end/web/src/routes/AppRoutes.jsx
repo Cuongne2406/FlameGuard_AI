@@ -6,9 +6,16 @@ import Dashboard from "../pages/admin/Dashboard/Dashboard";
 import CampaignsPage from "../pages/admin/Campaigns/CampaignsPage";
 import CampaignListPage from "../pages/admin/Campaigns/CampaignListPage";
 import CampaignTimelinePage from "../pages/admin/Campaigns/CampaignTimelinePage";
+import UnitMembersPage from "../pages/admin/Organizations/UnitMembersPage";
 import CampaignCalendarPage from "../pages/admin/Campaigns/CampaignCalendarPage";
+import CampaignCreatePage from "../pages/admin/Campaigns/CampaignCreatePage";
+import CampaignEditPage from "../pages/admin/Campaigns/CampaignEditPage";
+import EventCreatePage from "../pages/admin/Campaigns/EventCreatePage";
+import CampaignDetailPage from "../pages/admin/Campaigns/CampaignDetailPage";
+import EventDetailPage from "../pages/admin/Campaigns/EventDetailPage";
 import Finance from "../pages/admin/Finance/Finance";
 import Awards from "../pages/admin/Awards/Awards";
+import AwardLeaderboardPage from "../pages/admin/Awards/AwardLeaderboardPage";
 import DigitalDocuments from "../pages/admin/DigitalDocuments/DigitalDocument";
 import AIIntelligence from "../pages/admin/AIIntelligence/AIIntelligeance";
 import Settings from "../pages/admin/Settings/Settings";
@@ -74,15 +81,25 @@ const AppRoutes = () => {
             element={<Navigate to="/admin/organizations" replace />}
           />
           <Route path="organizations" element={<OrganizationsPage />} />
-          <Route path="organizations/org-chart" element={<OrgChartPage />} />
           <Route path="organizations/units" element={<UnitsPage />} />
+          <Route path="organizations/units/:id/members" element={<UnitMembersPage />} />
           <Route path="organizations/members" element={<MembersPage />} />
           <Route path="campaigns" element={<CampaignsPage />} />
           <Route path="campaigns/list" element={<CampaignListPage />} />
           <Route path="campaigns/timeline" element={<CampaignTimelinePage />} />
           <Route path="campaigns/calendar" element={<CampaignCalendarPage />} />
+          <Route path="campaigns/create" element={<CampaignCreatePage />} />
+          <Route path="campaigns/edit/:id" element={<CampaignEditPage />} />
+          <Route path="campaigns/details/:id" element={<CampaignDetailPage />} />
+          <Route path="campaigns/calendar/create-event" element={<EventCreatePage />} />
+          <Route path="campaigns/calendar/details/:id" element={<EventDetailPage />} />
           <Route path="finance" element={<Finance />} />
-          <Route path="awards" element={<Awards />} />
+          
+          <Route path="awards">
+            <Route index element={<Awards />} />
+            <Route path="leaderboard" element={<AwardLeaderboardPage />} />
+          </Route>
+
           <Route path="documents" element={<DigitalDocuments />} />
           <Route path="ai" element={<AIIntelligence />} />
           <Route path="settings" element={<Settings />} />
@@ -90,6 +107,8 @@ const AppRoutes = () => {
           <Route path="activity-log" element={<UserActivityLog />} />
           <Route path="notifications" element={<NotificationManager />} />
         </Route>
+        {/* Standalone page without AdminLayout sidebar/header */}
+        <Route path="events/:id/live" element={<EventLiveReport />} />
       </Route>
 
       {/* admin_sub */}

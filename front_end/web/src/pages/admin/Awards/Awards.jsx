@@ -15,9 +15,11 @@ import {
   MessageSquare,
   X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { awardService } from "../../../services/awardService";
 
 const Awards = () => {
+  const navigate = useNavigate();
   // --- BỔ SUNG STATE ---
   const [rankings, setRankings] = useState([]);
   const [candidates, setCandidates] = useState([]);
@@ -134,7 +136,10 @@ const Awards = () => {
               <TrendingUp className="text-amber-500" size={18} /> Bảng vàng Thi
               đua Khối Khoa/Viện
             </h3>
-            <button className="text-blue-600 text-xs font-bold hover:underline">
+            <button 
+              onClick={() => navigate('/admin/awards/leaderboard')}
+              className="text-blue-600 text-xs font-bold hover:underline"
+            >
               Xem chi tiết
             </button>
           </div>

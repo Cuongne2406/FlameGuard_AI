@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { documentService } from "../../../services/documentService";
 import {
   FileText,
@@ -12,7 +12,9 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronRight,
-  Upload, // Thêm icon cho modal
+  Upload,
+  File,
+  Loader2,
 } from "lucide-react";
 
 const DigitalDocument = () => {
@@ -32,6 +34,14 @@ const DigitalDocument = () => {
     purpose: '',
     is_public: false
   });
+
+  // Upload state
+  const [uploadedFile, setUploadedFile] = useState(null); // File obj
+  const [uploadedFileUrl, setUploadedFileUrl] = useState(''); // Cloudinary URL sau upload
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [isDragOver, setIsDragOver] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchData = async () => {
     try {
@@ -62,17 +72,52 @@ const DigitalDocument = () => {
     return searchMatch && categoryMatch;
   });
 
+  const resetUpload = () => {
+    setUploadedFile(null);
+    setUploadedFileUrl('');
+    setUploadError('');
+    setIsUploading(false);
+    setIsDragOver(false);
+  };
+
+  const handleFileSelect = async (file) => {
+    if (!file) return;
+    const allowed = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowed.includes(file.type)) {
+      setUploadError('Chỉ chấp nhận file PDF hoặc DOCX.');
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('File quá lớn. Tối đa 20MB.');
+      return;
+    }
+    setUploadError('');
+    setUploadedFile(file);
+    setIsUploading(true);
+    try {
+      const result = await documentService.uploadFile(file);
+      setUploadedFileUrl(result.file_url);
+    } catch (err) {
+      setUploadError(err.message || 'Upload thất bại. Vui lòng thử lại.');
+      setUploadedFile(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSave = async (e) => {
      e.preventDefault();
      try {
+       const payload = { ...formData, ...(uploadedFileUrl ? { file_url: uploadedFileUrl } : {}) };
        if (modalMode === 'create') {
-         await documentService.createRequest(formData);
+         await documentService.createRequest(payload);
        } else {
-         await documentService.updateDocument(formData.id, formData);
-         if (selectedDoc?.id === formData.id) setSelectedDoc({ ...selectedDoc, ...formData });
+         await documentService.updateDocument(formData.id, payload);
+         if (selectedDoc?.id === formData.id) setSelectedDoc({ ...selectedDoc, ...payload });
        }
        setIsModalOpen(false);
        setFormData({ document_code: '', document_type: 'Kế hoạch', title: '', purpose: '', is_public: false });
+       resetUpload();
        fetchData();
      } catch (err) { 
        alert('Lỗi dữ liệu. Vui lòng thử lại.'); 
@@ -88,6 +133,10 @@ const DigitalDocument = () => {
       purpose: doc.purpose || '',
       is_public: doc.is_public || false
     });
+    // Pre-fill existing file_url if any
+    setUploadedFileUrl(doc.file_url || '');
+    setUploadedFile(null);
+    setUploadError('');
     setModalMode('edit');
     setIsModalOpen(true);
   };
@@ -130,6 +179,7 @@ const DigitalDocument = () => {
           <button
             onClick={() => {
               setFormData({ document_code: '', document_type: 'Kế hoạch', title: '', purpose: '', is_public: false });
+              resetUpload();
               setModalMode('create');
               setIsModalOpen(true);
             }}
@@ -334,10 +384,73 @@ const DigitalDocument = () => {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Tải lên văn bản (PDF/Docx)</label>
-                <div className="border-2 border-dashed border-slate-100 rounded-2xl p-6 flex flex-col items-center gap-2 hover:border-blue-200 hover:bg-blue-50/30 transition-all cursor-pointer text-center">
-                  <Upload className="text-slate-300" size={24} />
-                  <span className="text-[10px] font-bold text-slate-400">Kéo thả file hoặc nhấn để chọn</span>
-                </div>
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="hidden"
+                  onChange={e => handleFileSelect(e.target.files?.[0])}
+                />
+
+                {/* Uploaded file preview */}
+                {(uploadedFile || uploadedFileUrl) && !isUploading ? (
+                  <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                      <File size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-emerald-800 truncate">
+                        {uploadedFile?.name || 'File đã tải lên'}
+                      </p>
+                      <p className="text-[10px] text-emerald-600">
+                        {uploadedFile ? `${(uploadedFile.size / 1024).toFixed(1)} KB • Đã upload lên Cloud ✓` : 'File đang sử dụng'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetUpload}
+                      className="p-1 hover:bg-emerald-200 rounded-full text-emerald-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : isUploading ? (
+                  <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                    <Loader2 size={18} className="text-blue-500 animate-spin shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-blue-700">Đang tải lên Cloudinary...</p>
+                      <p className="text-[10px] text-blue-500">{uploadedFile?.name}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
+                    onDragLeave={() => setIsDragOver(false)}
+                    onDrop={e => { e.preventDefault(); setIsDragOver(false); handleFileSelect(e.dataTransfer.files?.[0]); }}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center gap-2 transition-all cursor-pointer text-center ${
+                      isDragOver
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50/30'
+                    }`}
+                  >
+                    <Upload className={isDragOver ? 'text-blue-500' : 'text-slate-300'} size={24} />
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {isDragOver ? 'Thả file vào đây' : 'Kéo thả hoặc nhấn để chọn'}
+                    </span>
+                    <span className="text-[9px] text-slate-300">PDF, DOCX • Tối đa 20MB</span>
+                  </div>
+                )}
+
+                {/* Error message */}
+                {uploadError && (
+                  <div className="flex items-center gap-1.5 text-red-600 text-[10px] font-bold mt-1">
+                    <AlertCircle size={12} />
+                    {uploadError}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3 px-2 mt-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">

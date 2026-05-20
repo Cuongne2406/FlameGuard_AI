@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Edit3,
@@ -19,6 +20,7 @@ import { organizationService } from "../../../services/organizationService";
 import { userService } from "../../../services/userService";
 
 const UnitList = ({ triggerCreateModal, onModalClose }) => {
+  const navigate = useNavigate();
   // --- STATE QUẢN LÝ ---
   const [modalStep, setModalStep] = useState("none"); // none, create, assign, success, edit, delete
   const [newUnitName, setNewUnitName] = useState("");
@@ -203,19 +205,10 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
     }
   };
 
-  const handleViewMembers = async (unit) => {
-    setSelectedUnit(unit);
-    setModalStep("members");
-    setLoadingMembers(true);
-    try {
-        const members = await organizationService.getOrganizationMembers(unit.id);
-        setUnitMembers(members);
-    } catch (error) {
-        console.error("Lỗi tải danh sách", error);
-        setUnitMembers([]);
-    } finally {
-        setLoadingMembers(false);
-    }
+  const handleViewMembers = (unit) => {
+    navigate(`/admin/organizations/units/${unit.id}/members`, {
+      state: { unitName: unit.name }
+    });
   };
 
   const handleEdit = async () => {

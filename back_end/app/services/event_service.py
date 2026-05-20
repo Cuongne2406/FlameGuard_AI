@@ -34,6 +34,16 @@ def create_campaign(db: Session, campaign_in: CampaignCreate):
     db.refresh(db_campaign)
     return db_campaign
 
+def get_campaign(db: Session, campaign_id: UUID):
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if campaign.organization:
+        campaign.organization_name = campaign.organization.name
+    if campaign.academic_term:
+        campaign.academic_term_name = f"{campaign.academic_term.semester_name} ({campaign.academic_term.year_name})"
+    return campaign
+
 def get_campaigns(db: Session, skip: int = 0, limit: int = 100):
     campaigns = db.query(Campaign).offset(skip).limit(limit).all()
     # Gán tên cho response (Pydantic will pick them up)
@@ -70,13 +80,30 @@ def delete_campaign(db: Session, campaign_id: UUID):
 # Event Services
 # ==========================================
 def create_event(db: Session, event_in: EventCreate):
+    # Auto-link logic: if campaign_id is not specified, try to find an active campaign covering start_time
+    campaign_id = event_in.campaign_id
+    if not campaign_id and event_in.start_time:
+        event_date = event_in.start_time.date()
+        query = db.query(Campaign).filter(
+            Campaign.start_date <= event_date,
+            Campaign.end_date >= event_date
+        )
+        if event_in.org_id:
+            query = query.filter(Campaign.organization_id == event_in.org_id)
+        matching_campaign = query.first()
+        if matching_campaign:
+            campaign_id = matching_campaign.id
+
     # Optional logic: verify if campaign_id exists
-    if event_in.campaign_id:
-        campaign = db.query(Campaign).filter(Campaign.id == event_in.campaign_id).first()
+    if campaign_id:
+        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
         if not campaign:
              raise HTTPException(status_code=404, detail="Campaign not found")
 
-    db_event = Event(**event_in.dict())
+    event_data = event_in.dict()
+    event_data["campaign_id"] = campaign_id
+
+    db_event = Event(**event_data)
     db.add(db_event)
     db.commit()
     db.refresh(db_event)

@@ -1,41 +1,64 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ChevronLeft,
   ChevronRight,
   Plus,
   Flag,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import { campaignService } from "../../../services/campaignService";
+import { eventService } from "../../../services/eventService";
 
 const CalendarView = ({ onSelectCampaign }) => {
+  const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    const fetchCampaigns = async () => {
+    const fetchCalendarData = async () => {
       try {
-        const data = await campaignService.getCampaigns();
-        setCampaigns(data);
+        const [campsData, eventsData] = await Promise.all([
+          campaignService.getCampaigns(),
+          eventService.getEvents()
+        ]);
+        setCampaigns(campsData);
         
-        const mappedEvents = data.map(camp => {
+        const mappedCamps = campsData.map(camp => {
            const startDate = camp.start_date ? new Date(camp.start_date) : null;
            return {
+              id: camp.id,
               day: startDate ? startDate.getDate() : null,
               month: startDate ? startDate.getMonth() : null,
               year: startDate ? startDate.getFullYear() : null,
               title: camp.name,
+              isCampaign: true,
               color: camp.unit.includes("CNTT") ? "bg-orange-500" : 
                      camp.unit.includes("Xây dựng") ? "bg-emerald-500" : "bg-blue-600"
            };
         }).filter(e => e.day !== null);
-        setEvents(mappedEvents);
+
+        const mappedEvts = (eventsData || []).map(evt => {
+           const startTime = evt.start_time ? new Date(evt.start_time) : null;
+           return {
+              id: evt.id,
+              day: startTime ? startTime.getDate() : null,
+              month: startTime ? startTime.getMonth() : null,
+              year: startTime ? startTime.getFullYear() : null,
+              title: evt.name,
+              isCampaign: false,
+              color: "bg-purple-600"
+           };
+        }).filter(e => e.day !== null);
+
+        setEvents([...mappedCamps, ...mappedEvts]);
       } catch (error) {
-        console.error("Failed to fetch campaigns:", error);
+        console.error("Failed to fetch calendar data:", error);
       }
     };
-    fetchCampaigns();
+    fetchCalendarData();
   }, []);
 
   const monthNames = ["Tháng 01", "Tháng 02", "Tháng 03", "Tháng 04", "Tháng 05", "Tháng 06", "Tháng 07", "Tháng 08", "Tháng 09", "Tháng 10", "Tháng 11", "Tháng 12"];
@@ -82,7 +105,10 @@ const CalendarView = ({ onSelectCampaign }) => {
             </div>
           </div>
           <h3 className="text-lg font-black text-slate-800 tracking-tight">{currentMonthName}, {currentYear}</h3>
-          <button className="flex items-center gap-2 bg-[#0061D5] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-blue-100">
+          <button 
+            onClick={() => navigate("/admin/campaigns/calendar/create-event")}
+            className="flex items-center gap-2 bg-[#0061D5] text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-blue-100 active:scale-95 transition-all"
+          >
             <Plus size={16} /> Tạo sự kiện
           </button>
         </div>
@@ -106,7 +132,19 @@ const CalendarView = ({ onSelectCampaign }) => {
                           <span className="text-xs font-bold text-slate-400">{dayNum}</span>
                           <div className="mt-1 space-y-1">
                             {events.filter(e => e.day === dayNum && e.month === currentDate.getMonth() && e.year === currentYear).map((evt, i) => (
-                               <EventTag key={i} color={evt.color} title={evt.title} icon={<Flag size={10} fill="white" />} />
+                               <EventTag 
+                                 key={i} 
+                                 color={evt.color} 
+                                 title={evt.title} 
+                                 icon={evt.isCampaign ? <Flag size={10} fill="white" /> : <Calendar size={10} />} 
+                                 onClick={() => {
+                                    if (evt.isCampaign) {
+                                      navigate(`/admin/campaigns/details/${evt.id}`);
+                                    } else {
+                                      navigate(`/admin/campaigns/calendar/details/${evt.id}`);
+                                    }
+                                  }}
+                               />
                             ))}
                           </div>
                         </>
@@ -127,9 +165,10 @@ const CalendarView = ({ onSelectCampaign }) => {
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 border-b pb-2">CHỦ GIẢI & PHÂN LOẠI</h4>
           <div className="space-y-3">
-            <LegendItem color="bg-blue-600" label="Cấp Trường" />
-            <LegendItem color="bg-emerald-500" label="Khoa Xây dựng" />
-            <LegendItem color="bg-orange-500" label="Khoa CNTT" />
+            <LegendItem color="bg-blue-600" label="Cấp Trường (Chiến dịch)" />
+            <LegendItem color="bg-emerald-500" label="Khoa Xây dựng (Chiến dịch)" />
+            <LegendItem color="bg-orange-500" label="Khoa CNTT (Chiến dịch)" />
+            <LegendItem color="bg-purple-600" label="Sự kiện Chi tiết (Events)" />
           </div>
         </div>
 
@@ -149,7 +188,14 @@ const CalendarView = ({ onSelectCampaign }) => {
                <div className="text-[11px] text-slate-400 italic">Chưa có sự kiện nào.</div>
             ) : (
                 campaigns.slice(0, 3).map((camp) => (
-                   <UpcomingEvent key={camp.id} date={camp.start_date ? new Date(camp.start_date).getDate() : "?"} month={camp.start_date ? new Date(camp.start_date).toLocaleDateString("vi-VN", { month: "short" }).toUpperCase() : "?"} title={camp.name} time={camp.time} />
+                   <UpcomingEvent 
+                      key={camp.id} 
+                      date={camp.start_date ? new Date(camp.start_date).getDate() : "?"} 
+                      month={camp.start_date ? new Date(camp.start_date).toLocaleDateString("vi-VN", { month: "short" }).toUpperCase() : "?"} 
+                      title={camp.name} 
+                      time={camp.time} 
+                      onClick={() => navigate(`/admin/campaigns/details/${camp.id}`)}
+                    />
                 ))
             )}
           </div>
@@ -159,9 +205,12 @@ const CalendarView = ({ onSelectCampaign }) => {
   );
 };
 
-const EventTag = ({ color, title, icon }) => (
-  <div className={`${color} text-white p-1 rounded flex items-center gap-1 text-[9px] font-bold shadow-sm truncate`}>
-    {icon} <span>{title}</span>
+const EventTag = ({ color, title, icon, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`${color} text-white p-1 rounded flex items-center gap-1 text-[9px] font-bold shadow-sm truncate cursor-pointer hover:scale-[1.02] active:scale-95 transition-all`}
+  >
+    {icon} <span className="truncate">{title}</span>
   </div>
 );
 
@@ -172,8 +221,8 @@ const LegendItem = ({ color, label }) => (
   </div>
 );
 
-const UpcomingEvent = ({ date, month, title, time }) => (
-  <div className="flex items-start gap-4 group cursor-pointer">
+const UpcomingEvent = ({ date, month, title, time, onClick }) => (
+  <div onClick={onClick} className="flex items-start gap-4 group cursor-pointer">
     <div className="text-center border-r border-slate-100 pr-4 min-w-[50px]">
       <div className="text-[9px] font-bold text-slate-400 uppercase">{month}</div>
       <div className="text-xl font-black text-slate-800">{date}</div>

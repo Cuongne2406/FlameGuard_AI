@@ -1,13 +1,64 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
+import cloudinary
+import cloudinary.uploader
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.documents import DigitalDocument
 from app.schemas.document_schemas import DigitalDocumentCreate, DigitalDocumentUpdate, DigitalDocumentResponse
+from app.core.config import settings
+
+# Init Cloudinary
+cloudinary.config(
+    cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+    api_key=settings.CLOUDINARY_API_KEY,
+    api_secret=settings.CLOUDINARY_API_SECRET,
+    secure=True
+)
 
 router = APIRouter()
+
+@router.post("/upload-file")
+async def upload_document_file(
+    file: UploadFile = File(...),
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Upload a document file (PDF, DOCX) to Cloudinary and return the secure URL.
+    """
+    ALLOWED_TYPES = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ]
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF hoặc DOCX")
+
+    MAX_SIZE = 20 * 1024 * 1024  # 20 MB
+    contents = await file.read()
+    if len(contents) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File quá lớn. Tối đa 20MB")
+
+    try:
+        result = cloudinary.uploader.upload(
+            contents,
+            resource_type="raw",
+            folder="dyus_documents",
+            public_id=f"{file.filename.rsplit('.', 1)[0]}_{current_user.id}",
+            use_filename=True,
+            unique_filename=True,
+            overwrite=False,
+        )
+        return {
+            "file_url": result["secure_url"],
+            "public_id": result["public_id"],
+            "format": result.get("format", ""),
+            "bytes": result.get("bytes", 0)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload thất bại: {str(e)}")
 
 @router.post("/", response_model=DigitalDocumentResponse)
 def create_document(

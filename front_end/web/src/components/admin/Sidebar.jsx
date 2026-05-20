@@ -43,11 +43,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       path: "/admin/organizations",
       children: [
         {
-          label: "Sơ đồ cây",
-          path: "/admin/organizations/org-chart",
-          icon: <GitBranch size={16} />,
-        },
-        {
           label: "Danh sách đơn vị",
           path: "/admin/organizations/units",
           icon: <Building2 size={16} />,
