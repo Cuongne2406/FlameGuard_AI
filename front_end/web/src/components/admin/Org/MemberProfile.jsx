@@ -17,12 +17,83 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { userService } from "../../../services/userService";
+import { organizationService } from "../../../services/organizationService";
 
 // --- 1. MODAL THÊM MỚI / CHỈNH SỬA ---
 const MemberModal = ({ isOpen, onClose, member, onSave }) => {
-  const [formData, setFormData] = useState(
-    member || { name: "", role: "UVBCH", unit: "Khoa CNTT", status: "Active" },
-  );
+  const [formData, setFormData] = useState({
+    name: "",
+    role: "UVBCH",
+    unit: "",
+    unitId: "",
+    email: "",
+    phone_number: "",
+    userId: null,
+    status: "Active",
+  });
+
+  const [searchUser, setSearchUser] = useState("");
+  const [searchUnit, setSearchUnit] = useState("");
+  const [allUsers, setAllUsers] = useState([]);
+  const [allOrgs, setAllOrgs] = useState([]);
+  const [showUserSuggestions, setShowUserSuggestions] = useState(false);
+  const [showUnitSuggestions, setShowUnitSuggestions] = useState(false);
+
+  useEffect(() => {
+    if (member) {
+      setFormData({
+        ...member,
+        unit: member.unit || "",
+        unitId: "", // Sẽ cần fetch hoặc set nếu có
+      });
+      setSearchUser(member.name || "");
+      setSearchUnit(member.unit || "");
+    } else {
+      setFormData({ 
+        name: "", 
+        role: "UVBCH", 
+        unit: "", 
+        unitId: "", 
+        email: "", 
+        phone_number: "", 
+        userId: null, 
+        status: "Active" 
+      });
+      setSearchUser("");
+      setSearchUnit("");
+    }
+  }, [member, isOpen]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [users, orgs] = await Promise.all([
+          userService.getAllUsers(),
+          organizationService.getOrganizations()
+        ]);
+        setAllUsers(users);
+        setAllOrgs(orgs);
+      } catch (err) {
+        console.error("Failed to fetch modal data:", err);
+      }
+    };
+    if (isOpen) fetchData();
+  }, [isOpen]);
+
+  const filteredUsers = useMemo(() => {
+    if (!searchUser || formData.userId || member) return [];
+    return allUsers.filter(u => 
+      u.full_name?.toLowerCase().includes(searchUser.toLowerCase()) || 
+      u.student_id?.toLowerCase().includes(searchUser.toLowerCase())
+    ).slice(0, 5);
+  }, [allUsers, searchUser, formData.userId, member]);
+
+  const filteredOrgs = useMemo(() => {
+    if (!searchUnit || formData.unitId) return [];
+    return allOrgs.filter(o => 
+      o.name?.toLowerCase().includes(searchUnit.toLowerCase())
+    ).slice(0, 5);
+  }, [allOrgs, searchUnit, formData.unitId]);
 
   if (!isOpen) return null;
 
@@ -33,68 +104,137 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
           <h3 className="text-xl font-black text-slate-800">
             {member ? "Chỉnh sửa Cán bộ" : "Thêm Cán bộ mới"}
           </h3>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white rounded-full transition-colors"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors">
             <X size={20} className="text-slate-400" />
           </button>
         </div>
         <div className="p-8 space-y-4">
-          <div>
-            <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-              Họ và tên
-            </label>
-            <input
-              className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              placeholder="Nhập tên cán bộ..."
-            />
+          <div className="relative">
+            <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Họ và tên / MSSV</label>
+            <div className="relative">
+              <input
+                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.userId ? 'border-blue-500 bg-blue-50/30' : 'border-slate-100'} rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold`}
+                value={searchUser}
+                onChange={(e) => {
+                  setSearchUser(e.target.value);
+                  setFormData(prev => ({ ...prev, name: e.target.value, userId: null }));
+                  setShowUserSuggestions(true);
+                }}
+                placeholder="Tìm MSSV hoặc nhập tên mới..."
+              />
+              {formData.userId && (
+                <button 
+                  onClick={() => { setFormData(p => ({...p, userId: null})); setSearchUser(""); }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            
+            {showUserSuggestions && filteredUsers.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                {filteredUsers.map(u => (
+                  <button
+                    key={u.id}
+                    className="w-full px-5 py-3 text-left hover:bg-blue-50 border-b border-slate-50 last:border-0 flex justify-between items-center"
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, name: u.full_name, userId: u.id, email: u.email }));
+                      setSearchUser(u.full_name);
+                      setShowUserSuggestions(false);
+                    }}
+                  >
+                    <div>
+                      <p className="font-bold text-slate-800">{u.full_name}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">{u.student_id || "User"}</p>
+                    </div>
+                    <Plus size={14} className="text-blue-500" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-                Chức vụ
-              </label>
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Email</label>
+              <input
+                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Số điện thoại</label>
+              <input
+                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
+                value={formData.phone_number}
+                onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+                placeholder="09xxx..."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Chức vụ</label>
               <select
                 className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
                 value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
                 <option>Bí thư LCĐ</option>
                 <option>Phó Bí thư</option>
                 <option>UVBCH</option>
+                <option>Chủ nhiệm CLB</option>
               </select>
             </div>
-            <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">
-                Đơn vị
-              </label>
+            <div className="relative">
+              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Đơn vị</label>
               <input
-                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
-                value={formData.unit}
-                onChange={(e) =>
-                  setFormData({ ...formData, unit: e.target.value })
-                }
+                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.unitId ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100'} rounded-2xl outline-none font-bold transition-all`}
+                value={searchUnit}
+                onChange={(e) => {
+                  setSearchUnit(e.target.value);
+                  setFormData(prev => ({ ...prev, unit: e.target.value, unitId: "" }));
+                  setShowUnitSuggestions(true);
+                }}
+                placeholder="Tìm tên khoa/lớp..."
               />
+              {showUnitSuggestions && filteredOrgs.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                  {filteredOrgs.map(o => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      className="w-full px-5 py-3 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, unit: o.name, unitId: o.id }));
+                        setSearchUnit(o.name);
+                        setShowUnitSuggestions(false);
+                      }}
+                    >
+                      <p className="font-bold text-slate-800">{o.name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {formData.unit && !formData.unitId && (
+                <p className="text-[10px] text-rose-500 font-bold mt-1.5 ml-2 animate-pulse flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">info</span>
+                  Vui lòng nhấp chọn từ danh sách gợi ý phía trên
+                </p>
+              )}
             </div>
           </div>
         </div>
         <div className="px-8 py-6 bg-slate-50 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700"
-          >
-            Hủy bỏ
-          </button>
+          <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Hủy bỏ</button>
           <button
             onClick={() => onSave(formData)}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200"
+            disabled={!formData.name || !formData.unitId}
+            className={`flex-1 py-3 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200 transition-all ${(!formData.name || !formData.unitId) ? 'bg-slate-300 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'}`}
           >
             Lưu thay đổi
           </button>
@@ -145,7 +285,7 @@ const DeleteModal = ({ isOpen, onClose, member, onDelete }) => {
 };
 
 // --- 3. COMPONENT CHI TIẾT HỒ SƠ ---
-const MemberDetail = ({ member, onBack }) => {
+const MemberDetail = ({ member, onBack, onEdit, onExport }) => {
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -169,10 +309,16 @@ const MemberDetail = ({ member, onBack }) => {
           </div>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
+          <button 
+            onClick={() => onEdit(member)}
+            className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+          >
             <Edit3 size={18} /> Chỉnh sửa
           </button>
-          <button className="flex items-center gap-2 px-5 py-3 bg-blue-600 rounded-2xl text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all">
+          <button 
+            onClick={() => onExport(member)}
+            className="flex items-center gap-2 px-5 py-3 bg-blue-600 rounded-2xl text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+          >
             <FileText size={18} /> Xuất dữ liệu
           </button>
         </div>
@@ -185,7 +331,7 @@ const MemberDetail = ({ member, onBack }) => {
             <div className="relative">
               <div className="relative w-32 h-32 mx-auto mb-6 p-1 border-[4px] border-blue-600 rounded-3xl rotate-3">
                 <img
-                  src={`https://ui-avatars.com/api/?name=${member.name}&background=0284c7&color=fff&size=128`}
+                  src={member.avatar_url || `https://ui-avatars.com/api/?name=${member.name}&background=0284c7&color=fff&size=128`}
                   className="w-full h-full rounded-2xl object-cover -rotate-3"
                   alt="Avatar"
                 />
@@ -200,14 +346,9 @@ const MemberDetail = ({ member, onBack }) => {
               </div>
               <div className="space-y-4 mt-8 pt-8 border-t border-slate-100">
                 <ContactInfo
-                  icon={<Mail size={16} />}
-                  label="Email"
-                  value="phuchau.le@gmail.com"
-                />
-                <ContactInfo
                   icon={<Phone size={16} />}
                   label="Số điện thoại"
-                  value="0905 ••• •••"
+                  value={member.phone_number || "Chưa cập nhật"}
                 />
                 <ContactInfo
                   icon={<MapPin size={16} />}
@@ -217,7 +358,7 @@ const MemberDetail = ({ member, onBack }) => {
                 <ContactInfo
                   icon={<Calendar size={16} />}
                   label="Ngày vào đoàn"
-                  value={member.joinDate || "15/09/2021"}
+                  value={member.joinDate || "N/A"}
                 />
               </div>
             </div>
@@ -227,19 +368,19 @@ const MemberDetail = ({ member, onBack }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               label="Hoạt động"
-              value="42"
+              value={member.activity_count || "0"}
               sub="Tham gia"
               color="text-blue-600"
             />
             <StatCard
               label="Điểm rèn luyện"
-              value="95/100"
-              sub="Xuất sắc"
+              value={`${member.training_score || "0"}/100`}
+              sub={member.training_score >= 90 ? "Xuất sắc" : (member.training_score >= 70 ? "Khá" : "Trung bình")}
               color="text-emerald-600"
             />
             <StatCard
               label="Khen thưởng"
-              value="08"
+              value={member.award_count || "0"}
               sub="Cấp khoa"
               color="text-purple-600"
             />
@@ -250,16 +391,12 @@ const MemberDetail = ({ member, onBack }) => {
             </h4>
             <div className="space-y-6">
               <TimelineItem
-                year="2024 - Nay"
+                year={`${new Date(member.joinDate).getFullYear() || '2024'} - Nay`}
                 title={member.role}
                 desc="Đang đương nhiệm"
                 active
               />
-              <TimelineItem
-                year="2022 - 2024"
-                title="Ủy viên BCH"
-                desc="Phụ trách phong trào"
-              />
+              {/* Có thể bổ sung lịch sử từ DB nếu có API hỗ trợ trong tương lai */}
             </div>
           </div>
         </div>
@@ -278,15 +415,23 @@ const MemberProfiles = () => {
       setLoading(true);
       try {
         const data = await userService.getAllUsers();
-        const formattedData = data.map(u => ({
+        // Lọc: Chỉ lấy những người thực sự đã được bổ nhiệm vào đơn vị
+        const officers = data.filter(u => u.organizations && u.organizations.length > 0);
+        
+        const formattedData = officers.map(u => ({
           id: u.student_id || `CB-${u.id.substring(0,6)}`,
           userId: u.id,
           name: u.full_name || u.email,
-          role: u.role || "Thành viên",
+          role: u.role_title || "Cán bộ",
           email: u.email,
-          unit: u.organizations?.[0]?.name || "Chưa xếp lớp",
-          status: u.is_active ? "Active" : "Inactive",
-          joinDate: u.created_at ? new Date(u.created_at).toLocaleDateString() : "15/09/2021",
+          phone_number: u.phone_number,
+          avatar_url: u.avatar_url,
+          unit: u.organizations?.[0]?.organization_name || "Đơn vị",
+          status: u.status === "ACTIVE" ? "Active" : "Inactive",
+          joinDate: u.organizations?.[0]?.joined_date ? new Date(u.organizations[0].joined_date).toLocaleDateString() : (u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A"),
+          activity_count: u.activity_count,
+          award_count: u.award_count,
+          training_score: u.training_score
         }));
         setMembers(formattedData);
       } catch (err) {
@@ -319,27 +464,72 @@ const MemberProfiles = () => {
   // Handler: Lưu (Thêm/Sửa)
   const handleSaveMember = async (data) => {
     try {
+      let finalUserId = data.userId;
+      
       if (modalMode.type === "edit") {
-        if (userService.updateUser && data.userId) {
-           await userService.updateUser(data.userId, { full_name: data.name, role: data.role });
+        if (data.userId) {
+           await userService.updateUser(data.userId, { 
+             full_name: data.name,
+             email: data.email,
+             phone_number: data.phone_number
+           });
         }
-        setMembers(members.map((m) => (m.id === data.id ? data : m)));
+        // Nếu chọn đơn vị mới, thực hiện gán
+        if (data.unitId) {
+           await organizationService.assignMember({
+             user_id: data.userId,
+             organization_id: data.unitId,
+             title: data.role,
+             is_primary: true
+           });
+        }
       } else {
         // Thêm mới
-        if (userService.createUser) {
-           const res = await userService.createUser({ full_name: data.name, role: data.role, email: `user${Date.now()}@dyus.edu.vn`, password: "password" });
-           data.userId = res.id;
+        if (!finalUserId) {
+          // Tạo user mới (cho GV/Thầy cô)
+          const res = await userService.createUser({ 
+            full_name: data.name, 
+            email: `cb.${Date.now()}@lhu.edu.vn`, // Tự động tạo email hệ thống
+            password: "password123",
+            student_id: null
+          });
+          finalUserId = res.id;
         }
-        const newMember = {
-          ...data,
-          id: `CB-${Math.floor(100000 + Math.random() * 900000)}`,
-          status: "Active",
-        };
-        setMembers([newMember, ...members]);
+        
+        // Gán vào tổ chức
+        if (data.unitId) {
+          await organizationService.assignMember({
+            user_id: finalUserId,
+            organization_id: data.unitId,
+            title: data.role,
+            is_primary: true
+          });
+        }
       }
+      
+      // Reload danh sách để cập nhật dữ liệu mới nhất từ BE
+      const updatedUsers = await userService.getAllUsers();
+      const officers = updatedUsers.filter(u => u.organizations && u.organizations.length > 0);
+      const formattedData = officers.map(u => ({
+        id: u.student_id || `CB-${u.id.substring(0,6)}`,
+        userId: u.id,
+        name: u.full_name || u.email,
+        role: u.role_title || "Cán bộ",
+        email: u.email,
+        phone_number: u.phone_number,
+        unit: u.organizations?.[0]?.organization_name || "Đơn vị",
+        status: u.status === "ACTIVE" ? "Active" : "Inactive",
+        joinDate: u.organizations?.[0]?.joined_date ? new Date(u.organizations[0].joined_date).toLocaleDateString() : (u.created_at ? new Date(u.created_at).toLocaleDateString() : "N/A"),
+        activity_count: u.activity_count,
+        award_count: u.award_count,
+        training_score: u.training_score
+      }));
+      setMembers(formattedData);
+      
       setModalMode({ open: false, type: "add", data: null });
     } catch (err) {
       console.error("Failed to save member:", err);
+      alert("Lỗi khi lưu cán bộ. Vui lòng kiểm tra lại dữ liệu.");
     }
   };
 
@@ -349,143 +539,174 @@ const MemberProfiles = () => {
     setDeleteModal({ open: false, data: null });
   };
 
-  if (selectedMember)
-    return (
-      <MemberDetail
-        member={selectedMember}
-        onBack={() => setSelectedMember(null)}
-      />
-    );
+  // Handler: Xuất dữ liệu
+  const handleExport = (member) => {
+    const headers = ["Mã Cán bộ", "Họ tên", "Chức vụ", "Đơn vị", "Email", "SĐT", "Ngày vào đoàn", "Số hoạt động", "Khen thưởng"];
+    const row = [
+      member.id,
+      member.name,
+      member.role,
+      member.unit,
+      member.email,
+      member.phone_number,
+      member.joinDate,
+      member.activity_count,
+      member.award_count
+    ];
+    
+    const csvContent = "\ufeff" 
+      + headers.join(",") + "\n"
+      + row.join(",");
 
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Ho_so_${member.id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   return (
     <div className="space-y-6 animate-in fade-in duration-500 max-w-[1400px] mx-auto p-4">
-      {/* Header & Search */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-            Danh sách Cán bộ
-          </h1>
-          <p className="text-slate-400 text-sm font-medium">
-            Tổng cộng {filteredMembers.length} nhân sự
-          </p>
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Tìm tên, mã cán bộ..."
-              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm font-medium"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          <button
-            onClick={() =>
-              setModalMode({ open: true, type: "add", data: null })
-            }
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:scale-105 transition-all"
-          >
-            <Plus size={18} /> Thêm mới
-          </button>
-        </div>
-      </div>
-
-      {/* Bảng dữ liệu */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Thông tin Cán bộ
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Chức vụ
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Đơn vị
-              </th>
-              <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                Trạng thái
-              </th>
-              <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filteredMembers.map((m) => (
-              <tr
-                key={m.id}
-                onClick={() => setSelectedMember(m)}
-                className="group hover:bg-blue-50/40 transition-all cursor-pointer"
+      {/* Nội dung chính: Danh sách hoặc Chi tiết */}
+      {selectedMember ? (
+        <MemberDetail
+          member={selectedMember}
+          onBack={() => setSelectedMember(null)}
+          onEdit={(m) => setModalMode({ open: true, type: "edit", data: m })}
+          onExport={handleExport}
+        />
+      ) : (
+        <>
+          {/* Header & Search */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">
+                Danh sách Cán bộ
+              </h1>
+              <p className="text-slate-400 text-sm font-medium">
+                Tổng cộng {filteredMembers.length} nhân sự
+              </p>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <div className="relative flex-1 md:w-80">
+                <Search
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  placeholder="Tìm tên, mã cán bộ..."
+                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm font-medium"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={() =>
+                  setModalMode({ open: true, type: "add", data: null })
+                }
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:scale-105 transition-all"
               >
-                <td className="px-8 py-5">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-600 font-black shadow-sm border border-white">
-                      {m.name.split(" ").pop().charAt(0)}
-                    </div>
-                    <div>
-                      <p className="text-[15px] font-black text-slate-800">
-                        {m.name}
-                      </p>
-                      <p className="text-[11px] text-slate-400 font-bold uppercase">
-                        {m.id}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-5">
-                  <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase border border-blue-100">
-                    {m.role}
-                  </span>
-                </td>
-                <td className="px-6 py-5 text-sm font-bold text-slate-600">
-                  {m.unit}
-                </td>
-                <td className="px-6 py-5 text-center">
-                  <div
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${m.status === "Active" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}
-                  >
-                    {m.status === "Active" ? "Đang hoạt động" : "Tạm nghỉ"}
-                  </div>
-                </td>
-                <td
-                  className="px-8 py-5 text-right"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() =>
-                        setModalMode({ open: true, type: "edit", data: m })
-                      }
-                      className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteModal({ open: true, data: m })}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {filteredMembers.length === 0 && (
-          <div className="p-20 text-center text-slate-400 font-bold">
-            Không tìm thấy cán bộ nào...
+                <Plus size={18} /> Thêm mới
+              </button>
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Modals */}
+          {/* Bảng dữ liệu */}
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Thông tin Cán bộ
+                  </th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Chức vụ
+                  </th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    Đơn vị
+                  </th>
+                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
+                    Trạng thái
+                  </th>
+                  <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredMembers.map((m) => (
+                  <tr
+                    key={m.id}
+                    onClick={() => setSelectedMember(m)}
+                    className="group hover:bg-blue-50/40 transition-all cursor-pointer"
+                  >
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-600 font-black shadow-sm border border-white">
+                          {m.name.split(" ").pop().charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-[15px] font-black text-slate-800">
+                            {m.name}
+                          </p>
+                          <p className="text-[11px] text-slate-400 font-bold uppercase">
+                            {m.id}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase border border-blue-100">
+                        {m.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-sm font-bold text-slate-600">
+                      {m.unit}
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${m.status === "Active" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}
+                      >
+                        {m.status === "Active" ? "Đang hoạt động" : "Tạm nghỉ"}
+                      </div>
+                    </td>
+                    <td
+                      className="px-8 py-5 text-right"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() =>
+                            setModalMode({ open: true, type: "edit", data: m })
+                          }
+                          className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                        >
+                          <Edit size={18} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteModal({ open: true, data: m })}
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredMembers.length === 0 && (
+              <div className="p-20 text-center text-slate-400 font-bold">
+                Không tìm thấy cán bộ nào...
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Modals - Luôn ở đây để có thể hiển thị bất kể view nào */}
       <MemberModal
         isOpen={modalMode.open}
         member={modalMode.data}

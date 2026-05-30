@@ -68,6 +68,7 @@ __pycache__/
 # Database (Nếu có file db cục bộ)
 *.db
 *.sqlite3
+back_end/db_backups/
 
 ### --- FRONTEND (Node.js) --- ###
 # Thư mục thư viện frontend

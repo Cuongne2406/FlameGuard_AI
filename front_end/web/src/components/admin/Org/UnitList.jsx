@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   Edit3,
@@ -9,49 +10,94 @@ import {
   X,
   AlertTriangle,
   Filter,
+  UserPlus,
+  Users,
+  CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { organizationService } from "../../../services/organizationService";
+import { userService } from "../../../services/userService";
 
-const UnitList = () => {
+const UnitList = ({ triggerCreateModal, onModalClose }) => {
+  const navigate = useNavigate();
   // --- STATE QUẢN LÝ ---
   const [modalStep, setModalStep] = useState("none"); // none, create, assign, success, edit, delete
   const [newUnitName, setNewUnitName] = useState("");
+  const [newUnitType, setNewUnitType] = useState("CLUB");
   const [searchTerm, setSearchTerm] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState(null); // Lưu đơn vị đang được chọn để sửa/xóa
+  const [selectedUnit, setSelectedUnit] = useState(null); 
 
-  // Dữ liệu mẫu
+  // States cho bổ nhiệm nhân sự
+  const [allUsers, setAllUsers] = useState([]);
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [selectedLeader, setSelectedLeader] = useState(null);
+  const [assignTitle, setAssignTitle] = useState("Bí thư");
+  const [userShowSuggestions, setUserShowSuggestions] = useState(false);
+
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // View Members
+  const [unitMembers, setUnitMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   // --- FETCH DATA ---
+  const fetchUnits = async () => {
+    setLoading(true);
+    try {
+      const data = await organizationService.getOrganizations();
+      const formattedUnits = data.map((u) => ({
+        id: u.id,
+        name: u.name,
+        type: u.type === 'CLASS' ? 'LCĐ Khoa' : u.type === 'CLUB' ? 'CLB/Đội/Nhóm' : u.type || 'Đơn vị',
+        leader: u.leader_name || "Đang cập nhật",
+        leaderId: u.leader_student_id || "",
+        leaderTitle: u.type === 'CLASS' ? 'Bí thư LCĐ' : 'Chủ nhiệm',
+        size: u.total_members ? `${u.total_members} SV` : '0 SV',
+        subUnits: u.type === 'CLASS' ? 'Chi đoàn' : 'Thành viên',
+        score: u.activity_score || 80,
+        status: u.status || "Active",
+      }));
+      setUnits(formattedUnits);
+    } catch (error) {
+      console.error("Failed to fetch units:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const users = await userService.getAllUsers();
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchUnits = async () => {
-      setLoading(true);
-      try {
-        const data = await organizationService.getOrganizations();
-        // Xử lý dữ liệu fallback (mock data có định dạng hơi khác)
-        const formattedUnits = data.map((u, index) => ({
-          id: u.id || index + 1,
-          name: u.name,
-          type: u.type === 'CLASS' ? 'LCĐ Khoa' : u.type === 'CLUB' ? 'CLB/Đội/Nhóm' : u.type || 'Đơn vị',
-          leader: u.leader || "Đang cập nhật",
-          leaderTitle: u.type === 'CLASS' ? 'Bí thư LCĐ' : 'Chủ nhiệm',
-          size: u.total ? `${u.total} SV` : u.current_member_count ? `${u.current_member_count} SV` : 'N/A',
-          subUnits: u.type === 'CLASS' ? 'Chi đoàn' : 'Thành viên',
-          score: u.activity || u.fee || 80,
-          status: u.status || "Active",
-        }));
-        setUnits(formattedUnits);
-      } catch (error) {
-        console.error("Failed to fetch units:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchUnits();
+    fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (triggerCreateModal) {
+      setNewUnitName("");
+      setNewUnitType("CLUB");
+      setModalStep("create");
+    }
+  }, [triggerCreateModal]);
+
+  const handleCloseModal = () => {
+    setModalStep("none");
+    setCreatedOrgId(null);
+    setSelectedLeader(null);
+    setUserSearchTerm("");
+    if (onModalClose) onModalClose();
+  };
 
   // --- LOGIC TÌM KIẾM ---
   const filteredUnits = useMemo(() => {
@@ -71,21 +117,129 @@ const UnitList = () => {
       .slice(0, 4);
   }, [searchTerm, units]);
 
+  const filteredUsers = useMemo(() => {
+    if (!userSearchTerm || !userShowSuggestions) return [];
+    const searchLower = userSearchTerm.toLowerCase();
+    
+    // Nếu đã chọn một người và term đang khớp chính xác tên người đó -> ẩn gợi ý
+    if (selectedLeader && (userSearchTerm === selectedLeader.full_name || userSearchTerm === selectedLeader.student_id)) {
+      return [];
+    }
+
+    return allUsers.filter(u => 
+      u.full_name.toLowerCase().includes(searchLower) ||
+      (u.student_id && u.student_id.toLowerCase().includes(searchLower))
+    ).slice(0, 5);
+  }, [userSearchTerm, allUsers, userShowSuggestions, selectedLeader]);
+
+  // Tự động chọn nếu MSSV khớp chính xác & sync với search term
+  useEffect(() => {
+    if (modalStep === "create" || modalStep === "edit") {
+      // 1. Nếu trống -> reset
+      if (!userSearchTerm) {
+        setSelectedLeader(null);
+        return;
+      }
+
+      // 2. Tìm match chính xác theo MSSV
+      const exactMatch = allUsers.find(u => u.student_id === userSearchTerm);
+      if (exactMatch) {
+         if (!selectedLeader || selectedLeader.id !== exactMatch.id) {
+            setSelectedLeader(exactMatch);
+         }
+         return;
+      }
+
+      // 3. Nếu đang có selectedLeader nhưng term không khớp cả Name và MSSV -> reset
+      if (selectedLeader) {
+         const isMatchName = userSearchTerm === selectedLeader.full_name;
+         const isMatchID = userSearchTerm === selectedLeader.student_id;
+         if (!isMatchName && !isMatchID) {
+            setSelectedLeader(null);
+         }
+      }
+    }
+  }, [userSearchTerm, allUsers, modalStep, selectedLeader]);
+
   // --- LOGIC XỬ LÝ DỮ LIỆU ---
-  const handleDelete = () => {
-    setUnits(units.filter((u) => u.id !== selectedUnit.id));
-    setModalStep("none");
-    setSelectedUnit(null);
+  const handleCreate = async () => {
+    setIsSubmitting(true);
+    try {
+      // 1. Create Organization
+      const res = await organizationService.createOrganization({
+        name: newUnitName,
+        type: newUnitType,
+        parent_id: null 
+      });
+      
+      // 2. Assign Leader if selected
+      if (selectedLeader && res.id) {
+        await organizationService.assignMember({
+          user_id: selectedLeader.id,
+          organization_id: res.id,
+          title: assignTitle,
+          is_primary: true
+        });
+      }
+
+      setModalStep("success");
+      fetchUnits();
+    } catch (error) {
+      console.error("Create failed", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleEdit = () => {
-    setUnits(
-      units.map((u) =>
-        u.id === selectedUnit.id ? { ...u, name: newUnitName } : u,
-      ),
-    );
-    setModalStep("success");
-    setNewUnitName("");
+
+  const handleDelete = async () => {
+    try {
+      if (selectedUnit?.id) {
+        await organizationService.deleteOrganization(selectedUnit.id);
+        setModalStep("none");
+        setSelectedUnit(null);
+        fetchUnits();
+      }
+    } catch (error) {
+      console.error("Delete failed", error);
+    }
+  };
+
+  const handleViewMembers = (unit) => {
+    navigate(`/admin/organizations/units/${unit.id}/members`, {
+      state: { unitName: unit.name }
+    });
+  };
+
+  const handleEdit = async () => {
+    setIsSubmitting(true);
+    try {
+      if (selectedUnit?.id) {
+        // 1. Update Org Info
+        await organizationService.updateOrganization(selectedUnit.id, {
+          name: newUnitName,
+          type: newUnitType
+        });
+
+        // 2. Update Leader if changed
+        if (selectedLeader) {
+          await organizationService.assignMember({
+            user_id: selectedLeader.id,
+            organization_id: selectedUnit.id,
+            title: assignTitle,
+            is_primary: true
+          });
+        }
+
+        setModalStep("success");
+        setNewUnitName("");
+        fetchUnits();
+      }
+    } catch (error) {
+      console.error("Update failed", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const exportToExcel = () => {
@@ -175,7 +329,12 @@ const UnitList = () => {
         </div>
       </div>
 
-      {/* 2. BẢNG DỮ LIỆU */}
+      {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
+              <Loader2 className="animate-spin" size={40} />
+              <p className="font-bold">Đang tải danh sách đơn vị...</p>
+          </div>
+      ) : (
       <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -233,7 +392,7 @@ const UnitList = () => {
                             {unit.leader}
                           </p>
                           <p className="text-[10px] text-slate-400 font-medium">
-                            {unit.leaderTitle}
+                            {unit.leaderId ? `${unit.leaderId} • ` : ""}{unit.leaderTitle}
                           </p>
                         </div>
                       </div>
@@ -259,9 +418,20 @@ const UnitList = () => {
                     <td className="px-6 py-5 text-right">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => handleViewMembers(unit)}
+                          title="Danh sách sinh viên"
+                          className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
+                        >
+                          <Users size={16} />
+                        </button>
+                        <button
                           onClick={() => {
                             setSelectedUnit(unit);
                             setNewUnitName(unit.name);
+                            setNewUnitType(unit.type === 'LCĐ Khoa' ? 'FACULTY' : unit.type === 'CLB/Đội/Nhóm' ? 'CLUB' : 'CLASS');
+                            // Load existing leader info if available
+                            setUserSearchTerm(unit.leaderId || "");
+                            setAssignTitle(unit.leaderTitle || "Bí thư");
                             setModalStep("edit");
                           }}
                           className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
@@ -302,6 +472,7 @@ const UnitList = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* 3. MODAL SYSTEM */}
       {modalStep !== "none" && (
@@ -313,11 +484,11 @@ const UnitList = () => {
                 {modalStep === "create" && "Tạo đơn vị mới"}
                 {modalStep === "edit" && "Chỉnh sửa đơn vị"}
                 {modalStep === "delete" && "Xác nhận xóa"}
-                {modalStep === "assign" && "Bổ nhiệm nhân sự"}
                 {modalStep === "success" && "Thông báo"}
+                {modalStep === "members" && `Danh sách ${selectedUnit?.name}`}
               </h3>
               <button
-                onClick={() => setModalStep("none")}
+                onClick={handleCloseModal}
                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X size={20} className="text-slate-400" />
@@ -345,18 +516,100 @@ const UnitList = () => {
                       <label className="block text-[11px] font-black text-slate-400 uppercase mb-2 ml-1">
                         Loại hình
                       </label>
-                      <select className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none font-bold">
-                        <option>Đoàn Khoa</option>
-                        <option>CLB/Đội/Nhóm</option>
+                      <select 
+                         value={newUnitType}
+                         onChange={(e) => setNewUnitType(e.target.value)}
+                         className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none font-bold italic"
+                      >
+                        <option value="FACULTY">Đoàn Khoa</option>
+                        <option value="CLUB">CLB / Đội / Nhóm</option>
+                        <option value="CLASS">Chi đoàn</option>
                       </select>
                     </div>
                     <div>
                       <label className="block text-[11px] font-black text-slate-400 uppercase mb-2 ml-1">
                         Trực thuộc
                       </label>
-                      <select className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm">
-                        <option>Đoàn Trường</option>
+                      <select className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none font-bold italic">
+                        <option>Ban Chấp hành</option>
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Phần bổ nhiệm lãnh đạo */}
+                  <div className="pt-4 border-t border-slate-100">
+                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-3 flex items-center gap-2">
+                       <UserPlus size={14} className="text-blue-500" />
+                       {modalStep === "create" ? "Bổ nhiệm người phụ trách (Tùy chọn)" : "Chỉnh sửa người phụ trách"}
+                    </label>
+                    <div className="space-y-4">
+                      <div className="relative group">
+                        <input
+                          type="text"
+                          value={userSearchTerm}
+                          onChange={(e) => {
+                            setUserSearchTerm(e.target.value);
+                            setUserShowSuggestions(true);
+                          }}
+                          onFocus={() => setUserShowSuggestions(true)}
+                          placeholder="Nhập MSSV hoặc Tên lãnh đạo..."
+                          className={`w-full px-5 py-4 bg-slate-50 border ${selectedLeader ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200'} rounded-2xl text-sm focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold pr-12`}
+                        />
+                        {userSearchTerm && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUserSearchTerm("");
+                              setSelectedLeader(null);
+                              setUserShowSuggestions(false);
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                        {filteredUsers.length > 0 && userShowSuggestions && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                            {filteredUsers.map(u => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedLeader(u);
+                                  setUserSearchTerm(u.full_name);
+                                  setUserShowSuggestions(false);
+                                }}
+                                className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-0"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-bold uppercase">
+                                  {u.full_name?.split(" ").pop().charAt(0)}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-bold text-slate-700">{u.full_name}</p>
+                                  <p className="text-[10px] text-slate-400">{u.student_id ? `MSSV: ${u.student_id}` : u.email}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                         <div className="flex-1">
+                             <p className="text-[10px] font-black text-blue-500 uppercase mb-1 ml-1">Chức vụ</p>
+                             <select 
+                               value={assignTitle}
+                               onChange={(e) => setAssignTitle(e.target.value)}
+                               className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none"
+                             >
+                               <option>Bí thư</option>
+                               <option>Phó Bí thư</option>
+                               <option>Chủ nhiệm CLB</option>
+                               <option>Trưởng Đội/Nhóm</option>
+                               <option>Ủy viên</option>
+                             </select>
+                         </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -381,43 +634,9 @@ const UnitList = () => {
                 </div>
               )}
 
-              {modalStep === "assign" && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3">
-                    <UserPlus className="text-blue-600 shrink-0" size={20} />
-                    <p className="text-xs text-blue-700 font-medium">
-                      Bạn đang bổ nhiệm nhân sự đứng đầu cho đơn vị:{" "}
-                      <strong className="font-black">
-                        {newUnitName || "Đơn vị mới"}
-                      </strong>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-2">
-                      Tìm kiếm cán bộ
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Nhập tên hoặc MSSV..."
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-2">
-                      Chức vụ bổ nhiệm
-                    </label>
-                    <select className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl text-sm">
-                      <option>Bí thư</option>
-                      <option>Chủ nhiệm CLB</option>
-                      <option>Trưởng Đội</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-
               {modalStep === "success" && (
                 <div className="py-6 text-center">
-                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500">
+                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500 shadow-lg shadow-emerald-50">
                     <CheckCircle2 size={48} />
                   </div>
                   <h4 className="text-xl font-black text-slate-800 uppercase italic">
@@ -426,6 +645,46 @@ const UnitList = () => {
                   <p className="text-sm text-slate-400 mt-2">
                     Dữ liệu đã được cập nhật thành công vào hệ thống.
                   </p>
+                </div>
+              )}
+
+              {modalStep === "members" && (
+                <div className="py-2 max-h-[60vh] overflow-y-auto w-full">
+                    {loadingMembers ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-4">
+                            <Loader2 className="animate-spin" size={30} />
+                            <p className="font-bold">Đang tải danh sách...</p>
+                        </div>
+                    ) : unitMembers.length === 0 ? (
+                        <p className="text-center text-sm text-slate-500 py-8 font-bold">Chưa có sinh viên nào trong đơn vị này.</p>
+                    ) : (
+                        <div className="overflow-x-auto w-full">
+                            <table className="w-full text-left border-collapse min-w-[500px]">
+                                <thead>
+                                    <tr className="border-b border-slate-100 bg-slate-50">
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">MSSV</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên</th>
+                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chức vụ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {unitMembers.map((m, idx) => (
+                                        <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-4 py-3 text-sm font-medium text-slate-500">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-sm font-bold text-slate-700">{m.student_id || '---'}</td>
+                                            <td className="px-4 py-3 text-sm font-black text-slate-800">{m.full_name}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-xs font-bold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg">
+                                                    {m.title}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
               )}
             </div>
@@ -442,7 +701,7 @@ const UnitList = () => {
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="px-8 py-3 bg-red-600 text-white text-sm font-black rounded-xl shadow-lg shadow-red-100 hover:bg-red-700"
+                    className="px-8 py-3 bg-red-600 text-white text-sm font-black rounded-xl shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95"
                   >
                     XÁC NHẬN XÓA
                   </button>
@@ -457,31 +716,36 @@ const UnitList = () => {
                   </button>
                   <button
                     onClick={handleEdit}
-                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700"
+                    disabled={!newUnitName || !selectedLeader || isSubmitting}
+                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
                   >
+                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
                     LƯU THAY ĐỔI
                   </button>
                 </>
               ) : modalStep === "create" ? (
-                <button
-                  onClick={() => setModalStep("assign")}
-                  className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-blue-100 hover:bg-blue-700"
-                >
-                  TIẾP TỤC
-                </button>
-              ) : modalStep === "assign" ? (
-                <button
-                  onClick={() => setModalStep("success")}
-                  className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl hover:bg-blue-700"
-                >
-                  HOÀN TẤT
-                </button>
+                <>
+                  <button
+                    onClick={() => setModalStep("none")}
+                    className="px-6 py-3 text-sm font-black text-slate-400"
+                  >
+                    HỦY
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    disabled={!newUnitName || !selectedLeader || isSubmitting}
+                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                    HOÀN TẤT
+                  </button>
+                </>
               ) : (
                 <button
-                  onClick={() => setModalStep("none")}
-                  className="w-full py-4 bg-slate-900 text-white text-sm font-black rounded-2xl uppercase"
+                  onClick={handleCloseModal}
+                  className="w-full py-4 bg-slate-900 text-white text-sm font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200"
                 >
-                  QUAY LẠI
+                  ĐÓNG CỬA SỔ
                 </button>
               )}
             </div>

@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from uuid import UUID
 from app.api.deps import get_db
 from app.models.events import Event, EventStatus
 from app.models.news import News

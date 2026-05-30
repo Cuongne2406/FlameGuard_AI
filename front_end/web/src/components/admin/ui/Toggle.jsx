@@ -1,5 +1,6 @@
-export const Toggle = ({ checked }) => (
+export const Toggle = ({ checked, onChange }) => (
   <div
+    onClick={() => onChange && onChange(!checked)}
     className={`w-10 h-6 rounded-full p-1 cursor-pointer transition-all ${checked ? "bg-blue-600" : "bg-slate-200"}`}
   >
     <div

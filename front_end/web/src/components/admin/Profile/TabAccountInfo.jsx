@@ -1,7 +1,7 @@
 import React from "react";
 import { Mail, Phone, MapPin, ShieldCheck, Edit3, Save } from "lucide-react";
 
-const TabAccountInfo = () => {
+const TabAccountInfo = ({ user }) => {
   return (
     <div className="grid grid-cols-1 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* 1. Khối Thông tin cá nhân */}
@@ -21,8 +21,8 @@ const TabAccountInfo = () => {
                 <Mail size={18} />
               </div>
               <input
-                // readOnly
-                defaultValue="ltphau@lhu.edu.vn"
+                readOnly
+                defaultValue={user?.email || "ltphau@lhu.edu.vn"}
                 className="w-full pl-12 pr-10 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-500 outline-none"
               />
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -41,7 +41,7 @@ const TabAccountInfo = () => {
                 <Phone size={18} />
               </div>
               <input
-                defaultValue="09xxxxxxx"
+                defaultValue={user?.phone_number || "09xxxxxxx"}
                 className="w-full pl-12 pr-12 py-3.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none"
               />
               <button className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-blue-500 transition-colors">
@@ -60,7 +60,7 @@ const TabAccountInfo = () => {
                 <MapPin size={18} />
               </div>
               <input
-                defaultValue="Ban Chấp Hành Đoàn Trường"
+                defaultValue={user?.organizations?.[0]?.name || "Ban Chấp Hành Đoàn Trường"}
                 className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-500 outline-none"
               />
             </div>

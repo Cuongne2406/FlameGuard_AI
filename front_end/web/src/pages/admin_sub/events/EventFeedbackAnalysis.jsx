@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Toast from '../../../components/ui/Toast';
+import { apiClient } from '../../../services/apiClient';
+import { eventService } from '../../../services/eventService';
 
 const EventFeedbackAnalysis = () => {
     const { id } = useParams();
@@ -14,12 +16,16 @@ const EventFeedbackAnalysis = () => {
     const [sentiment, setSentiment] = useState([]);
     const [keywords, setKeywords] = useState([]);
     const [feedbacks, setFeedbacks] = useState([]);
+    const [ratingStats, setRatingStats] = useState([0, 0, 0, 0, 0]); // 5 star to 1 star
 
     React.useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await apiClient(`/ai-sentiments/event/${id}`);
+                const [res, fbStats] = await Promise.all([
+                    apiClient(`/ai-sentiments/event/${id}`),
+                    eventService.getEventFeedbackStats(id)
+                ]);
                 setSentiment(res.sentiment || []);
                 setFeedbacks(res.feedbacks || []);
                 setKeywords((res.keywords || []).map(kw => ({
@@ -28,6 +34,7 @@ const EventFeedbackAnalysis = () => {
                     color: res.score > 0 ? 'emerald' : 'rose'
                 })));
                 setStats(res);
+                if (fbStats) setRatingStats(fbStats);
             } catch (error) {
                 console.error("Error fetching event analysis:", error);
             } finally {
@@ -99,15 +106,17 @@ const EventFeedbackAnalysis = () => {
                                 )) : <p className="text-sm text-slate-400 italic">Chưa có dữ liệu cảm xúc.</p>}
                             </div>
                             <div className="relative h-40 w-40 flex items-center justify-center">
-                                {/* Mock Donut Chart */}
+                                {/* Dynamic Donut Chart based on ratingStats */}
                                 <svg className="w-full h-full transform -rotate-90">
                                     <circle cx="80" cy="80" r="70" stroke="#f1f5f9" strokeWidth="20" fill="transparent" />
-                                    <circle cx="80" cy="80" r="70" stroke="#10b981" strokeWidth="20" fill="transparent" strokeDasharray="440" strokeDashoffset="66" />
-                                    <circle cx="80" cy="80" r="70" stroke="#f97316" strokeWidth="20" fill="transparent" strokeDasharray="440" strokeDashoffset="400" />
+                                    {/* 4-5 stars: emerald */}
+                                    <circle cx="80" cy="80" r="70" stroke="#10b981" strokeWidth="20" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((ratingStats[0] + ratingStats[1]) / (ratingStats.reduce((a, b) => a + b, 0) || 1) * 440)} />
+                                    {/* 1-3 stars: orange/rose */}
+                                    <circle cx="80" cy="80" r="70" stroke="#f97316" strokeWidth="20" fill="transparent" strokeDasharray="440" strokeDashoffset={440 - ((ratingStats[2] + ratingStats[3] + ratingStats[4]) / (ratingStats.reduce((a, b) => a + b, 0) || 1) * 440)} style={{ transform: `rotate(${((ratingStats[0] + ratingStats[1]) / (ratingStats.reduce((a, b) => a + b, 0) || 1)) * 360}deg)`, transformOrigin: 'center' }} />
                                 </svg>
                                 <div className="absolute flex flex-col items-center">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Phản hồi</p>
-                                    <p className="text-xl font-bold text-slate-900">{stats.total || 0}</p>
+                                    <p className="text-xl font-bold text-slate-900">{ratingStats.reduce((a, b) => a + b, 0)}</p>
                                 </div>
                             </div>
                         </div>

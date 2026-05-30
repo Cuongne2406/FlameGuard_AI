@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pydantic import BaseModel
 from typing import Optional, List
 from uuid import UUID
@@ -21,6 +22,7 @@ class EventStatusEnum(str, Enum):
     ENDED = "ENDED"
 
 class EventRegistrationStatusEnum(str, Enum):
+    PENDING = "PENDING"
     REGISTERED = "REGISTERED"
     ATTENDED = "ATTENDED"
     CANCELLED = "CANCELLED"
@@ -55,6 +57,8 @@ class CampaignResponse(CampaignBase):
     id: UUID
     organization_id: UUID
     academic_term_id: UUID
+    organization_name: Optional[str] = None
+    academic_term_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -70,9 +74,13 @@ class EventBase(BaseModel):
     end_time: Optional[datetime] = None
     capacity: Optional[int] = None
     status: EventStatusEnum = EventStatusEnum.DRAFT
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    points_awarded: int = 0
 
 class EventCreate(EventBase):
     campaign_id: Optional[UUID] = None
+    org_id: Optional[UUID] = None
 
 class EventUpdate(BaseModel):
     name: Optional[str] = None
@@ -82,10 +90,82 @@ class EventUpdate(BaseModel):
     capacity: Optional[int] = None
     status: Optional[EventStatusEnum] = None
     campaign_id: Optional[UUID] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    points_awarded: Optional[int] = None
+    org_id: Optional[UUID] = None
 
 class EventResponse(EventBase):
     id: UUID
     campaign_id: Optional[UUID] = None
+    org_id: Optional[UUID] = None
+    qa_sessions: List['EventQAResponse'] = []
+    incidents: List['EventIncidentResponse'] = []
+    feedbacks: List['EventFeedbackResponse'] = []
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# Event Feedback Schemas
+# ==========================================
+class EventFeedbackBase(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+class EventFeedbackCreate(EventFeedbackBase):
+    event_id: UUID
+    user_id: UUID
+
+class EventFeedbackResponse(EventFeedbackBase):
+    id: UUID
+    event_id: UUID
+    user_id: UUID
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# ==========================================
+# Event QA Schemas
+# ==========================================
+class EventQABase(BaseModel):
+    question: str
+    answer: Optional[str] = None
+    is_answered: bool = False
+
+class EventQACreate(EventQABase):
+    event_id: UUID
+    user_id: Optional[UUID] = None
+
+class EventQAResponse(EventQABase):
+    id: UUID
+    event_id: UUID
+    user_id: Optional[UUID] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# Event Incident Schemas
+# ==========================================
+class EventIncidentBase(BaseModel):
+    description: str
+    severity: str
+    status: str = "PENDING"
+
+class EventIncidentCreate(EventIncidentBase):
+    event_id: UUID
+    reported_by: UUID
+
+class EventIncidentResponse(EventIncidentBase):
+    id: UUID
+    event_id: UUID
+    reported_by: UUID
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -110,6 +190,21 @@ class EventRegistrationResponse(EventRegistrationBase):
     event_id: UUID
     user_id: UUID
     check_in_time: Optional[datetime] = None
+    check_in_token: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class EventSummaryResponse(BaseModel):
+    event_id: UUID
+    name: str
+    total_participants: int
+    attended_count: int
+    qa_count: int
+    incident_count: int
+    highlights: List[str]
+    average_rating: float
+
+    class Config:
+        from_attributes = True
+EventResponse.model_rebuild()

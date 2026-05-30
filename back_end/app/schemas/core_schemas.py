@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
 
 # ==========================================
@@ -76,6 +76,16 @@ class OrganizationBase(BaseModel):
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
     status: OrgStatusEnum = OrgStatusEnum.ACTIVE
+    fee_percentage: Optional[float] = 0.0
+    activity_points: Optional[int] = 0
+    avatar_url: Optional[str] = None
+    icon: Optional[str] = None
+    warning_message: Optional[str] = None
+    warning_deadline: Optional[datetime] = None
+    last_activity_at: Optional[datetime] = None
+    leader_user_id: Optional[UUID] = None
+    contact_email: Optional[str] = None
+    phone: Optional[str] = None
 
 class OrganizationCreate(OrganizationBase):
     pass
@@ -86,9 +96,73 @@ class OrganizationUpdate(BaseModel):
     description: Optional[str] = None
     parent_id: Optional[UUID] = None
     status: Optional[OrgStatusEnum] = None
+    fee_percentage: Optional[float] = None
+    activity_points: Optional[int] = None
+    avatar_url: Optional[str] = None
+    icon: Optional[str] = None
+    classification: Optional[str] = None
+    warning_message: Optional[str] = None
+    warning_deadline: Optional[datetime] = None
+    last_activity_at: Optional[datetime] = None
 
 class OrganizationResponse(OrganizationBase):
     id: UUID
+    leader_name: Optional[str] = None
+    leader_student_id: Optional[str] = None
+    total_members: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+class UserOrgMiniResponse(BaseModel):
+    organization_id: UUID
+    organization_name: str
+    title: Optional[str] = None
+    is_primary: bool = False
+    joined_date: Optional[date] = None
+
+    class Config:
+        from_attributes = True
+
+
+# ==========================================
+# UserOrganization Schemas
+# ==========================================
+class UserOrganizationBase(BaseModel):
+    user_id: UUID
+    organization_id: UUID
+    title: Optional[str] = None
+    is_primary: bool = False
+    joined_date: Optional[date] = None
+
+class UserOrganizationCreate(UserOrganizationBase):
+    pass
+
+class UserOrganizationResponse(UserOrganizationBase):
+    id: UUID
+
+    class Config:
+        from_attributes = True
+
+# ==========================================
+# Club Proposal Schemas
+# ==========================================
+class ClubProposalBase(BaseModel):
+    title: str
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    organization_id: Optional[UUID] = None
+    icon: Optional[str] = "help"
+
+class ClubProposalCreate(ClubProposalBase):
+    pass
+
+class ClubProposalResponse(ClubProposalBase):
+    id: UUID
+    requested_by: UUID
+    status: str
+    created_at: date
+    requester_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -120,6 +194,11 @@ class AcademicTermResponse(AcademicTermBase):
     class Config:
         from_attributes = True
 
+class ClubDashboardStats(BaseModel):
+    totalClubs: int
+    totalMembers: int
+    totalBudget: float
+
 
 # ==========================================
 # User Schemas
@@ -135,10 +214,17 @@ class UserBase(BaseModel):
     email_alerts_enabled: bool = True
     zalo_alerts_enabled: bool = True
     daily_digest_enabled: bool = False
-    signature_data: Optional[str] = None
+    class_name: Optional[str] = None
+    academic_year: Optional[int] = None
+    bio: Optional[str] = None
+    social_links: Optional[str] = None
+    device_id: Optional[str] = None
+    push_token: Optional[str] = None
+    is_profile_updated: bool = False
 
 class UserCreate(UserBase):
     password: str
+    class_id: Optional[UUID] = None
     role_ids: Optional[List[UUID]] = []
 
 class UserUpdate(BaseModel):
@@ -152,7 +238,15 @@ class UserUpdate(BaseModel):
     email_alerts_enabled: Optional[bool] = None
     zalo_alerts_enabled: Optional[bool] = None
     daily_digest_enabled: Optional[bool] = None
-    signature_data: Optional[str] = None
+    class_id: Optional[UUID] = None
+    class_name: Optional[str] = None
+    academic_year: Optional[int] = None
+    bio: Optional[str] = None
+    social_links: Optional[str] = None
+    device_id: Optional[str] = None
+    push_token: Optional[str] = None
+    is_profile_updated: Optional[bool] = None
+    is_completing: Optional[bool] = False
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
 
@@ -161,10 +255,12 @@ class UserResponse(UserBase):
     last_login_at: Optional[date] = None
     level: int = 1
     training_score: int = 0
-    university: Optional[str] = None
-    address: Optional[str] = None
+    class_id: Optional[UUID] = None
     role_title: Optional[str] = None
+    activity_count: int = 0
+    award_count: int = 0
     roles: List[RoleResponse] = []
+    organizations: List[UserOrgMiniResponse] = []
 
     class Config:
         from_attributes = True
@@ -173,8 +269,14 @@ class UserResponse(UserBase):
 # Auth Schemas
 # ==========================================
 class Token(BaseModel):
-    access_token: str
-    token_type: str
+    access_token: Optional[str] = None
+    token_type: Optional[str] = None
+    requires_2fa: bool = False
+    user_id: Optional[UUID] = None
+
+class VerifyOTP(BaseModel):
+    user_id: UUID
+    otp_code: str
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None

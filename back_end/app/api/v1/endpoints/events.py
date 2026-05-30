@@ -6,7 +6,10 @@ from uuid import UUID
 from app.api.deps import get_db
 from app.schemas.event_schemas import (
     EventCreate, EventUpdate, EventResponse,
-    EventRegistrationCreate, EventRegistrationUpdate, EventRegistrationResponse
+    EventRegistrationCreate, EventRegistrationUpdate, EventRegistrationResponse,
+    EventQACreate, EventQAResponse, EventIncidentCreate, EventIncidentResponse,
+    EventFeedbackCreate, EventFeedbackResponse,
+    EventSummaryResponse
 )
 from app.services import event_service
 
@@ -15,20 +18,19 @@ router = APIRouter()
 from sqlalchemy import func
 from app.models.events import Event, EventStatus, EventRegistration
 
-router = APIRouter()
-
 @router.get("/stats")
 def get_event_stats(db: Session = Depends(get_db)):
     """
     Lấy thống kê sự kiện thực tế từ Database.
     """
+    from app.models.events import Event, EventStatus, EventRegistration, EventFeedback
     total_events = db.query(func.count(Event.id)).scalar() or 0
     upcoming_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.PUBLISHED).scalar() or 0
     live_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.LIVE).scalar() or 0
     ended_events = db.query(func.count(Event.id)).filter(Event.status == EventStatus.ENDED).scalar() or 0
     total_participants = db.query(func.count(EventRegistration.id)).scalar() or 0
-    total_feedback = 0 # Future requirement: add Feedback table
-    avg_rating = 0.0 # Future requirement: add Feedback table
+    total_feedback = db.query(func.count(EventFeedback.id)).scalar() or 0
+    avg_rating = db.query(func.avg(EventFeedback.rating)).scalar() or 0.0
     
     return {
         "totalEvents": total_events,
@@ -38,7 +40,7 @@ def get_event_stats(db: Session = Depends(get_db)):
         "totalParticipants": total_participants,
         "participantTarget": 2000,
         "totalFeedback": total_feedback,
-        "avgRating": avg_rating
+        "avgRating": float(avg_rating)
     }
 
 # ==========================================
@@ -59,6 +61,14 @@ def read_events(
     db: Session = Depends(get_db)
 ):
     return event_service.get_events(db, skip=skip, limit=limit)
+
+@router.get("/{event_id}", response_model=EventResponse)
+def read_event(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event(db, event_id=event_id)
 
 @router.put("/{event_id}", response_model=EventResponse)
 def update_event(
@@ -119,3 +129,122 @@ def update_event_registration(
     Cập nhật trạng thái đăng ký (Ví dụ điểm danh Check-in, hoặc Hủy đăng ký).
     """
     return event_service.update_event_registration(db=db, registration_id=registration_id, registration_in=registration_in)
+
+
+# ==========================================
+# Event QA Endpoints
+# ==========================================
+@router.post("/{event_id}/qa", response_model=EventQAResponse)
+def create_event_qa(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    qa_in: EventQACreate,
+):
+    if str(event_id) != str(qa_in.event_id):
+        raise HTTPException(status_code=400, detail="Event ID mismatch")
+    return event_service.create_qa(db=db, qa_in=qa_in)
+
+@router.get("/{event_id}/qa", response_model=List[EventQAResponse])
+def get_event_qa(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+):
+    return event_service.get_event_qa(db=db, event_id=event_id, skip=skip, limit=limit)
+
+@router.put("/qa/{qa_id}/answer", response_model=EventQAResponse)
+def answer_event_qa(
+    *,
+    db: Session = Depends(get_db),
+    qa_id: UUID,
+    answer: str,
+):
+    return event_service.answer_qa(db=db, qa_id=qa_id, answer=answer)
+
+
+# ==========================================
+# Event Incident Endpoints
+# ==========================================
+@router.post("/{event_id}/incidents", response_model=EventIncidentResponse)
+def report_event_incident(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    incident_in: EventIncidentCreate,
+):
+    if str(event_id) != str(incident_in.event_id):
+        raise HTTPException(status_code=400, detail="Event ID mismatch")
+    return event_service.report_incident(db=db, incident_in=incident_in)
+
+@router.get("/{event_id}/incidents", response_model=List[EventIncidentResponse])
+def get_event_incidents(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    skip: int = 0,
+    limit: int = 100,
+):
+    return event_service.get_event_incidents(db=db, event_id=event_id, skip=skip, limit=limit)
+
+@router.put("/incidents/{incident_id}/status", response_model=EventIncidentResponse)
+def update_event_incident_status(
+    *,
+    db: Session = Depends(get_db),
+    incident_id: UUID,
+    status: str,
+):
+    return event_service.update_incident_status(db=db, incident_id=incident_id, status=status)
+
+@router.put("/registrations/{registration_id}/approve", response_model=EventRegistrationResponse)
+def approve_event_registration(
+    *,
+    db: Session = Depends(get_db),
+    registration_id: UUID,
+):
+    return event_service.approve_registration(db=db, registration_id=registration_id)
+
+@router.get("/registrations/pending", response_model=List[EventRegistrationResponse])
+def get_pending_registrations(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 100,
+):
+    return event_service.get_all_pending_registrations(db=db, skip=skip, limit=limit)
+
+@router.get("/{id}/summary", response_model=EventSummaryResponse)
+def get_event_summary(
+    *,
+    db: Session = Depends(get_db),
+    id: UUID,
+):
+    return event_service.get_event_summary(db=db, event_id=id)
+
+@router.post("/{event_id}/feedbacks", response_model=EventFeedbackResponse)
+def create_event_feedback(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+    feedback_in: EventFeedbackCreate,
+):
+    if str(event_id) != str(feedback_in.event_id):
+        raise HTTPException(status_code=400, detail="Event ID mismatch")
+    return event_service.create_feedback(db=db, feedback_in=feedback_in)
+
+@router.get("/{event_id}/live-stats")
+def get_event_live_stats(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event_live_stats(db=db, event_id=event_id)
+
+@router.get("/{event_id}/feedback-stats")
+def get_event_feedback_stats(
+    *,
+    db: Session = Depends(get_db),
+    event_id: UUID,
+):
+    return event_service.get_event_feedback_stats(db=db, event_id=event_id)

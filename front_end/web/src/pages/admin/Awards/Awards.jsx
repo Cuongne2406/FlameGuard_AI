@@ -7,23 +7,53 @@ import {
   TrendingDown,
   Minus,
   Plus,
-  Edit3,
   Calendar,
   CheckCircle2,
   Clock,
   Award,
-  X, // Thêm icon đóng modal
+  ExternalLink,
+  MessageSquare,
+  X,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { awardService } from "../../../services/awardService";
 
 const Awards = () => {
+  const navigate = useNavigate();
   // --- BỔ SUNG STATE ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [criteria, setCriteria] = useState([]);
   const [rankings, setRankings] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [stats, setStats] = useState({ remainingDays: '0', submitted: '0', approved: '0', passRate: '0%' });
   const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const fetchCandidates = async () => {
+    try {
+      const awardsData = await awardService.getAwardsList();
+      setCandidates(awardsData || []);
+    } catch(err) {}
+  };
+
+  const handleProcessCandidate = async (status, comments) => {
+    if (!selectedCandidate) return;
+    setIsProcessing(true);
+    try {
+      await awardService.updateAwardAssessment(selectedCandidate.id, {
+        status,
+        comments
+      });
+      await fetchCandidates();
+      setSelectedCandidate(null);
+    } catch (err) {
+      alert("Lỗi khi xử lý hồ sơ!");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
 
   React.useEffect(() => {
     const fetchData = async () => {
@@ -35,8 +65,9 @@ const Awards = () => {
         // Cập nhật bằng dữ liệu API khi có backend thực tế
         setCandidates(awardsData || []);
         setRankings(statsData?.rankings || []);
-        // Nếu API trả về stats chi tiết:
-        // setStats(statsData?.stats || { remainingDays: '0', submitted: '0', ... })
+        if (statsData?.summary) {
+          setStats(statsData.summary);
+        }
       } catch (err) {
         console.error("Lỗi khi tải dữ liệu khen thưởng:", err);
       } finally {
@@ -45,6 +76,7 @@ const Awards = () => {
     };
     fetchData();
   }, []);
+
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 relative">
@@ -96,15 +128,18 @@ const Awards = () => {
         </div>
       </div>
 
-      {/* 2. BẢNG VÀNG & CẤU HÌNH TIÊU CHÍ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* 2. BẢNG VÀNG */}
+      <div className="grid grid-cols-1 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center">
             <h3 className="font-black text-slate-700 flex items-center gap-2">
               <TrendingUp className="text-amber-500" size={18} /> Bảng vàng Thi
               đua Khối Khoa/Viện
             </h3>
-            <button className="text-blue-600 text-xs font-bold hover:underline">
+            <button 
+              onClick={() => navigate('/admin/awards/leaderboard')}
+              className="text-blue-600 text-xs font-bold hover:underline"
+            >
               Xem chi tiết
             </button>
           </div>
@@ -130,28 +165,6 @@ const Awards = () => {
             </table>
           </div>
         </div>
-
-        {/* --- CẤU HÌNH TIÊU CHÍ (Phần thay đổi) --- */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-black text-slate-700 flex items-center gap-2">
-              <Edit3 className="text-slate-400" size={18} /> Cấu hình Bộ tiêu
-              chí
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {criteria.map((item, index) => (
-              <CriterionItem key={index} {...item} />
-            ))}
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="w-full py-3 border-2 border-dashed border-slate-100 rounded-xl text-[11px] font-bold text-slate-400 hover:border-blue-200 hover:text-blue-500 transition-all active:scale-95"
-            >
-              + Thêm tiêu chí mới
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* 3. TIẾN ĐỘ XÉT DUYỆT (Giữ nguyên) */}
@@ -167,80 +180,28 @@ const Awards = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {candidates.length > 0 ? (
-            candidates.map((c, i) => <CandidateCard key={i} {...c} />)
+            candidates.map((c, i) => (
+              <CandidateCard 
+                key={i} 
+                candidate={c} 
+                onClick={(cand) => setSelectedCandidate(cand)} 
+              />
+            ))
           ) : (
             <div className="col-span-2 text-center py-6 text-xs text-slate-400">Không có ứng viên nào đang chờ duyệt.</div>
           )}
         </div>
       </div>
 
-      {/* --- MODAL HỘP THOẠI THÊM MỚI --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-          <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-300 border border-slate-100">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-black text-slate-800">
-                Tiêu chí thi đua
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsModalOpen(false);
-              }}
-            >
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">
-                  Tên tiêu chí
-                </label>
-                <input
-                  type="text"
-                  placeholder="Nhập tên hoạt động..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">
-                  Điểm thưởng/phạt
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: +10 hoặc -5"
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 text-xs font-bold text-slate-400 hover:text-slate-600"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 active:scale-95 transition-all"
-                >
-                  Lưu tiêu chí
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 4. APPLICATION DETAIL MODAL */}
+      <ApplicationDetailModal 
+        candidate={selectedCandidate}
+        onClose={() => setSelectedCandidate(null)}
+        onProcess={handleProcessCandidate}
+        isProcessing={isProcessing}
+      />
     </div>
+
   );
 };
 
@@ -277,40 +238,47 @@ const RankRow = ({ rank, name, score, trend, trendIcon, trendColor }) => (
   </tr>
 );
 
-const CriterionItem = ({ label, points, color, icon }) => (
-  <div
-    className={`flex justify-between items-center p-4 rounded-xl border border-transparent hover:border-slate-100 transition-all ${color.split(" ")[0].replace("bg-", "bg-opacity-20 bg-")}`}
-  >
-    <div className="flex items-center gap-3">
-      <div className={`p-2 rounded-lg ${color}`}>{icon}</div>
-      <span className="text-xs font-bold text-slate-700">{label}</span>
-    </div>
-    <span className={`text-sm font-black ${color.split(" ")[1]}`}>
-      {points}
-    </span>
-  </div>
-);
 
-const CandidateCard = ({ name, id, unit, status, statusColor }) => (
-  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 flex justify-between items-center hover:shadow-md transition-all">
-    <div className="flex items-center gap-4">
-      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
-        {name.split(" ").pop().charAt(0)}
+const CandidateCard = ({ candidate, onClick }) => {
+  const { full_name, student_id, university, status } = candidate;
+  
+  // Mapping màu sắc dựa trên status
+  const statusColors = {
+    PENDING: "bg-amber-100 text-amber-600 border border-amber-200",
+    APPROVED: "bg-emerald-100 text-emerald-600 border border-emerald-200",
+    REJECTED: "bg-rose-100 text-rose-600 border border-rose-200",
+  };
+
+  const statusColor = statusColors[status] || "bg-slate-100 text-slate-400";
+  const displayName = full_name || "Chưa có tên";
+  const displayId = student_id || "N/A";
+  const displayUnit = university || "N/A";
+  
+  // Trích xuất chữ cái đầu của tên (Safe split)
+  const nameParts = displayName.split(" ");
+  const initial = nameParts.length > 0 ? nameParts[nameParts.length - 1].charAt(0) : "?";
+
+  return (
+    <div onClick={() => onClick(candidate)} className="p-4 rounded-2xl border border-slate-100 bg-slate-50/30 flex justify-between items-center hover:shadow-md hover:border-blue-200 cursor-pointer transition-all group">
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
+          {initial}
+        </div>
+        <div>
+          <h5 className="text-xs font-black text-slate-800">{displayName}</h5>
+          <p className="text-[10px] text-slate-400 font-medium">
+            {displayId} • {displayUnit}
+          </p>
+        </div>
       </div>
-      <div>
-        <h5 className="text-xs font-black text-slate-800">{name}</h5>
-        <p className="text-[10px] text-slate-400 font-medium">
-          {id} • {unit}
-        </p>
-      </div>
+      <span
+        className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${statusColor}`}
+      >
+        {status}
+      </span>
     </div>
-    <span
-      className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${statusColor}`}
-    >
-      {status}
-    </span>
-  </div>
-);
+  );
+};
 
 const TabBtn = ({ label, active }) => (
   <button
@@ -319,5 +287,118 @@ const TabBtn = ({ label, active }) => (
     {label}
   </button>
 );
+
+const ApplicationDetailModal = ({ candidate, onClose, onProcess, isProcessing }) => {
+  const [feedback, setFeedback] = useState("");
+
+  if (!candidate) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
+      <div className="relative bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-slate-100 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-50 flex justify-between items-start bg-slate-50/50">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black text-2xl uppercase shadow-inner">
+              {candidate.full_name?.split(" ").pop()?.charAt(0) || "?"}
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">{candidate.full_name || "Chưa có tên"}</h3>
+              <p className="text-sm font-bold text-slate-500 mt-1">{candidate.student_id} • {candidate.university}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${
+                  candidate.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' : 
+                  candidate.status === 'REJECTED' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'
+                }`}>
+                  {candidate.status}
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  Nộp: {new Date(candidate.created_at).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-8 space-y-6 overflow-y-auto">
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hồ sơ Khen thưởng</h4>
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="font-bold text-slate-800 text-sm">{candidate.award_name || 'Sinh viên 5 tốt'}</div>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                {candidate.description || "Không có ghi chú thêm."}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tài liệu Minh chứng</h4>
+            {candidate.evidence_url ? (
+              <a 
+                href={candidate.evidence_url} 
+                target="_blank" 
+                rel="noreferrer"
+                className="flex items-center justify-between p-4 bg-blue-50/50 rounded-2xl border border-blue-100 hover:bg-blue-50 transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <ExternalLink size={18} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-blue-700">Mở Link Minh Chứng</div>
+                    <div className="text-[10px] text-blue-400 truncate max-w-[300px]">{candidate.evidence_url}</div>
+                  </div>
+                </div>
+                <div className="text-blue-500 font-bold text-xs uppercase group-hover:underline">Xem ngay</div>
+              </a>
+            ) : (
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-sm text-slate-500 italic">
+                Ứng viên không cung cấp link minh chứng.
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+              <MessageSquare size={12} /> Phản hồi cho Sinh viên
+            </h4>
+            <textarea 
+              rows={3}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Nhập lý do từ chối hoặc lời phê bình (tùy chọn)..."
+              className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all resize-none"
+            />
+          </div>
+        </div>
+
+        {/* Footer Actions */}
+        {candidate.status === 'PENDING' && (
+          <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-4">
+            <button 
+              disabled={isProcessing}
+              onClick={() => onProcess('REJECTED', feedback)}
+              className="flex-1 py-4 bg-white border border-rose-200 text-rose-600 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm hover:bg-rose-50 active:scale-95 transition-all text-center"
+            >
+              Từ chối
+            </button>
+            <button 
+              disabled={isProcessing}
+              onClick={() => onProcess('APPROVED', feedback)}
+              className="flex-[2] py-4 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all text-center"
+            >
+              {isProcessing ? "Đang xử lý..." : "Duyệt Hồ sơ"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default Awards;

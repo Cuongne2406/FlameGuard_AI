@@ -11,6 +11,10 @@ export const authService = {
       body: formData.toString() 
     });
   },
+  verify2fa: (data) => apiClient('/auth/verify-2fa', { 
+    method: 'POST', 
+    body: JSON.stringify(data) 
+  }),
   register: (data) => apiClient('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   refresh: (data) => apiClient('/auth/refresh', { method: 'POST', body: JSON.stringify(data) }),
   logout: () => apiClient('/auth/logout', { method: 'POST' }),

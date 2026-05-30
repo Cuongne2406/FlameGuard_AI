@@ -52,12 +52,38 @@ const SubAdminDashboard = () => {
     setToast({ message: '❌ Đã hủy yêu cầu!', type: 'error' });
   };
 
-  // Stats cards - lấy từ systemService nếu có
+  // Stats cards - lấy từ systemService thực tế
   const stats = [
-    { label: 'Tổng Chi Đoàn', val: dashboardData?.stats?.totalMembers?.split(',')[0] || '0', sub: '100% đã có BCH', icon: 'groups', color: 'blue', unit: 'Lớp' },
-    { label: 'Tổng Sinh viên', val: dashboardData?.stats?.totalMembers?.replace(',','') || '0', sub: 'Active App: 99%', icon: 'school', color: 'blue' },
-    { label: 'Quỹ Khoa hiện tại', val: dashboardData?.stats?.totalBudgetStr?.split(' ')[0] || '0', unit: 'Triệu VNĐ', sub: 'Thu đủ 95% Đoàn phí', icon: 'account_balance_wallet', color: 'emerald' },
-    { label: 'Chi tiêu năm', val: `Đạt ${100 - (dashboardData?.stats?.budgetLeftPercent || 100)}%`, sub: 'Tiến độ tốt', icon: 'trending_up', color: 'orange' },
+    { 
+      label: 'Tổng Chi Đoàn', 
+      val: dashboardData?.stats?.totalClasses?.toLocaleString() || '0', 
+      sub: '100% đã có BCH', 
+      icon: 'groups', 
+      color: 'blue', 
+      unit: 'Lớp' 
+    },
+    { 
+      label: 'Tổng Sinh viên', 
+      val: dashboardData?.stats?.totalStudents?.toLocaleString() || '0', 
+      sub: 'Active App: 99%', 
+      icon: 'school', 
+      color: 'blue' 
+    },
+    { 
+      label: 'Quỹ Khoa hiện tại', 
+      val: ((dashboardData?.stats?.totalBudget || 0) / 1000000).toLocaleString(undefined, { maximumFractionDigits: 1 }), 
+      unit: 'Triệu VNĐ', 
+      sub: 'Thu đủ 95% Đoàn phí', 
+      icon: 'account_balance_wallet', 
+      color: 'emerald' 
+    },
+    { 
+      label: 'Chi tiêu năm', 
+      val: `Đạt ${100 - (dashboardData?.stats?.budgetLeftPercent || 100)}%`, 
+      sub: 'Tiến độ tốt', 
+      icon: 'trending_up', 
+      color: 'orange' 
+    },
   ];
 
   // Activities cho Monitoring

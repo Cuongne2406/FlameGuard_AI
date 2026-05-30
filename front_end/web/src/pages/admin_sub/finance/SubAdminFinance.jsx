@@ -24,18 +24,25 @@ const SubAdminFinance = () => {
     const [statsData, setStatsData] = useState({ totalFund: 0, totalIncome: 0, totalExpense: 0 });
 
     useEffect(() => {
-        const fetchTransactions = async () => {
+        const loadDashboardData = async () => {
             try {
                 setLoading(true);
-                const data = await financeService.getFacultyTransactions();
-                setTransactions(data);
+                // Fetch stats và transactions song song
+                const [stats, txns] = await Promise.all([
+                    financeService.getBudgetStats(),
+                    financeService.getFacultyTransactions()
+                ]);
+                
+                if (stats) setStatsData(stats);
+                if (txns) setTransactions(txns);
             } catch (err) {
                 console.error('Failed to fetch finance records', err);
+                setToast({ message: 'Lỗi tải dữ liệu tài chính!', type: 'error' });
             } finally {
                 setLoading(false);
             }
         };
-        fetchTransactions();
+        loadDashboardData();
     }, []);
 
     const filteredTransactions = transactions.filter(t => {
@@ -59,31 +66,32 @@ const SubAdminFinance = () => {
     };
 
     const handleCreateTransaction = async () => {
-        const newId = `TXN${Date.now()}`;
         const amountNum = parseFloat(newTransaction.amount) || 0;
-        const sign = newTransaction.type === 'Thu' ? '+' : '-';
-        const newTxn = {
-            id: newId,
+        
+        const txnData = {
             type: newTransaction.type,
             title: newTransaction.title,
             detail: newTransaction.description,
-            user: newTransaction.from || 'Admin',
-            amount: `${sign}${amountNum.toLocaleString()}`,
-            status: newTransaction.type === 'Thu' ? 'Đã nhập quỹ' : 'Chờ duyệt',
-            statusColor: newTransaction.type === 'Thu' ? 'emerald' : 'orange',
-            icon: newTransaction.type === 'Thu' ? 'payments' : 'shopping_bag',
-            color: newTransaction.type === 'Thu' ? 'emerald' : 'rose',
-            actionRequired: newTransaction.type === 'Chi',
+            user: newTransaction.from || 'Hệ thống',
+            amount: amountNum.toString()
         };
 
         try {
-            await financeService.createFacultyTransaction(newTxn);
-            setTransactions(prev => [newTxn, ...prev]);
+            await financeService.createFacultyTransaction(txnData);
+            
+            // Reload data sau khi tạo thành công
+            const [newStats, newTxns] = await Promise.all([
+                financeService.getBudgetStats(),
+                financeService.getFacultyTransactions()
+            ]);
+            setStatsData(newStats);
+            setTransactions(newTxns);
+            
             setShowCreateModal(false);
             setNewTransaction({ type: 'Thu', title: '', amount: '', description: '', from: '' });
             setToast({ message: 'Đã tạo phiếu thành công!', type: 'success' });
         } catch (error) {
-            setToast({ message: 'Lỗi tạo phiếu!', type: 'error' });
+            setToast({ message: 'Lỗi tạo phiếu: ' + (error.message || ''), type: 'error' });
         }
     };
 
@@ -154,10 +162,10 @@ const SubAdminFinance = () => {
                 <div className="bg-white border border-slate-100 rounded-2xl p-5 lg:p-8 shadow-sm space-y-4 lg:space-y-6">
                     <div className="flex justify-between items-start">
                         <div className="space-y-2">
-                            <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">Tiến độ thu Đoàn phí Kỳ 1/2026</p>
+                            <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase tracking-widest">Tiến độ thu Đoàn phí {statsData.feeProgress?.termName || 'Kỳ hiện tại'}</p>
                             <div className="flex items-baseline gap-1 lg:gap-2 pt-2 lg:pt-4">
-                                <span className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tighter">92%</span>
-                                <span className="text-[8px] lg:text-xs font-bold text-slate-400 uppercase">1380/1500 SV</span>
+                                <span className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tighter">{statsData.feeProgress?.percent || 0}%</span>
+                                <span className="text-[8px] lg:text-xs font-bold text-slate-400 uppercase">{statsData.feeProgress?.paidCount || 0}/{statsData.feeProgress?.totalCount || 0} SV</span>
                             </div>
                         </div>
                         <div className="h-8 w-8 lg:h-10 lg:w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -165,10 +173,10 @@ const SubAdminFinance = () => {
                         </div>
                     </div>
                     <div className="h-1 lg:h-1.5 rounded-full bg-slate-50 overflow-hidden">
-                        <div className="h-full bg-blue-600 rounded-full" style={{ width: '92%' }}></div>
+                        <div className="h-full bg-blue-600 rounded-full" style={{ width: `${statsData.feeProgress?.percent || 0}%` }}></div>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pt-2">
-                        <p className="text-[9px] lg:text-xs font-bold text-rose-500 uppercase tracking-widest">Còn 120 bạn chưa đóng</p>
+                        <p className="text-[9px] lg:text-xs font-bold text-rose-500 uppercase tracking-widest">Còn {statsData.feeProgress?.remainingCount || 0} bạn chưa đóng</p>
                         <button className="h-8 lg:h-10 px-3 lg:px-4 rounded-xl bg-blue-50 text-blue-600 text-[9px] lg:text-xs font-bold uppercase tracking-widest shadow-sm whitespace-nowrap">Gửi nhắc nhở</button>
                     </div>
                 </div>
@@ -181,9 +189,9 @@ const SubAdminFinance = () => {
                             <span className="material-symbols-outlined text-lg lg:text-xl">north_east</span>
                         </div>
                     </div>
-                    <p className="text-2xl lg:text-3xl font-bold text-rose-600 tracking-tighter">-5.200.000</p>
+                    <p className="text-2xl lg:text-3xl font-bold text-rose-600 tracking-tighter">-{parseFloat(statsData.monthlyExpense || 0).toLocaleString()}đ</p>
                     <div className="p-2 lg:p-3 rounded-xl bg-slate-50 border border-slate-100">
-                        <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase">Chủ yếu cho: <span className="text-slate-900">Giải bóng đá & In ấn</span></p>
+                        <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase">Chủ yếu cho: <span className="text-slate-900">{statsData.topExpenseCategory || 'Chưa có chi tiêu'}</span></p>
                     </div>
                 </div>
 
@@ -195,10 +203,10 @@ const SubAdminFinance = () => {
                             <span className="material-symbols-outlined text-lg lg:text-xl">handshake</span>
                         </div>
                     </div>
-                    <p className="text-2xl lg:text-3xl font-bold text-emerald-600 tracking-tighter">+10.000.000</p>
+                    <p className="text-2xl lg:text-3xl font-bold text-emerald-600 tracking-tighter">+{parseFloat(statsData.externalFunding || 0).toLocaleString()}đ</p>
                     <div className="p-2 lg:p-3 rounded-xl bg-slate-50/50 border border-emerald-100 flex items-center gap-1 lg:gap-2">
                         <span className="material-symbols-outlined text-emerald-500 text-xs lg:text-sm">check_circle</span>
-                        <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase">Từ Doanh nghiệp ABC</p>
+                        <p className="text-[9px] lg:text-xs font-bold text-slate-400 uppercase">{statsData.latestSponsor || 'Chưa có tài trợ'}</p>
                     </div>
                 </div>
             </div>

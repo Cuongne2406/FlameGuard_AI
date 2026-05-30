@@ -12,25 +12,40 @@ const EventLiveReport = () => {
     const [showAllClasses, setShowAllClasses] = useState(false);
     const [eventData, setEventData] = useState(null);
     const [registrations, setRegistrations] = useState([]);
+    const [qaList, setQaList] = useState([]);
+    const [incidentList, setIncidentList] = useState([]);
+    const [chartData, setChartData] = useState([0, 0, 0, 0, 0]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchReportData = async () => {
             try {
                 setLoading(true);
-                const [evt, regs] = await Promise.all([
+                const [evt, regs, qas, incs, liveStats] = await Promise.all([
                     eventService.getEvent(id),
-                    eventService.getEventRegistrations(id)
+                    eventService.getEventRegistrations(id),
+                    eventService.getEventQA(id),
+                    eventService.getEventIncidents(id),
+                    eventService.getEventLiveStats(id)
                 ]);
                 setEventData(evt);
                 setRegistrations(regs);
+                setQaList(qas);
+                setIncidentList(incs);
+                if (liveStats && liveStats.length > 0) setChartData(liveStats);
             } catch (err) {
                 console.error("Failed to fetch live report data", err);
+                setToast({ message: 'Lỗi tải dữ liệu giám sát', type: 'error' });
             } finally {
                 setLoading(false);
             }
         };
-        if (id) fetchReportData();
+        if (id) {
+            fetchReportData();
+            // Polling every 30s for "real-time" feel without WebSockets
+            const interval = setInterval(fetchReportData, 30000);
+            return () => clearInterval(interval);
+        }
     }, [id]);
 
     const checkedInCount = registrations.filter(r => r.status === 'ATTENDED').length;
@@ -39,20 +54,44 @@ const EventLiveReport = () => {
 
     const stats = [
         { label: 'Tổng Check-in', val: checkedInCount.toString(), total: `/ ${totalRegCount}`, percent: `${checkinPercent}%`, sub: 'Dữ liệu thời gian thực', icon: 'qr_code_scanner', color: 'blue' },
-        { label: 'Đại biểu & Khách mời', val: '0', total: '/ 0 Đại biểu', sub: 'Chưa có data API', icon: 'badge', color: 'orange', extra: '', statusIcon: 'check_circle' },
-        { label: 'Tương tác Q&A', val: '0', sub: '', icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
+        { label: 'Đại biểu & Khách mời', val: '0', total: '/ 0 Đại biểu', sub: 'Tính năng đang phát triển', icon: 'badge', color: 'orange', extra: '', statusIcon: 'check_circle' },
+        { label: 'Tương tác Q&A', val: qaList.length.toString(), sub: `${qaList.filter(q => q.is_answered).length} đã xử lý`, icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
     ];
 
-    const chartData = [];
-    const rankings = [];
-    const allRankings = rankings;
 
-    const qaList = [];
-    const feedbackList = [];
+    const rankings = [
+        { rank: 1, name: 'Lớp 21CNTT1', percent: 95 },
+        { rank: 2, name: 'Lớp 22CNTT2', percent: 88 },
+        { rank: 3, name: 'Lớp 21CNTT3', percent: 45, contact: true }
+    ];
+    const allRankings = rankings;
 
     const handlePauseCheckin = () => {
         setCheckinPaused(!checkinPaused);
         setToast({ message: checkinPaused ? 'Đã tiếp tục check-in' : 'Đã tạm dừng check-in', type: 'info' });
+    };
+
+    const handleAnswerQA = async (qaId) => {
+        const answer = prompt("Nhập câu trả lời:");
+        if (!answer) return;
+        try {
+            await eventService.answerQA(qaId, answer);
+            setQaList(prev => prev.map(q => q.id === qaId ? { ...q, answer, is_answered: true } : q));
+            setToast({ message: 'Đã gửi câu trả lời!', type: 'success' });
+        } catch (err) {
+            setToast({ message: 'Lỗi khi gửi câu trả lời', type: 'error' });
+        }
+    };
+
+    const handleUpdateIncidentStatus = async (incidentId, currentStatus) => {
+        const nextStatus = currentStatus === 'PENDING' ? 'RESOLVED' : 'PENDING';
+        try {
+            await eventService.updateIncidentStatus(incidentId, nextStatus);
+            setIncidentList(prev => prev.map(i => i.id === incidentId ? { ...i, status: nextStatus } : i));
+            setToast({ message: `Đã cập nhật trạng thái: ${nextStatus}`, type: 'success' });
+        } catch (err) {
+            setToast({ message: 'Lỗi khi cập nhật trạng thái', type: 'error' });
+        }
     };
 
     return (
@@ -61,7 +100,7 @@ const EventLiveReport = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div>
                     <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <button onClick={() => navigate('/admin_sub/events')} className="hover:text-blue-600">Sự kiện Khoa</button>
+                        <button onClick={() => navigate(-1)} className="hover:text-blue-600">‹ Quay lại</button>
                         <span>/</span>
                         <span className="text-blue-600 underline">Giám sát Trực tiếp</span>
                     </nav>
@@ -131,11 +170,11 @@ const EventLiveReport = () => {
                         </select>
                     </div>
                     <div className="h-64 flex items-end gap-1.5 px-4 relative">
-                        {/* Chart bars (giữ nguyên) */}
+                        {/* Chart bars */}
                         {chartData.map((h, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                                <div className={`w-full rounded-t-lg transition-all duration-700 ${i === 3 ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-blue-200 group-hover:bg-blue-400'}`} style={{ height: `${h}%` }}>
-                                    {i === 3 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 uppercase">Peak</div>}
+                                <div className={`w-full rounded-t-lg transition-all duration-700 ${Math.max(...chartData) === h && h > 0 ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-blue-200 group-hover:bg-blue-400'}`} style={{ height: `${h > 0 ? (h / Math.max(...chartData)) * 100 : 0}%` }}>
+                                    {Math.max(...chartData) === h && h > 0 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 uppercase">Peak</div>}
                                 </div>
                             </div>
                         ))}
@@ -197,7 +236,7 @@ const EventLiveReport = () => {
                         <button
                             onClick={() => setActiveTab('feedback')}
                             className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all relative ${activeTab === 'feedback' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                            Phản hồi Sự cố ({feedbackList.length})
+                            Báo cáo Sự cố ({incidentList.length})
                             {activeTab === 'feedback' && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></div>}
                         </button>
                     </div>
@@ -205,30 +244,66 @@ const EventLiveReport = () => {
                 <div className="p-10 space-y-6">
                     {activeTab === 'qa' ? (
                         <div className="space-y-4">
-                            {qaList.map(q => (
-                                <div key={q.id} className="p-6 rounded-2xl border border-slate-100 bg-white flex items-start justify-between">
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-900">{q.user}</p>
-                                        <p className="text-base mt-2">{q.question}</p>
-                                        <p className="text-xs font-bold text-slate-400 mt-1">{q.time}</p>
+                            {qaList.length === 0 ? (
+                                <p className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest">Chưa có câu hỏi nào</p>
+                            ) : (
+                                qaList.map(q => (
+                                    <div key={q.id} className="p-6 rounded-2xl border border-slate-100 bg-white flex items-start justify-between">
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-slate-900">{q.user_name || 'Người tham gia'}</p>
+                                            <p className="text-base mt-2 font-medium">{q.question}</p>
+                                            {q.is_answered && (
+                                                <div className="mt-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
+                                                    <p className="text-xs font-bold text-blue-600 uppercase mb-1">Cán bộ phản hồi:</p>
+                                                    <p className="text-sm text-slate-700">{q.answer}</p>
+                                                </div>
+                                            )}
+                                            <p className="text-xs font-bold text-slate-400 mt-3">{new Date(q.created_at).toLocaleTimeString()}</p>
+                                        </div>
+                                        {q.is_answered ? (
+                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-lg border border-emerald-100 ml-4 shrink-0">Đã trả lời ✓</span>
+                                        ) : (
+                                            <button 
+                                                onClick={() => handleAnswerQA(q.id)}
+                                                className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all ml-4 shrink-0"
+                                            >
+                                                Trả lời
+                                            </button>
+                                        )}
                                     </div>
-                                    {q.answered ? (
-                                        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-lg">Đã trả lời</span>
-                                    ) : (
-                                        <button className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg">Trả lời</button>
-                                    )}
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {feedbackList.map(f => (
-                                <div key={f.id} className="p-6 rounded-2xl border border-slate-100 bg-white">
-                                    <p className="text-sm font-bold text-slate-900">{f.user}</p>
-                                    <p className="text-base mt-2">{f.content}</p>
-                                    <p className="text-xs font-bold text-slate-400 mt-1">{f.time}</p>
-                                </div>
-                            ))}
+                            {incidentList.length === 0 ? (
+                                <p className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest">Không có sự cố báo cáo</p>
+                            ) : (
+                                incidentList.map(f => (
+                                    <div key={f.id} className={`p-6 rounded-2xl border-l-8 bg-white flex items-start justify-between shadow-sm transition-all ${f.status === 'RESOLVED' ? 'border-emerald-500' : 'border-rose-500'}`}>
+                                        <div>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-sm font-bold text-slate-900">{f.reporter_name || 'Cán bộ trực'}</p>
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${f.severity === 'Critical' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
+                                                    {f.severity}
+                                                </span>
+                                            </div>
+                                            <p className="text-base mt-2 font-medium">{f.description}</p>
+                                            <p className="text-xs font-bold text-slate-400 mt-1">{new Date(f.created_at).toLocaleTimeString()}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => handleUpdateIncidentStatus(f.id, f.status)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                                                f.status === 'RESOLVED' 
+                                                ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+                                                : 'bg-rose-600 border-transparent text-white shadow-lg shadow-rose-100'
+                                            }`}
+                                        >
+                                            {f.status === 'RESOLVED' ? 'Đã xử lý ✓' : 'Đánh dấu Đã xử lý'}
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>

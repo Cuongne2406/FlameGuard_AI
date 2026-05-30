@@ -1,334 +1,289 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import {
+  ArrowRight,
+  Award,
+  BadgeCheck,
+  Bell,
+  Calendar,
+  QrCode,
+  Search,
+  Sparkles,
+} from "lucide-react";
 import { AuthContext } from "../../../context/AuthContext";
 import { systemService } from "../../../services/systemService";
 import { userService } from "../../../services/userService";
-import {
-  Search,
-  Bell,
-  Sparkles,
-  Trophy,
-  Calendar,
-  Wallet,
-  Zap,
-  ArrowRight,
-  MessageSquare,
-  FileText,
-  BarChart,
-  Star as LucideStar
-} from "lucide-react";
+
+const quickKeywords = ["Mùa hè xanh", "Tình nguyện", "Workshop AI"];
 
 const UserDashboard = () => {
   const { user } = useContext(AuthContext);
   const [dashboardData, setDashboardData] = useState(null);
   const [profileStats, setProfileStats] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [dash, stats] = await Promise.all([
           systemService.getSystemDashboard(),
-          userService.getProfileStats()
+          userService.getProfileStats(),
         ]);
         setDashboardData(dash);
         setProfileStats(stats);
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
       }
     };
+
     fetchData();
   }, []);
 
-  const getIcon = (iconName) => {
-    switch(iconName) {
-      case 'file_text': return <FileText size={18} />;
-      case 'bar_chart': return <BarChart size={18} />;
-      case 'event': return <LucideStar size={18} />;
-      default: return <Zap size={18} />;
-    }
-  };
+  const upcomingEvents = useMemo(() => {
+    const source = dashboardData?.timelines || [];
+    if (!searchQuery.trim()) return source;
+
+    const query = searchQuery.toLowerCase();
+    return source.filter((event) => {
+      const label = (event.label || "").toLowerCase();
+      const status = (event.status || "").toLowerCase();
+      const date = (event.date || "").toLowerCase();
+      return label.includes(query) || status.includes(query) || date.includes(query);
+    });
+  }, [dashboardData, searchQuery]);
+
+  const latestCertificates = profileStats?.recent_certificates || [];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Header Chào mừng */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-            Xin chào, {user?.full_name?.split(" ").pop() || "Sinh viên"}! 👋
-          </h1>
-          <p className="text-slate-500 text-sm font-medium">
-            Hôm nay là {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: '2-digit', day: '2-digit' })}
-          </p>
-        </div>
-
-        {/* Thanh tìm kiếm nhanh */}
-        <div className="relative w-full md:w-80 group">
-          <Search
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
-            size={18}
-          />
-          <input
-            type="text"
-            placeholder="Tìm kiếm..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-          />
-        </div>
-      </div>
-
-      {/* Grid Layout chính */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Cột trái (4/12) */}
-        <div className="md:col-span-3 space-y-6">
-          {/* Card Thông tin cá nhân nhanh */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col items-center text-center">
-            <div className="relative mb-4">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-100 to-blue-50 border-4 border-white shadow-md flex items-center justify-center overflow-hidden">
-                <img
-                  src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
-                  alt="avatar"
-                />
-              </div>
-              <div className="absolute bottom-0 right-0 w-6 h-6 bg-blue-600 border-2 border-white rounded-full flex items-center justify-center text-white">
-                <Sparkles size={12} />
-              </div>
-            </div>
-            <div>
-            <h3 className="text-xl font-black text-slate-800">
-              {user?.full_name}
-            </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
-              {user?.student_id}
-            </p>
-            <div className="mt-2 inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase">
-              {user?.student_id ? user?.class_name || "Sinh viên" : "Khách"}
-            </div>
-          </div>
-          </div>
-
-          {/* Cấp độ đoàn viên */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-start mb-4">
-              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Cấp độ đoàn viên
-              </h4>
-              <Trophy className="text-amber-500" size={18} />
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 font-black text-2xl shadow-inner border border-amber-100/50">
-                {user?.level || 5}
-              </div>
-              <div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-black text-slate-800">{user?.training_score || 0}</span>
-                  <span className="text-slate-400 text-xs font-bold">/100</span>
-                </div>
-                <p className="text-[10px] font-bold text-emerald-500 uppercase">
-                  Xếp loại: { (user?.training_score >= 90) ? 'Xuất sắc' : (user?.training_score >= 80 ? 'Tốt' : 'Khá') }
+    <div className="space-y-6">
+      <section className="app-card overflow-hidden">
+        <div className="app-hero relative px-5 pb-8 pt-6 md:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
+          <div className="relative flex flex-col gap-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-sm font-semibold text-white/78">Chào buổi sáng,</p>
+                <h2 className="mt-2 text-3xl font-black tracking-tight text-white md:text-4xl">
+                  {user?.full_name || "Sinh viên"}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-white/82">
+                  Hôm nay mình ưu tiên sự kiện mới, check-in nhanh và hồ sơ cá nhân
+                  của bạn giống như trên app mobile.
                 </p>
               </div>
-            </div>
-            <button className="w-full py-2.5 bg-slate-50 hover:bg-blue-50 text-blue-600 rounded-xl text-[11px] font-black transition-colors flex items-center justify-center gap-2 border border-slate-100">
-              <Sparkles size={14} /> Đoàn viên Ưu tú
-            </button>
-          </div>
 
-          {/* Ví của tôi */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
-            <div className="flex items-center gap-2 mb-4">
-              <Wallet className="text-slate-400" size={16} />
-              <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                Ví của tôi
-              </h4>
-            </div>
-            <p className="text-[10px] text-slate-500 mb-1">
-              Trạng thái phí tháng 3/2026
-            </p>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-xs font-black text-emerald-600">
-                Đã hoàn thành
-              </span>
-            </div>
-            <button className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl text-[11px] font-black transition-all shadow-lg shadow-orange-200 uppercase tracking-widest">
-              Nạp quỹ lớp
-            </button>
-          </div>
-        </div>
-
-        {/* Cột giữa (Trợ lý & Lịch - 6/12) */}
-        <div className="md:col-span-6 space-y-6">
-          {/* Trợ lý AI DYUS */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
-              <Sparkles size={80} className="text-blue-600" />
+              <div className="flex items-center gap-3 self-start rounded-full bg-white/14 px-4 py-2 text-white backdrop-blur">
+                <Bell size={16} />
+                <span className="text-sm font-semibold">
+                  {new Date().toLocaleDateString("vi-VN", {
+                    weekday: "long",
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  })}
+                </span>
+              </div>
             </div>
 
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
-                  <Sparkles size={20} />
+            <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
+              <div className="rounded-[26px] bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex items-center gap-3 rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3">
+                  <Search size={18} className="text-slate-400" />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Tìm sự kiện, địa điểm, hoạt động..."
+                    className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                  />
                 </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-800">
-                    Trợ lý ảo DYUS
-                  </h4>
-                  <p className="text-[10px] text-emerald-500 font-bold">
-                    • Online - Sẵn sàng hỗ trợ
-                  </p>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {quickKeywords.map((keyword) => (
+                    <button
+                      key={keyword}
+                      onClick={() => setSearchQuery(keyword)}
+                      className="app-chip hover:bg-slate-50"
+                    >
+                      {keyword}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <button className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-blue-100 transition-colors">
-                Mentoring Mode
-              </button>
-            </div>
 
-            <div className="bg-slate-50/50 rounded-2xl p-4 mb-4 border border-slate-100">
-              <p className="text-xs text-slate-600 leading-relaxed italic">
-                "Chào {user?.full_name?.split(" ").pop()}! 👋 Mình thấy điểm rèn luyện của bạn đang ở mức{" "}
-                <span className="text-blue-600 font-black">
-                  {user?.training_score || 0} điểm
-                </span>
-                . { (user?.training_score < 90) ? "Cố gắng tham gia thêm hoạt động để đạt loại Xuất sắc nhé!" : "Tuyệt vời! Bạn đang duy trì phong độ rất tốt." }
-              </p>
-            </div>
-
-            {/* Gợi ý sự kiện của AI */}
-            {dashboardData?.suggestedEvent && (
-              <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-slate-100 shadow-sm mb-4">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500 shrink-0 font-bold">
-                  💡
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h5 className="text-[11px] font-black text-slate-800 truncate uppercase">
-                    {dashboardData.suggestedEvent.name}
-                  </h5>
-                  <p className="text-[10px] text-slate-400 font-bold">
-                    {dashboardData.suggestedEvent.date} • {dashboardData.suggestedEvent.location}
+              <div className="app-gradient-panel flex flex-col justify-between gap-4 px-5 py-5 text-white">
+                <div>
+                  <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-black">
+                    CHECK-IN NHANH
+                  </div>
+                  <h3 className="mt-3 text-2xl font-black">Quét QR trong vài giây</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/84">
+                    Nút check-in luôn nổi bật ở trang chủ để vào sự kiện nhanh hơn.
                   </p>
                 </div>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black transition-transform hover:scale-105">
-                  Đăng ký
+
+                <button className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-indigo-600 transition-transform hover:scale-[0.98]">
+                  <QrCode size={18} />
+                  Mở máy quét
                 </button>
               </div>
-            )}
-
-            {/* Input AI */}
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Hỏi DYUS về lộ trình phát triển..."
-                className="w-full bg-white border border-slate-200 rounded-2xl py-3 pl-4 pr-12 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/10 shadow-inner"
-              />
-              <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-md shadow-blue-200 transition-transform active:scale-95">
-                <ArrowRight size={16} />
-              </button>
             </div>
           </div>
+        </div>
 
-          {/* Sắp diễn ra */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-2">
-                <Calendar className="text-orange-500" size={18} />
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                  Sắp diễn ra
-                </h4>
-              </div>
-              <button className="text-[11px] font-black text-blue-600 hover:underline">
-                Xem lịch
-              </button>
+        <div className="grid gap-4 p-5 md:grid-cols-3 md:p-6">
+          <div className="app-card-muted p-5">
+            <Award size={18} className="text-indigo-600" />
+            <p className="mt-4 text-3xl font-black text-slate-800">
+              {user?.training_score || 0}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-500">Điểm rèn luyện</p>
+          </div>
+
+          <div className="app-card-muted p-5">
+            <BadgeCheck size={18} className="text-emerald-500" />
+            <p className="mt-4 text-3xl font-black text-slate-800">
+              {user?.level || 1}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-500">Cấp độ hiện tại</p>
+          </div>
+
+          <div className="app-card-muted p-5">
+            <Sparkles size={18} className="text-amber-500" />
+            <p className="mt-4 text-3xl font-black text-slate-800">
+              {latestCertificates.length}
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-500">Chứng nhận gần đây</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles size={18} className="text-amber-500" />
+              <h3 className="app-section-title">Hoạt động sắp tới</h3>
             </div>
+            <button className="text-sm font-bold text-indigo-600">Xem tất cả</button>
+          </div>
 
-            <div className="flex gap-6 items-center overflow-x-auto pb-4 custom-scrollbar">
-              {dashboardData?.timelines?.length > 0 ? dashboardData.timelines.map((event, idx) => (
-                <div key={event.id || idx} className="flex gap-6 items-center min-w-[300px] shrink-0">
-                  {/* Date Card */}
-                  <div className="flex flex-col items-center justify-center w-20 h-24 rounded-3xl bg-slate-50 border border-slate-100 shadow-inner">
-                    <span className="text-[10px] font-black text-red-500 uppercase">
-                      Bắt đầu
-                    </span>
-                    <span className="text-lg font-black text-slate-800 truncate px-2 w-full text-center">
-                      {event.date?.split(' ')[0] || '12/03'}
-                    </span>
-                  </div>
-                  {/* Event Info */}
-                  <div className="flex-1 space-y-3">
-                    <h4 className="text-base font-black text-slate-800 leading-tight">
-                      {event.label}
-                    </h4>
-                    <div className="flex flex-wrap gap-4">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <Calendar size={12} />
-                        <span className="text-[11px] font-bold">{event.status || 'Sắp diễn ra'}</span>
-                      </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.slice(0, 4).map((event, index) => (
+                <article key={event.id || index} className="app-card p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-500">
+                        Sự kiện
+                      </p>
+                      <h4 className="mt-3 text-lg font-black leading-7 text-slate-800">
+                        {event.label}
+                      </h4>
+                    </div>
+                    <div className="rounded-[20px] bg-indigo-50 px-3 py-2 text-center text-indigo-600">
+                      <p className="text-[10px] font-black uppercase">Ngày</p>
+                      <p className="text-sm font-black">
+                        {(event.date || "").split(" ")[0] || "--/--"}
+                      </p>
                     </div>
                   </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <span className="app-chip">
+                      <Calendar size={14} />
+                      {event.status || "Sắp diễn ra"}
+                    </span>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="app-card p-8 text-center text-sm font-medium text-slate-500 md:col-span-2">
+                Chưa có hoạt động phù hợp với từ khóa hiện tại.
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="app-card p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">
+                  Thông tin cá nhân
+                </p>
+                <h3 className="mt-3 text-2xl font-black text-slate-800">
+                  {user?.full_name || "Sinh viên"}
+                </h3>
+                <p className="mt-2 inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-600">
+                  MSSV: {user?.student_id || "Chưa cập nhật"}
+                </p>
+              </div>
+              <img
+                src={
+                  user?.avatar_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || "Felix"}`
+                }
+                alt="avatar"
+                className="h-16 w-16 rounded-full border-4 border-white object-cover shadow-md"
+              />
+            </div>
+
+            <div className="mt-6">
+              <div className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-500">
+                <span>Tiến trình cấp độ</span>
+                <span className="text-slate-800">
+                  {profileStats?.training_score || user?.training_score || 0}/
+                  {(user?.level || 1) * 1000} XP
+                </span>
+              </div>
+              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-[linear-gradient(90deg,#F59E0B,#FBBF24)]"
+                  style={{
+                    width: `${Math.min(
+                      (((profileStats?.training_score || user?.training_score || 0) /
+                        ((user?.level || 1) * 1000)) *
+                        100),
+                      100
+                    )}%`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="app-card p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-slate-800">Chứng nhận mới nhất</h3>
+              <button className="text-sm font-bold text-indigo-600">Mở hồ sơ</button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {latestCertificates.length > 0 ? (
+                latestCertificates.slice(0, 3).map((certificate) => (
+                  <div
+                    key={certificate.id}
+                    className="app-card-muted flex items-center justify-between p-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-slate-800">
+                        {certificate.title}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-slate-500">
+                        {certificate.time || "Xác thực bởi hệ thống"}
+                      </p>
+                    </div>
+                    <ArrowRight size={18} className="shrink-0 text-slate-400" />
+                  </div>
+                ))
+              ) : (
+                <div className="app-card-muted p-5 text-sm text-slate-500">
+                  Chưa có chứng nhận nào được ghi nhận.
                 </div>
-              )) : (
-                <div className="text-sm text-slate-400 p-4">Không có sự kiện sắp tới</div>
               )}
             </div>
           </div>
         </div>
-
-        {/* Cột phải (Thành tích & Yêu cầu - 3/12) */}
-        <div className="md:col-span-3 space-y-6">
-          {/* Thành tích mới nhất */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6">
-              Thành tích mới nhất
-            </h4>
-
-            <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
-              {profileStats?.recent_certificates?.length > 0 ? profileStats.recent_certificates.map((award, idx) => (
-                 <div key={award.id || idx} className="relative pl-8 group">
-                   <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-lg ${idx % 2 === 0 ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'} flex items-center justify-center z-10 border border-white`}>
-                     <Trophy size={12} />
-                   </div>
-                   <p className="text-[9px] font-bold text-slate-400 mb-1">
-                     {award.time}
-                   </p>
-                   <h5 className="text-[11px] font-black text-slate-800 group-hover:text-blue-600 transition-colors uppercase">
-                     {award.title}
-                   </h5>
-                   <p className="text-[10px] text-slate-400 mb-2">
-                     Xác thực bởi Hệ thống
-                   </p>
-                 </div>
-              )) : (
-                <p className="text-[10px] text-slate-400 italic pl-8">Chưa có thành tích ghi nhận</p>
-              )}
-            </div>
-
-            <button className="w-full mt-6 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-blue-600 transition-colors border-t border-slate-50 pt-4">
-              Xem tất cả hoạt động
-            </button>
-          </div>
-
-          {/* Yêu cầu nhanh */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[2rem] p-6 border border-blue-100/50 shadow-inner">
-            <div className="flex items-center gap-2 mb-4 text-blue-600">
-              <Sparkles size={16} />
-              <h4 className="text-[11px] font-black uppercase tracking-widest">
-                Yêu cầu nhanh
-              </h4>
-            </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed mb-4">
-              Bạn cần giấy xác nhận để bổ sung hồ sơ vay vốn sinh viên?
-            </p>
-            <button className="w-full py-4 bg-white hover:bg-blue-600 hover:text-white text-blue-600 rounded-[1.5rem] text-[10px] font-black transition-all shadow-md shadow-blue-200/50 border border-blue-200 uppercase tracking-widest">
-              1-Click Xin giấy xác nhận
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer bản quyền */}
-      <footer className="text-center py-4">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
-          © 2025 Digital Youth Union System (DYUS). Designed for the next
-          generation.
-        </p>
-      </footer>
+      </section>
     </div>
   );
 };

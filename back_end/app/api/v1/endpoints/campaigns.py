@@ -31,6 +31,17 @@ def read_campaigns(
     """
     return event_service.get_campaigns(db, skip=skip, limit=limit)
 
+@router.get("/{campaign_id}", response_model=CampaignResponse)
+def read_campaign(
+    *,
+    db: Session = Depends(get_db),
+    campaign_id: UUID,
+):
+    """
+    Lấy chi tiết một chiến dịch.
+    """
+    return event_service.get_campaign(db=db, campaign_id=campaign_id)
+
 @router.put("/{campaign_id}", response_model=CampaignResponse)
 def update_campaign(
     *,

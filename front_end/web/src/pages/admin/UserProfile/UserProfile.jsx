@@ -1,10 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { User, ShieldCheck, Camera, Save } from "lucide-react";
 import TabAccountInfo from "../../../components/admin/Profile/TabAccountInfo";
 import TabSecurityLogin from "../../../components/admin/Profile/TabSecurityLogin";
+import { userService } from "../../../services/userService";
 
 const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("info");
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      setLoading(true);
+      try {
+        const data = await userService.getMe();
+        setUserData(data);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  const user = userData || {
+    full_name: "Lê Trọng Phúc Hậu",
+    role: "Super Admin",
+    student_id: "ban-it-truong",
+    is_active: true
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6 animate-in fade-in duration-500">
@@ -15,7 +48,7 @@ const UserProfile = () => {
         <div className="relative z-10">
           <div className="w-24 h-24 rounded-full border-4 border-white shadow-xl overflow-hidden bg-slate-100">
             <img
-              src="https://api.dicebear.com/7.x/avataaars/svg?seed=Hau"
+              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.full_name}`}
               alt="Avatar"
             />
           </div>
@@ -26,14 +59,14 @@ const UserProfile = () => {
 
         <div className="z-10 text-center md:text-left space-y-1">
           <h2 className="text-2xl font-black text-slate-800">
-            Lê Trọng Phúc Hậu
+            {user.full_name}
           </h2>
           <p className="text-sm font-bold text-blue-600">
-            Super Admin • ban-it-truong
+            {user.role} • {user.student_id}
           </p>
           <div className="flex gap-2 mt-2">
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
-              Đang hoạt động
+            <span className={`px-3 py-1 ${user.is_active ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'} text-[10px] font-black rounded-full border`}>
+              {user.is_active ? 'Đang hoạt động' : 'Tạm ngưng'}
             </span>
           </div>
         </div>
@@ -65,7 +98,7 @@ const UserProfile = () => {
 
       {/* Render Content */}
       <div className="transition-all duration-300">
-        {activeTab === "info" ? <TabAccountInfo /> : <TabSecurityLogin />}
+        {activeTab === "info" ? <TabAccountInfo user={user} /> : <TabSecurityLogin user={user} />}
       </div>
     </div>
   );

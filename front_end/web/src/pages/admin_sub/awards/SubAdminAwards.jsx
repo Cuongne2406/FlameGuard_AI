@@ -32,10 +32,10 @@ const SubAdminAwards = () => {
                     awardService.getAwardStats(activeTimescale)
                 ]);
                 
-                setStudents(studentsData);
-                setStats(statsData.stats || []);
-                setRankings(statsData.rankings || []);
-                setWarningClass(statsData.warningClass || null);
+                setStudents(Array.isArray(studentsData) ? studentsData : []);
+                setStats(statsData?.stats || []);
+                setRankings(statsData?.rankings || []);
+                setWarningClass(statsData?.warningClass || null);
             } catch (err) {
                 console.error("Failed to fetch award data", err);
             } finally {
@@ -77,7 +77,8 @@ const SubAdminAwards = () => {
     };
 
     const sendRemind = () => {
-        setToast({ message: `Đã gửi nhắc nhở tới Bí thư ${remindItem.class}!`, type: 'success' });
+        const className = remindItem?.university || remindItem?.class || "Lớp học";
+        setToast({ message: `Đã gửi nhắc nhở tới Bí thư ${className}!`, type: 'success' });
         setShowRemindModal(false);
         setRemindMessage('');
     };
@@ -121,16 +122,18 @@ const SubAdminAwards = () => {
 
         try {
             await awardService.updateAwardAssessment(selectedStudent.id, {
-                points: selectedStudent.points + addedPoints,
+                points: (selectedStudent.points || 0) + addedPoints,
                 assessment: assessmentForm
             });
-            const newPoints = selectedStudent.points + addedPoints;
+            const newPoints = (selectedStudent.points || 0) + addedPoints;
+            const studentName = selectedStudent.full_name || selectedStudent.name || "Sinh viên";
+            
             setStudents(prev => prev.map(s =>
                 s.id === selectedStudent.id
                     ? { ...s, points: newPoints, status: 'Đã duyệt', assessed: true, assessment: { ...assessmentForm } }
                     : s
             ));
-            setToast({ message: `Đã cộng ${addedPoints} điểm cho ${selectedStudent.name}!`, type: 'success' });
+            setToast({ message: `Đã cộng ${addedPoints} điểm cho ${studentName}!`, type: 'success' });
             setShowAssessmentModal(false);
         } catch (error) {
             setToast({ message: 'Lỗi khi lưu đánh giá!', type: 'error' });
@@ -146,15 +149,17 @@ const SubAdminAwards = () => {
 
         try {
             await awardService.updateAwardAssessment(selectedStudent.id, {
-                points: selectedStudent.points + addedPoints,
+                points: (selectedStudent.points || 0) + addedPoints,
                 assessment: assessmentForm
             });
+            const studentName = selectedStudent.full_name || selectedStudent.name || "Sinh viên";
+            
             setStudents(prev => prev.map(s =>
                 s.id === selectedStudent.id
-                    ? { ...s, points: selectedStudent.points + addedPoints, assessment: { ...assessmentForm } }
+                    ? { ...s, points: (selectedStudent.points || 0) + addedPoints, assessment: { ...assessmentForm } }
                     : s
             ));
-            setToast({ message: `Đã cập nhật đánh giá cho ${selectedStudent.name}!`, type: 'success' });
+            setToast({ message: `Đã cập nhật đánh giá cho ${studentName}!`, type: 'success' });
             setShowAssessmentModal(false);
         } catch (error) {
             setToast({ message: 'Lỗi khi cập nhật đánh giá!', type: 'error' });
@@ -163,8 +168,8 @@ const SubAdminAwards = () => {
 
     const exportToExcel = () => {
         const data = [
-            ['Họ tên', 'Lớp', 'Điểm', 'Xếp hạng', 'Trạng thái'],
-            ...students.map(s => [s.name, s.class, s.points, s.rank, s.status])
+            ['Họ tên', 'Đơn vị', 'Điểm', 'Xếp hạng', 'Trạng thái'],
+            ...students.map(s => [s.full_name || s.name, s.university || s.class, s.points || 0, s.rank || 'N/A', s.status])
         ];
         const ws = XLSX.utils.aoa_to_sheet(data);
         const wb = XLSX.utils.book_new();
@@ -262,7 +267,7 @@ const SubAdminAwards = () => {
                                         <span className="text-xl md:text-2xl">{r.icon}</span>
                                     </td>
                                     <td className="py-4 md:py-6 lg:py-8 px-3 md:px-4 lg:px-6">
-                                        <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{r.class}</p>
+                                        <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{r.university || r.class}</p>
                                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.dept}</p>
                                     </td>
                                     <td className="py-4 md:py-6 lg:py-8 px-3 md:px-4 lg:px-6">
@@ -302,7 +307,7 @@ const SubAdminAwards = () => {
                                     <span className="text-sm md:text-base font-bold text-rose-500">{warningClass.rank}</span>
                                 </td>
                                 <td className="py-4 md:py-6 lg:py-8 px-3 md:px-4 lg:px-6">
-                                    <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{warningClass.class}</p>
+                                    <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{warningClass.university || warningClass.class}</p>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{warningClass.dept}</p>
                                 </td>
                                 <td className="py-4 md:py-6 lg:py-8 px-3 md:px-4 lg:px-6 font-bold text-rose-600">{warningClass.score}</td>
@@ -343,68 +348,56 @@ const SubAdminAwards = () => {
                         </div>
                         <h3 className="text-lg md:text-xl font-bold text-slate-900 uppercase">Xét duyệt Danh hiệu Sinh viên 5 Tốt</h3>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tiến độ:</p>
-                        <div className="flex items-center gap-2">
-                            <div className="h-2 w-24 md:w-32 bg-slate-50 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-600 rounded-full" style={{ width: '70%' }}></div>
-                            </div>
-                            <p className="text-xs md:text-sm font-bold text-blue-600">70%</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
-                    {students.map(st => (
-                        <div key={st.id} className="p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-2xl transition-all group relative overflow-hidden">
-                            <div className="flex items-start gap-4">
-                                <div className="relative h-12 w-12 md:h-14 md:w-14 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg md:text-xl font-bold shadow-inner shrink-0">
-                                    {st.name[0]}
-                                    {st.status === 'Đã duyệt' && (
-                                        <div className="absolute -bottom-1 -right-1 h-4 w-4 md:h-5 md:w-5 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm">
-                                            <span className="material-symbols-outlined text-xs font-bold">check_circle</span>
-                                        </div>
-                                    )}
+                    {students.map(st => {
+                        const displayName = st.full_name || st.name || "Chưa có tên";
+                        const displayId = st.student_id || st.id || "N/A";
+                        const displayClass = st.university || st.class || "N/A";
+                        const initial = displayName.charAt(0) || "?";
+
+                        return (
+                            <div key={st.id} className="p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border border-slate-100 bg-slate-50/30 hover:bg-white hover:shadow-2xl transition-all group relative overflow-hidden">
+                                <div className="flex items-start gap-4">
+                                    <div className="relative h-12 w-12 md:h-14 md:w-14 rounded-full bg-blue-600 flex items-center justify-center text-white text-lg md:text-xl font-bold shadow-inner shrink-0">
+                                        {initial}
+                                        {st.status === 'Đã duyệt' && (
+                                            <div className="absolute -bottom-1 -right-1 h-4 w-4 md:h-5 md:w-5 bg-white rounded-full flex items-center justify-center text-emerald-500 shadow-sm">
+                                                <span className="material-symbols-outlined text-xs font-bold">check_circle</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{displayName}</p>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{displayClass}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm md:text-base font-bold text-slate-900 uppercase">{st.name}</p>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{st.class}</p>
+                                <div className="mt-6 pt-6 border-t border-slate-100 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Điểm</p>
+                                        <span className={`px-2 py-0.5 rounded text-xs font-bold tracking-widest uppercase ${st.rank === 'Top 5 Khoa' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{st.rank || 'N/A'}</span>
+                                    </div>
+                                    <p className="text-xl md:text-2xl font-bold text-slate-900">{st.points || 0}</p>
                                 </div>
+                                <button
+                                    onClick={() => handleAssess(st)}
+                                    className="w-full h-10 md:h-12 rounded-xl md:rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-bold uppercase tracking-widest shadow-sm hover:bg-blue-600 hover:text-white transition-all mt-4 md:mt-6 flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-base md:text-lg">assessment</span>
+                                    {st.assessed ? 'Sửa' : 'Đánh giá'}
+                                </button>
                             </div>
-                            <div className="mt-6 pt-6 border-t border-slate-100 space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Điểm</p>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold tracking-widest uppercase ${st.rank === 'Top 5 Khoa' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>{st.rank}</span>
-                                </div>
-                                <p className="text-xl md:text-2xl font-bold text-slate-900">{st.points}</p>
-                            </div>
-                            <button
-                                onClick={() => handleAssess(st)}
-                                className="w-full h-10 md:h-12 rounded-xl md:rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-bold uppercase tracking-widest shadow-sm hover:bg-blue-600 hover:text-white transition-all mt-4 md:mt-6 flex items-center justify-center gap-2"
-                            >
-                                <span className="material-symbols-outlined text-base md:text-lg">assessment</span>
-                                {st.assessed ? 'Sửa' : 'Đánh giá'}
-                            </button>
-                        </div>
-                    ))}
-                    {/* Xem toàn bộ */}
-                    <div
-                        onClick={() => setShowAllStudentsModal(true)}
-                        className="p-6 md:p-8 rounded-2xl md:rounded-[2.5rem] border-2 border-dashed border-slate-100 bg-slate-50/20 flex flex-col items-center justify-center text-slate-300 gap-3 group cursor-pointer hover:border-blue-100 hover:bg-white transition-all"
-                    >
-                        <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
-                            <span className="material-symbols-outlined text-2xl md:text-3xl">add</span>
-                        </div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-center">Xem toàn bộ</p>
-                    </div>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Modals (giữ nguyên, Modal component đã responsive) */}
+            {/* Modals */}
             <Modal isOpen={showDetailModal} onClose={() => setShowDetailModal(false)} title="Chi tiết thành tích" size="md">
                 {detailItem && (
                     <div className="space-y-3 md:space-y-4 p-2 md:p-4">
-                        <p className="text-sm md:text-base"><span className="font-bold">Chi đoàn:</span> {detailItem.class}</p>
+                        <p className="text-sm md:text-base"><span className="font-bold">Đơn vị:</span> {detailItem.university || detailItem.class}</p>
                         <p className="text-sm md:text-base"><span className="font-bold">Khoa:</span> {detailItem.dept}</p>
                         <p className="text-sm md:text-base"><span className="font-bold">Điểm:</span> {detailItem.score}</p>
                         <p className="text-sm md:text-base"><span className="font-bold">Xu hướng:</span> {detailItem.trend}</p>
@@ -419,7 +412,7 @@ const SubAdminAwards = () => {
             <Modal isOpen={showRemindModal} onClose={() => setShowRemindModal(false)} title="Gửi nhắc nhở" size="sm">
                 {remindItem && (
                     <div className="space-y-3 md:space-y-4 p-2 md:p-4">
-                        <p className="text-sm">Nhắc nhở chi đoàn <span className="font-bold">{remindItem.class}</span></p>
+                        <p className="text-sm">Nhắc nhở chi đoàn <span className="font-bold">{remindItem.university || remindItem.class}</span></p>
                         <textarea
                             className="w-full h-20 md:h-24 p-3 border border-slate-200 rounded-lg md:rounded-xl text-sm"
                             placeholder="Nhập nội dung nhắc nhở..."
@@ -437,7 +430,7 @@ const SubAdminAwards = () => {
             <Modal isOpen={showAssessmentModal} onClose={() => setShowAssessmentModal(false)} title={selectedStudent?.assessed ? "Sửa đánh giá" : "Đánh giá đóng góp"} size="lg">
                 {selectedStudent && (
                     <div className="space-y-4 md:space-y-6 p-2 md:p-4">
-                        <p className="text-sm md:text-base font-bold">Sinh viên: {selectedStudent.name} - {selectedStudent.class}</p>
+                        <p className="text-sm md:text-base font-bold">Sinh viên: {selectedStudent.full_name || selectedStudent.name} - {selectedStudent.university || selectedStudent.class}</p>
                         <div>
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 md:mb-3">Chọn tiêu chí</p>
                             <div className="flex flex-wrap gap-2">
@@ -470,16 +463,16 @@ const SubAdminAwards = () => {
                                     <span className="material-symbols-outlined text-base md:text-lg">photo_camera</span>
                                 </label>
                             </div>
-                            {assessmentForm.image && (
-                                <div className="mt-2 p-2 border rounded-lg flex items-center gap-2">
-                                    <img src={assessmentForm.image} alt="evidence" className="h-8 w-8 md:h-10 md:w-10 object-cover rounded" />
-                                    <span className="text-xs">Đã chọn ảnh</span>
-                                    <button onClick={() => setAssessmentForm(prev => ({ ...prev, image: null }))} className="ml-auto text-red-500">
-                                        <span className="material-symbols-outlined text-sm">close</span>
-                                    </button>
-                                </div>
-                            )}
                         </div>
+                        {assessmentForm.image && (
+                            <div className="mt-2 p-2 border rounded-lg flex items-center gap-2">
+                                <img src={assessmentForm.image} alt="evidence" className="h-8 w-8 md:h-10 md:w-10 object-cover rounded" />
+                                <span className="text-xs">Đã chọn ảnh</span>
+                                <button onClick={() => setAssessmentForm(prev => ({ ...prev, image: null }))} className="ml-auto text-red-500">
+                                    <span className="material-symbols-outlined text-sm">close</span>
+                                </button>
+                            </div>
+                        )}
                         <div className="flex gap-3 pt-4">
                             <Button variant="outline" className="flex-1" onClick={() => setShowAssessmentModal(false)}>Hủy</Button>
                             <Button variant="primary" className="flex-1" onClick={selectedStudent?.assessed ? updateAssessment : saveAssessment}>
@@ -503,7 +496,7 @@ const SubAdminAwards = () => {
                             <thead>
                                 <tr className="bg-slate-50">
                                     <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Họ tên</th>
-                                    <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Lớp</th>
+                                    <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Đơn vị</th>
                                     <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Điểm</th>
                                     <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Xếp hạng</th>
                                     <th className="px-3 md:px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Trạng thái</th>
@@ -512,10 +505,10 @@ const SubAdminAwards = () => {
                             <tbody className="divide-y divide-slate-100">
                                 {students.map(s => (
                                     <tr key={s.id}>
-                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base font-bold">{s.name}</td>
-                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.class}</td>
-                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.points}</td>
-                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.rank}</td>
+                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base font-bold">{s.full_name || s.name}</td>
+                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.university || s.class}</td>
+                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.points || 0}</td>
+                                        <td className="px-3 md:px-4 py-3 text-sm md:text-base">{s.rank || 'N/A'}</td>
                                         <td className="px-3 md:px-4 py-3">
                                             <span className={`px-2 py-1 rounded-full text-xs font-bold ${s.status === 'Đã duyệt' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                                 {s.status}

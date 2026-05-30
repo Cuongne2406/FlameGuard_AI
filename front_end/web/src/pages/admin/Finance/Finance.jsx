@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Wallet,
   Coins,
@@ -8,91 +8,145 @@ import {
   Search,
   Calendar,
   Bell,
-  X, // Thêm icon đóng modal
+  X,
 } from "lucide-react";
 import { financeService } from "../../../services/financeService";
+import { organizationService } from "../../../services/organizationService";
 
 const Finance = () => {
-  // 1. STATE CHO TÌM KIẾM
+  // 1. STATE CHO UI
   const [searchTerm, setSearchTerm] = useState("");
-
-  // 2. STATE CHO MODAL NHẬP KHO
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // 2. STATE DỮ LIỆU TỪ API
+  // 2. STATE DỮ LIỆU
   const [assets, setAssets] = useState([]);
   const [budgetRows, setBudgetRows] = useState([]);
   const [requests, setRequests] = useState([]);
-  const [stats, setStats] = useState({ total: "0", used: "0", remaining: "0", assetsCount: "0", usedPercent: 0 });
-  const [loading, setLoading] = useState(true);
+  const [organizations, setOrganizations] = useState([]);
+  const [stats, setStats] = useState({
+    total: "0", used: "0", remaining: "0",
+    assetsCount: "0", usedPercent: 0
+  });
 
-  React.useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [fetchedAssets, budgetStats, fundRequests, budgets] = await Promise.all([
-          financeService.getAssets(),
-          financeService.getBudgetStats(),
-          financeService.getFacultyTransactions(),
-          apiClient('/budgets')
-        ]);
-        
-        // Map Assets
-        const mappedAssets = fetchedAssets.map(a => ({
-          id: a.id,
-          title: a.name || 'Tài sản',
-          desc: a.description || '',
-          status: a.status === 'AVAILABLE' ? "Sẵn sàng" : "Đang sử dụng",
-          statusColor: a.status === 'AVAILABLE' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600",
-          footer: `Vị trí: ${a.storage_location || 'Kho'}`
-        }));
-        setAssets(mappedAssets);
+  // 3. STATE CHO FORM NHẬP KHO
+  const [assetForm, setAssetForm] = useState({
+    name: "",
+    description: "",
+    quantity: 1,
+    unit: "Cái",
+    storage_location: "Hầm B2",
+    organization_id: ""
+  });
 
-        // Map Stats
-        const total = budgetStats.totalIncome || 0;
-        const used = budgetStats.totalExpense || 0;
-        const remaining = total - used;
-        const usedPercent = total > 0 ? Math.round((used / total) * 100) : 0;
-        
-        setStats({
-          total: (total / 1000000).toFixed(1), // Convert to Millions
-          used: (used / 1000000).toFixed(1),
-          remaining: (remaining / 1000000).toFixed(1),
-          assetsCount: fetchedAssets.length.toString(),
-          usedPercent
-        });
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [fetchedAssets, budgetStats, fundRequests, budgets, orgs] = await Promise.all([
+        financeService.getAssets(),
+        financeService.getBudgetStats(),
+        financeService.getFacultyTransactions(),
+        financeService.getBudgets(),
+        organizationService.getOrganizations()
+      ]);
 
-        // Map Fund Requests
-        setRequests(fundRequests.map(r => ({
-          dept: r.user || 'N/A',
-          time: 'Vừa xong',
-          desc: r.title + ': ' + r.detail
-        })));
-
-        // Map Budgets for table
-        setBudgetRows(budgets.map(b => ({
-          name: b.name || 'Ngân sách',
-          estimate: (b.total_amount / 1000000).toFixed(1),
-          actual: (b.used_amount / 1000000).toFixed(1),
-          diff: ((b.total_amount - b.used_amount) / 1000000).toFixed(1),
-          status: b.used_amount > b.total_amount ? "danger" : (b.used_amount === b.total_amount ? "warning" : "success")
-        })));
-
-      } catch (error) {
-        console.error("Lỗi khi tải dữ liệu tài chính:", error);
-      } finally {
-        setLoading(false);
+      setOrganizations(orgs);
+      if (orgs.length > 0 && !assetForm.organization_id) {
+        setAssetForm(prev => ({ ...prev, organization_id: orgs[0].id }));
       }
-    };
+
+      // Map Assets
+      setAssets(fetchedAssets.map(a => ({
+        id: a.id,
+        title: a.name || 'Tài sản',
+        desc: a.description || '',
+        status: a.status === 'AVAILABLE' ? "Sẵn sàng" : (a.status === 'IN_USE' ? "Đang sử dụng" : "Bảo trì"),
+        statusColor: a.status === 'AVAILABLE' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600",
+        footer: `Vị trí: ${a.storage_location || 'Kho'}`
+      })));
+
+      // Map Stats
+      const total = budgetStats.totalIncome || 0;
+      const used = budgetStats.totalExpense || 0;
+      const remaining = total - used;
+
+      setStats({
+        total: (total / 1000000).toFixed(1), // Convert to Millions
+        used: (used / 1000000).toFixed(1),
+        remaining: (remaining / 1000000).toFixed(1),
+        assetsCount: fetchedAssets.length.toString(),
+        usedPercent: total > 0 ? Math.round((used / total) * 100) : 0
+      });
+
+      // Map Fund Requests
+      setRequests(fundRequests.map(r => ({
+        id: r.id,
+        dept: r.user || 'N/A',
+        time: 'Vừa xong',
+        desc: r.title + ': ' + r.detail,
+        status: r.status
+      })));
+
+      // Map Budgets for table
+      setBudgetRows(budgets.map(b => ({
+        name: b.name || 'Ngân sách',
+        estimate: (b.total_amount / 1000000).toFixed(1),
+        actual: (b.used_amount / 1000000).toFixed(1),
+        diff: ((b.total_amount - b.used_amount) / 1000000).toFixed(1),
+        status: b.used_amount > b.total_amount ? "danger" : (b.used_amount === b.total_amount ? "warning" : "success")
+      })));
+
+    } catch (error) {
+      console.error("Lỗi khi tải dữ liệu tài chính:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
-  // 3. LOGIC LỌC TÀI SẢN
+  // 4. HANDLERS
+  const handleApprove = async (id) => {
+    if (!window.confirm("Xác nhận duyệt yêu cầu cấp kinh phí này?")) return;
+    try {
+      await financeService.approveFacultyTransaction(id);
+      fetchData();
+    } catch (error) {
+      console.error("Lỗi khi duyệt yêu cầu:", error);
+      alert("Không thể duyệt yêu cầu lúc này.");
+    }
+  };
+
+  const handleCreateAsset = async (e) => {
+    e.preventDefault();
+    try {
+      await financeService.createAsset(assetForm);
+      setIsModalOpen(false);
+      setAssetForm({
+        name: "",
+        description: "",
+        quantity: 1,
+        unit: "Cái",
+        storage_location: "Hầm B2",
+        organization_id: organizations[0]?.id || ""
+      });
+      fetchData();
+    } catch (error) {
+      console.error("Lỗi khi nhập kho:", error);
+      alert("Không thể nhập kho. Vui lòng kiểm tra lại thông tin.");
+    }
+  };
+
+  // 5. LOGIC LỌC TÀI SẢN
   const filteredAssets = assets.filter(
     (asset) =>
       asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       asset.desc.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  if (loading) return <div className="p-10 text-center text-slate-400">Đang tải dữ liệu tài chính...</div>;
 
   return (
     <div className="p-1 space-y-6 animate-in fade-in duration-700 relative">
@@ -150,10 +204,9 @@ const Finance = () => {
         />
       </div>
 
-      {/* 3. BẢNG ĐỐI SOÁT & YÊU CẦU (Giữ nguyên như cũ) */}
+      {/* 3. BẢNG ĐỐI SOÁT & YÊU CẦU */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {/* Table content... */}
           <div className="p-5 border-b border-slate-100 flex justify-between items-center">
             <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
               <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
@@ -192,28 +245,27 @@ const Finance = () => {
           <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
             <Bell size={16} className="text-red-500" /> Yêu cầu cấp kinh phí
           </h3>
-          {requests.length > 0 ? (
-            requests.map((req, i) => (
-              <RequestCard
-                key={i}
-                dept={req.dept}
-                time={req.time}
-                desc={req.desc}
-                type="primary"
-              />
-            ))
-          ) : (
-             <div className="text-center py-8 text-xs text-slate-400">Không có yêu cầu nào.</div>
-          )}
+          <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
+            {requests.length > 0 ? (
+              requests.map((req, i) => (
+                <RequestCard
+                  key={i}
+                  {...req}
+                  onApprove={() => handleApprove(req.id)}
+                />
+              ))
+            ) : (
+              <div className="text-center py-8 text-xs text-slate-400 italic">Không có yêu cầu nào mới.</div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* 4. KHO TÀI SẢN (PHẦN CÓ LOGIC MỚI) */}
+      {/* 4. KHO TÀI SẢN */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
           <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
-            <Package size={18} className="text-emerald-500" /> Kho Tài sản & Cơ
-            sở vật chất
+            <Package size={18} className="text-emerald-500" /> Kho Tài sản & Cơ sở vật chất
           </h3>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -225,11 +277,10 @@ const Finance = () => {
                 type="text"
                 placeholder="Tìm tên hoặc mô tả..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)} // CẬP NHẬT TÌM KIẾM
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none w-48 focus:w-64 transition-all focus:border-blue-400"
               />
             </div>
-            {/* NÚT MỞ MODAL */}
             <button
               onClick={() => setIsModalOpen(true)}
               className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-100 hover:bg-blue-700 transition-colors"
@@ -252,7 +303,7 @@ const Finance = () => {
         </div>
       </div>
 
-      {/* 5. MODAL NHẬP KHO (POPUP) */}
+      {/* 5. MODAL NHẬP KHO */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-300">
@@ -270,52 +321,80 @@ const Finance = () => {
 
             <form
               className="p-6 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setIsModalOpen(false);
-              }}
+              onSubmit={handleCreateAsset}
             >
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase">
-                  Tên tài sản
-                </label>
+                <label className="text-[11px] font-bold text-slate-500 uppercase">Tên tài sản</label>
                 <input
                   type="text"
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
+                  required
+                  value={assetForm.name}
+                  onChange={e => setAssetForm({...assetForm, name: e.target.value})}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
                   placeholder="Ví dụ: Máy chiếu Sony VPL"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 uppercase">Mô tả</label>
+                <input
+                  type="text"
+                  value={assetForm.description}
+                  onChange={e => setAssetForm({...assetForm, description: e.target.value})}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
+                  placeholder="Mô tả sơ lược về tài sản..."
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">
-                    Số lượng
-                  </label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase">Số lượng</label>
                   <input
                     type="number"
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
-                    placeholder="0"
+                    required
+                    min="1"
+                    value={assetForm.quantity}
+                    onChange={e => setAssetForm({...assetForm, quantity: parseInt(e.target.value)})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">
-                    Đơn vị tính
-                  </label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase">Đơn vị tính</label>
                   <input
                     type="text"
+                    required
+                    value={assetForm.unit}
+                    onChange={e => setAssetForm({...assetForm, unit: e.target.value})}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
                     placeholder="Cái/Bộ..."
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase">
-                  Vị trí lưu kho
-                </label>
-                <select className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500">
-                  <option>Hầm B2</option>
-                  <option>Phòng Đoàn Khoa</option>
-                  <option>Hội trường A</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase">Vị trí lưu kho</label>
+                  <select
+                    value={assetForm.storage_location}
+                    onChange={e => setAssetForm({...assetForm, storage_location: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
+                  >
+                    <option value="Hầm B2">Hầm B2</option>
+                    <option value="Phòng Đoàn Khoa">Phòng Đoàn Khoa</option>
+                    <option value="Hội trường A">Hội trường A</option>
+                    <option value="Kho Trung tâm">Kho Trung tâm</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase">Đơn vị quản lý</label>
+                  <select
+                    required
+                    value={assetForm.organization_id}
+                    onChange={e => setAssetForm({...assetForm, organization_id: e.target.value})}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
+                  >
+                    {organizations.map(org => (
+                      <option key={org.id} value={org.id}>{org.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -328,7 +407,8 @@ const Finance = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors"
+                  disabled={!assetForm.name || !assetForm.organization_id}
+                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   Xác nhận Nhập
                 </button>
@@ -365,7 +445,7 @@ const StatCard = ({
       </span>
       <span className="text-xs font-bold text-slate-400">{unit}</span>
     </div>
-    {progress && (
+    {progress !== undefined && (
       <div className="w-full bg-slate-100 h-1 rounded-full mb-2 overflow-hidden">
         <div
           className="bg-blue-500 h-full"
@@ -392,20 +472,25 @@ const BudgetRow = ({ name, estimate, actual, diff, status }) => (
   </tr>
 );
 
-const RequestCard = ({ dept, time, desc, type }) => (
+const RequestCard = ({ dept, time, desc, status, onApprove }) => (
   <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 space-y-3">
     <div className="flex justify-between items-start">
       <div>
         <h5 className="text-[11px] font-black text-slate-800">{dept}</h5>
         <span className="text-[9px] text-slate-400 font-medium">{time}</span>
       </div>
+      <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
+        {status === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
+      </span>
     </div>
     <p className="text-[10px] text-slate-500 leading-relaxed italic">
       "{desc}"
     </p>
-    <button className="w-full py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold">
-      Duyệt chi
-    </button>
+    {status !== 'APPROVED' && (
+      <button onClick={onApprove} className="w-full py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-100">
+        Duyệt chi
+      </button>
+    )}
   </div>
 );
 

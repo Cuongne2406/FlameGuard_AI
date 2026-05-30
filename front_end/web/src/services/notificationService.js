@@ -1,21 +1,18 @@
 import { apiClient } from './apiClient';
 
 export const notificationService = {
-  getNotifications: async () => {
-    try {
-      const res = await apiClient('/notifications');
-      return Array.isArray(res) ? res : [];
-    } catch { return []; }
+  getNotifications: (params) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiClient(`/notifications/me${query}`, { method: 'GET' });
   },
   
-  markAsRead: async (id) => {
-    return apiClient(`/notifications/${id}`, { 
-      method: 'PUT', 
-      body: JSON.stringify({ is_read: true }) 
-    });
-  },
+  markAsRead: (id) => apiClient(`/notifications/${id}/read`, { method: 'PUT' }),
+  
+  markAllAsRead: () => apiClient('/notifications/read-all', { method: 'POST' }),
 
-  createNotification: async (data) => {
-    return apiClient('/notifications', { method: 'POST', body: JSON.stringify(data) });
-  }
+  // Helper to send common system notifications (if needed by frontend directly)
+  sendSystemNotification: (userId, title, message) => apiClient('/notifications/', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, title, message })
+  })
 };

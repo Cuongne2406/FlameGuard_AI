@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { apiClient } from '../../services/apiClient';
 
 const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
@@ -12,18 +13,12 @@ const NotificationBell = () => {
     const fetchNotifications = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("access_token");
-            // Gọi API /me để lấy thông báo dành riêng cho User này
-            const response = await fetch("http://127.0.0.1:8000/api/v1/notifications/me", {
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                }
-            });
+            // Sử dụng apiClient để tự động xử lý token và URL
+            const data = await apiClient("/notifications/me");
             
-            if (response.ok) {
-                const data = await response.json();
+            if (data) {
                 // Chỉ lấy 5 tin mới nhất để hiển thị trên popup
-                setNotifications(data.slice(0, 5));
+                setNotifications(Array.isArray(data) ? data.slice(0, 5) : []);
             }
         } catch (error) {
             console.error("Lỗi tải thông báo:", error);
@@ -65,7 +60,7 @@ const NotificationBell = () => {
     };
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div className={`relative ${isOpen ? "z-[120]" : "z-20"}`} ref={dropdownRef}>
             {/* --- CÁI CHUÔNG --- */}
             <button 
                 onClick={() => setIsOpen(!isOpen)}
@@ -86,7 +81,7 @@ const NotificationBell = () => {
 
             {/* --- MENU XỔ XUỐNG (DROPDOWN) --- */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 origin-top-right animate-fade-in-up">
+                <div className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-[130] origin-top-right animate-fade-in-up">
                     <div className="p-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
                         <h3 className="font-bold text-slate-800 dark:text-white">Thông báo</h3>
                         <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-full font-medium">

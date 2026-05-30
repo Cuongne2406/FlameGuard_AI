@@ -12,18 +12,26 @@ const SubAdminClubs = () => {
     const [loading, setLoading] = useState(true);
     const [clubs, setClubs] = useState([]);
 
+    const [clubStats, setClubStats] = useState({ totalClubs: 0, totalMembers: 0, totalBudget: 0 });
+
     useEffect(() => {
-        const fetchClubs = async () => {
+        const fetchData = async () => {
             try {
-                const data = await organizationService.getOrganizations('CLUB');
-                setClubs(data);
+                const [clubsData, statsData, proposalsData] = await Promise.all([
+                    organizationService.getClubsDetailed(),
+                    organizationService.getClubsStats(),
+                    organizationService.getClubProposals()
+                ]);
+                setClubs(clubsData);
+                setClubStats(statsData);
+                setProposals(proposalsData);
             } catch (err) {
-                console.error("Failed to fetch clubs:", err);
+                console.error("Failed to fetch Clubs data:", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchClubs();
+        fetchData();
     }, []);
 
     const [proposals, setProposals] = useState([]);
@@ -53,37 +61,58 @@ const SubAdminClubs = () => {
 
     const handleAction = (msg) => setToast({ message: msg, type: 'success' });
 
-    const handleCreateClub = () => {
+    const handleCreateClub = async () => {
         if (!newClub.name) {
             setToast({ message: 'Vui lòng nhập tên CLB', type: 'error' });
             return;
         }
-        const club = {
-            id: `club-${Date.now()}`,
-            name: newClub.name,
-            leader: newClub.leader || 'Chưa có',
-            members: newClub.members || '0',
-            nextEvent: newClub.nextEvent || null,
-            activity: newClub.activity || 0,
-            budget: newClub.budget || 0,
-            status: 'active',
-            borderColor: 'blue',
-            statusText: 'Mới thành lập',
-            statusColor: 'emerald',
-            icon: 'groups',
-        };
-        setClubs([...clubs, club]);
-        setShowCreateModal(false);
-        setNewClub({ name: '', leader: '', members: '', nextEvent: '', activity: 0, budget: 0 });
-        handleAction('Thành lập CLB thành công!');
+        try {
+            const apiData = {
+                name: newClub.name,
+                type: 'CLUB',
+                description: `Chủ nhiệm: ${newClub.leader || 'Chưa có'}`,
+                status: 'ACTIVE'
+            };
+            const result = await organizationService.createOrganization(apiData);
+            setClubs([...clubs, result]);
+            setShowCreateModal(false);
+            setNewClub({ name: '', leader: '', members: '', nextEvent: '', activity: 0, budget: 0 });
+            handleAction('Thành lập CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi thành lập CLB', type: 'error' });
+        }
     };
 
-    const handleManageClub = () => {
+    const handleManageClub = async () => {
         if (!selectedClub) return;
-        setClubs(clubs.map(c => c.id === selectedClub.id ? selectedClub : c));
-        setShowManageModal(false);
-        setSelectedClub(null);
-        handleAction('Cập nhật CLB thành công!');
+        try {
+            const apiData = {
+                name: selectedClub.name,
+                activity_points: selectedClub.activity,
+                fee_percentage: selectedClub.budget,
+                classification: selectedClub.statusText
+            };
+            const result = await organizationService.updateOrganization(selectedClub.id, apiData);
+            setClubs(clubs.map(c => c.id === selectedClub.id ? { ...c, ...result } : c));
+            setShowManageModal(false);
+            setSelectedClub(null);
+            handleAction('Cập nhật CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi cập nhật CLB', type: 'error' });
+        }
+    };
+
+    const handleDeleteClub = async () => {
+        if (!selectedClub) return;
+        try {
+            await organizationService.deleteOrganization(selectedClub.id);
+            setClubs(clubs.filter(c => c.id !== selectedClub.id));
+            setShowManageModal(false);
+            setSelectedClub(null);
+            handleAction('Đã xóa CLB thành công!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi xóa CLB', type: 'error' });
+        }
     };
 
     const handleSupportRequest = () => {
@@ -101,15 +130,27 @@ const SubAdminClubs = () => {
         handleAction('Đã gửi yêu cầu hỗ trợ!');
     };
 
-    const handleApproveProposal = (proposal) => {
-        setProposals(proposals.map(p => p.id === proposal.id ? { ...p, status: 'approved' } : p));
-        handleAction('Đã duyệt đề xuất!');
+    const handleApproveProposal = async (proposal) => {
+        try {
+            await organizationService.approveClubProposal(proposal.id);
+            setProposals(proposals.map(p => p.id === proposal.id ? { ...p, status: 'approved' } : p));
+            handleAction('Đã duyệt đề xuất!');
+        } catch (err) {
+            setToast({ message: 'Không thể duyệt đề xuất', type: 'error' });
+        }
     };
 
-    const handleRejectProposal = (proposal) => {
-        setProposals(proposals.filter(p => p.id !== proposal.id));
-        if (selectedProposal?.id === proposal.id) setShowDetailModal(false);
-        handleAction('Đã từ chối đề xuất!');
+    const handleRejectProposal = async (proposal) => {
+        try {
+            // Note: Since there is no API endpoint to reject/delete proposal currently,
+            // we will simulate the rejection and remove it from UI state.
+            // Ideally, there should be `organizationService.rejectClubProposal(proposal.id)`
+            setProposals(proposals.filter(p => p.id !== proposal.id));
+            if (selectedProposal?.id === proposal.id) setShowDetailModal(false);
+            handleAction('Đã từ chối đề xuất!');
+        } catch (err) {
+            setToast({ message: 'Lỗi khi từ chối', type: 'error' });
+        }
     };
 
     const exportApprovedProposals = () => {
@@ -150,9 +191,9 @@ const SubAdminClubs = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {[
-                    { label: 'Tổng số tổ chức', val: '05 CLB/Đội', icon: 'groups', color: 'blue' },
-                    { label: 'Nhân sự nòng cốt', val: '150 Thành viên', icon: 'group_work', color: 'indigo' },
-                    { label: 'Tổng ngân sách CLB', val: '15.000.000 VNĐ', icon: 'account_balance_wallet', color: 'emerald' },
+                    { label: 'Tổng số tổ chức', val: `${clubStats.totalClubs || 0} CLB/Đội`, icon: 'groups', color: 'blue' },
+                    { label: 'Nhân sự nòng cốt', val: `${clubStats.totalMembers || 0} Thành viên`, icon: 'group_work', color: 'indigo' },
+                    { label: 'Tổng ngân sách CLB', val: `${(clubStats.totalBudget || 0).toLocaleString()} VNĐ`, icon: 'account_balance_wallet', color: 'emerald' },
                 ].map((s, i) => (
                     <div key={i} className="bg-white border border-slate-100 rounded-2xl p-4 md:p-6 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
                         <div className={`h-12 w-12 md:h-16 md:w-16 rounded-xl md:rounded-2xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center shrink-0`}>
@@ -352,6 +393,7 @@ const SubAdminClubs = () => {
                         <Input label="Số lượng thành viên" value={selectedClub.members} onChange={(e) => setSelectedClub({ ...selectedClub, members: e.target.value })} />
                         <Input label="Sự kiện sắp tới" value={selectedClub.nextEvent || ''} onChange={(e) => setSelectedClub({ ...selectedClub, nextEvent: e.target.value })} />
                         <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                            <Button variant="danger" className="flex-1" onClick={handleDeleteClub}>Xóa CLB</Button>
                             <Button variant="outline" className="flex-1" onClick={() => setShowManageModal(false)}>Hủy</Button>
                             <Button variant="primary" className="flex-1" onClick={handleManageClub}>Lưu thay đổi</Button>
                         </div>

@@ -1,352 +1,323 @@
-import React, { useState, useContext, useEffect } from "react";
-import { AuthContext } from "../../../context/AuthContext";
-import { userService } from "../../../services/userService";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import {
-  User,
-  Mail,
-  Phone,
-  ShieldCheck,
-  Smartphone,
-  Laptop,
   Bell,
-  Moon,
-  Languages,
   Camera,
   CheckCircle2,
-  Lock,
   ChevronRight,
-  LogOut,
-  Save,
+  Languages,
+  Loader2,
+  Lock,
+  Mail,
   RotateCcw,
+  Save,
+  ShieldCheck,
+  User,
   X,
-  Eye,
-  EyeOff,
 } from "lucide-react";
+import { AuthContext } from "../../../context/AuthContext";
+import { userService } from "../../../services/userService";
+import { Toggle } from "../../../components/admin/ui/Toggle";
 
 const UserSetting = () => {
   const { user, checkUserLogged } = useContext(AuthContext);
-
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-
-  // Form states
+  const [twoFactor, setTwoFactor] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState({ type: '', text: '' });
+  const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
 
-  // Update form fields when user data is available
   useEffect(() => {
-    if (user) {
-      setFullName(user.full_name || "");
-      setEmail(user.email || "");
-    }
+    if (!user) return;
+    setFullName(user.full_name || "");
+    setEmail(user.email || "");
+    setTwoFactor(user.is_2fa_enabled || false);
   }, [user]);
 
-  // Handle Profile Save
-  const handleSaveProfile = async () => {
-    if (!user || (!fullName && !email)) return;
-    setIsSaving(true);
-    setSaveMessage({ type: '', text: '' });
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveMessage({ type: "error", text: "Kích thước ảnh không vượt quá 5MB" });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setSaveMessage({ type: "", text: "" });
+
     try {
-      await userService.updateUser(user.id, {
-        full_name: fullName,
-        email: email
-      });
-      setSaveMessage({ type: 'success', text: 'Cập nhật thông tin thành công!' });
-      await checkUserLogged(); // Refresh global user state
+      await userService.uploadAvatar(file);
+      await checkUserLogged();
+      setSaveMessage({ type: "success", text: "Cập nhật ảnh đại diện thành công!" });
     } catch (error) {
-      setSaveMessage({ type: 'error', text: error.message || 'Có lỗi xảy ra khi lưu thông tin' });
+      setSaveMessage({ type: "error", text: error.message || "Lỗi khi tải ảnh lên" });
     } finally {
-      setIsSaving(false);
-      setTimeout(() => setSaveMessage({ type: '', text: '' }), 3000);
+      setIsUploadingAvatar(false);
+      setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  // State cho Modal Đổi mật khẩu
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaveMessage({ type: "", text: "" });
 
-  // Component Modal Đổi mật khẩu
-  const PasswordModal = () => (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-        {/* Modal Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-              <Lock size={18} />
-            </div>
-            <h3 className="font-black text-slate-800 uppercase tracking-tight text-sm">
-              Cập nhật mật khẩu
-            </h3>
-          </div>
-          <button
-            onClick={() => setIsPasswordModalOpen(false)}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-          >
-            <X size={20} className="text-slate-500" />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-8 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-              Mật khẩu hiện tại
-            </label>
-            <div className="relative">
-              <Lock
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                size={16}
-              />
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-blue-200 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-              Mật khẩu mới
-            </label>
-            <div className="relative">
-              <ShieldCheck
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                size={16}
-              />
-              <input
-                type="password"
-                placeholder="Tối thiểu 8 ký tự"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-blue-200 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-              Xác nhận mật khẩu mới
-            </label>
-            <div className="relative">
-              <CheckCircle2
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                size={16}
-              />
-              <input
-                type="password"
-                placeholder="Nhập lại mật khẩu mới"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-blue-200 outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 space-y-3">
-            <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all">
-              Xác nhận thay đổi
-            </button>
-            <button
-              onClick={() => setIsPasswordModalOpen(false)}
-              className="w-full py-4 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-600 transition-all"
-            >
-              Hủy bỏ
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    try {
+      await userService.updateMe({
+        full_name: fullName,
+        email,
+        is_2fa_enabled: twoFactor,
+      });
+      setSaveMessage({ type: "success", text: "Cập nhật thông tin thành công!" });
+      await checkUserLogged();
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text: error.message || "Có lỗi xảy ra khi lưu thông tin",
+      });
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveMessage({ type: "", text: "" }), 3000);
+    }
+  };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 p-4">
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Trang chủ <ChevronRight size={10} />{" "}
-            <span className="text-blue-600">Cài đặt</span>
+    <div className="space-y-6">
+      <section className="app-card overflow-hidden">
+        <div className="app-hero relative px-5 pb-8 pt-6 md:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
+          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div className="inline-flex rounded-full bg-white/18 px-3 py-1 text-[11px] font-black text-white">
+                CÀI ĐẶT TÀI KHOẢN
+              </div>
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white md:text-4xl">
+                Cá nhân & bảo mật
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/82">
+                Màn web này được làm lại theo app user: gọn hơn, rõ hơn và tập trung vào hồ sơ cùng trạng thái tài khoản.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {saveMessage.text && (
+                <span className={`rounded-full px-4 py-2 text-sm font-bold ${
+                  saveMessage.type === "success"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-rose-100 text-rose-600"
+                }`}>
+                  {saveMessage.text}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setFullName(user?.full_name || "");
+                  setEmail(user?.email || "");
+                  setTwoFactor(user?.is_2fa_enabled || false);
+                }}
+                className="rounded-full bg-white/16 px-5 py-3 text-sm font-black text-white"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <RotateCcw size={16} />
+                  Khôi phục
+                </span>
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                className="rounded-full bg-white px-5 py-3 text-sm font-black text-indigo-600"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Save size={16} />
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                </span>
+              </button>
+            </div>
           </div>
-          <h2 className="text-2xl font-black text-slate-800">
-            Thiết lập Tài khoản Cá nhân
-          </h2>
         </div>
 
-        <div className="flex items-center gap-3">
-          {saveMessage.text && (
-            <span className={`text-xs font-bold ${saveMessage.type === 'success' ? 'text-emerald-500' : 'text-red-500'} animate-in fade-in`}>
-              {saveMessage.text}
-            </span>
-          )}
-          <button 
-            onClick={() => {
-              setFullName(user?.full_name || "");
-              setEmail(user?.email || "");
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all"
-          >
-            <RotateCcw size={16} /> Khôi phục mặc định
-          </button>
-          <button 
-            onClick={handleSaveProfile}
-            disabled={isSaving}
-            className={`flex items-center gap-2 px-6 py-2.5 ${isSaving ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white rounded-xl text-xs font-black shadow-lg shadow-blue-200 transition-all`}
-          >
-            <Save size={16} /> {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* LEFT COLUMN: PROFILE CARD */}
-        <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-sm text-center relative overflow-hidden">
-            <div className="relative w-32 h-32 mx-auto mb-6">
+        <div className="grid gap-6 p-5 lg:grid-cols-[0.95fr_1.25fr] md:p-6">
+          <div className="app-card p-6 text-center">
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
+            <div className="relative mx-auto h-32 w-32">
               <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
+                src={
+                  user?.avatar_url ||
+                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || "Felix"}`
+                }
                 alt="Avatar"
-                className="w-full h-full rounded-full border-4 border-slate-50 bg-slate-100 object-cover shadow-inner"
+                className="h-full w-full rounded-full border-4 border-white object-cover shadow-md"
               />
-              <button className="absolute bottom-0 right-0 p-2.5 bg-blue-600 text-white rounded-full border-4 border-white shadow-lg hover:scale-110 transition-transform">
-                <Camera size={16} />
+              <button
+                onClick={handleAvatarClick}
+                disabled={isUploadingAvatar}
+                className="absolute bottom-1 right-1 flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-indigo-600 text-white"
+              >
+                {isUploadingAvatar ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
               </button>
             </div>
 
-            <h3 className="text-xl font-black text-slate-800">
-              {user?.full_name}
-            </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">
+            <h3 className="mt-5 text-2xl font-black text-slate-800">{user?.full_name}</h3>
+            <p className="mt-1 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
               MSSV: {user?.student_id}
             </p>
-            <div className="mt-2 inline-block px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase">
+            <div className="mt-3 inline-flex rounded-full bg-indigo-50 px-4 py-2 text-xs font-black text-indigo-600">
               Lớp: {user?.class_name || "N/A"}
             </div>
+          </div>
 
-            <div className="mt-8 space-y-4 text-left">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-                  Họ và tên
-                </label>
-                <div className="relative">
-                  <User
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                    size={16}
-                  />
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-200 outline-none transition-all"
-                  />
-                </div>
+          <div className="space-y-6">
+            <div className="app-card p-6">
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-indigo-600" />
+                <h3 className="text-lg font-black text-slate-800">Thông tin cơ bản</h3>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase ml-2">
-                  Email liên kết
-                </label>
-                <div className="relative">
-                  <Mail
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-                    size={16}
-                  />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold text-slate-700 focus:bg-white focus:border-blue-200 outline-none transition-all"
-                  />
-                  <CheckCircle2
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500"
-                    size={16}
-                  />
+              <div className="mt-5 grid gap-5 md:grid-cols-2">
+                <div>
+                  <label className="ml-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    Họ và tên
+                  </label>
+                  <div className="mt-2 flex items-center gap-3 rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3">
+                    <User size={16} className="text-slate-300" />
+                    <input
+                      value={fullName}
+                      onChange={(event) => setFullName(event.target.value)}
+                      className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="ml-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    Email liên kết
+                  </label>
+                  <div className="mt-2 flex items-center gap-3 rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3">
+                    <Mail size={16} className="text-slate-300" />
+                    <input
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                    />
+                    <CheckCircle2 size={16} className="text-emerald-500" />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* RIGHT COLUMN: SETTINGS */}
-        <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-            <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-8">
-              <ShieldCheck className="text-blue-600" size={20} /> Bảo mật & Đăng
-              nhập
-            </h4>
-
-            <div className="space-y-8">
-              <div className="flex items-center justify-between group">
-                <div>
-                  <h5 className="text-sm font-black text-slate-700">
-                    Mật khẩu
-                  </h5>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    Lần đổi gần nhất: 3 tháng trước
-                  </p>
-                </div>
-                {/* NÚT BẤM ĐỂ MỞ MODAL */}
-                <button
-                  onClick={() => setIsPasswordModalOpen(true)}
-                  className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase hover:bg-slate-100 transition-all border border-slate-100"
-                >
-                  Đổi mật khẩu
-                </button>
+            <div className="app-card p-6">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={18} className="text-indigo-600" />
+                <h3 className="text-lg font-black text-slate-800">Bảo mật & đăng nhập</h3>
               </div>
 
-              <div className="h-px bg-slate-50"></div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <h5 className="text-sm font-black text-slate-700">
-                    Xác thực 2 bước (2FA)
-                  </h5>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    Tăng cường bảo mật cho tài khoản của bạn
-                  </p>
+              <div className="mt-5 space-y-5">
+                <div className="flex items-center justify-between gap-4 rounded-[22px] border border-slate-100 bg-slate-50 p-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">Mật khẩu</p>
+                    <p className="mt-1 text-xs text-slate-500">Cập nhật định kỳ để tăng mức an toàn.</p>
+                  </div>
+                  <button
+                    onClick={() => setIsPasswordModalOpen(true)}
+                    className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700"
+                  >
+                    Đổi mật khẩu
+                  </button>
                 </div>
-                <button
-                  onClick={() => setTwoFactor(!twoFactor)}
-                  className={`w-12 h-6 rounded-full transition-all relative ${twoFactor ? "bg-blue-600" : "bg-slate-200"}`}
-                >
-                  <div
-                    className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${twoFactor ? "left-7" : "left-1"}`}
-                  ></div>
-                </button>
+
+                <div className="flex items-center justify-between gap-4 rounded-[22px] border border-slate-100 bg-slate-50 p-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">Xác thực 2 bước</p>
+                    <p className="mt-1 text-xs text-slate-500">Tăng cường bảo vệ cho tài khoản của bạn.</p>
+                  </div>
+                  <Toggle checked={twoFactor} onChange={(value) => setTwoFactor(value)} />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* ... Các phần khác giữ nguyên ... */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-6">
-                <Bell className="text-orange-500" size={20} /> Thông báo
-              </h4>
-              <div className="space-y-5">
-                <p className="text-[10px] text-slate-400 font-medium italic">
-                  Hệ thống thông báo đang hoạt động ổn định.
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="app-card p-6">
+                <div className="flex items-center gap-2">
+                  <Bell size={18} className="text-amber-500" />
+                  <h3 className="text-lg font-black text-slate-800">Thông báo</h3>
+                </div>
+                <p className="mt-4 text-sm leading-7 text-slate-500">
+                  Thông báo hệ thống đang hoạt động ổn định và được đồng bộ với màn thông báo riêng trên web.
                 </p>
               </div>
-            </div>
 
-            <div className="bg-white rounded-[2rem] border border-slate-100 p-8 shadow-sm">
-              <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-3 mb-6">
-                <Languages className="text-teal-500" size={20} /> Ngôn ngữ
-              </h4>
-              <select className="w-full p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none appearance-none cursor-pointer">
-                <option>Tiếng Việt (Vietnamese)</option>
-                <option>English (US)</option>
-              </select>
+              <div className="app-card p-6">
+                <div className="flex items-center gap-2">
+                  <Languages size={18} className="text-emerald-500" />
+                  <h3 className="text-lg font-black text-slate-800">Ngôn ngữ</h3>
+                </div>
+                <select className="mt-4 w-full rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 outline-none">
+                  <option>Tiếng Việt (Vietnamese)</option>
+                  <option>English (US)</option>
+                </select>
+              </div>
             </div>
           </div>
-
-          <button className="w-full py-4 bg-red-50 text-red-500 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 border border-red-100 hover:bg-red-100 transition-all">
-            <LogOut size={16} /> Đăng xuất khỏi tất cả thiết bị
-          </button>
         </div>
-      </div>
+      </section>
 
-      {/* RENDER MODAL KHI TRẠNG THÁI LÀ TRUE */}
-      {isPasswordModalOpen && <PasswordModal />}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setIsPasswordModalOpen(false)} />
+          <div className="app-card relative z-10 w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 p-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[16px] bg-indigo-50 text-indigo-600">
+                  <Lock size={18} />
+                </div>
+                <h3 className="text-base font-black text-slate-800">Cập nhật mật khẩu</h3>
+              </div>
+              <button onClick={() => setIsPasswordModalOpen(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              {["Mật khẩu hiện tại", "Mật khẩu mới", "Xác nhận mật khẩu mới"].map((label) => (
+                <div key={label}>
+                  <label className="ml-1 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                    {label}
+                  </label>
+                  <div className="mt-2 flex items-center gap-3 rounded-[20px] border border-slate-100 bg-slate-50 px-4 py-3">
+                    <Lock size={16} className="text-slate-300" />
+                    <input
+                      type="password"
+                      placeholder="••••••••"
+                      className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1 rounded-full bg-slate-100 px-5 py-3 text-sm font-black text-slate-500"
+                >
+                  Hủy
+                </button>
+                <button className="flex-[1.4] rounded-full bg-indigo-600 px-5 py-3 text-sm font-black text-white">
+                  Xác nhận
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

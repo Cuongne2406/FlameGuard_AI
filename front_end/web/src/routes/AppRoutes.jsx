@@ -1,12 +1,21 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./ProtectedRoute";
 import Login from "../components/Login";
 // admin pages
 import Dashboard from "../pages/admin/Dashboard/Dashboard";
-import Organization from "../pages/admin/Organization/Organization";
-import Campaigns from "../pages/admin/Campaigns/Campaigns";
+import CampaignsPage from "../pages/admin/Campaigns/CampaignsPage";
+import CampaignListPage from "../pages/admin/Campaigns/CampaignListPage";
+import CampaignTimelinePage from "../pages/admin/Campaigns/CampaignTimelinePage";
+import UnitMembersPage from "../pages/admin/Organizations/UnitMembersPage";
+import CampaignCalendarPage from "../pages/admin/Campaigns/CampaignCalendarPage";
+import CampaignCreatePage from "../pages/admin/Campaigns/CampaignCreatePage";
+import CampaignEditPage from "../pages/admin/Campaigns/CampaignEditPage";
+import EventCreatePage from "../pages/admin/Campaigns/EventCreatePage";
+import CampaignDetailPage from "../pages/admin/Campaigns/CampaignDetailPage";
+import EventDetailPage from "../pages/admin/Campaigns/EventDetailPage";
 import Finance from "../pages/admin/Finance/Finance";
 import Awards from "../pages/admin/Awards/Awards";
+import AwardLeaderboardPage from "../pages/admin/Awards/AwardLeaderboardPage";
 import DigitalDocuments from "../pages/admin/DigitalDocuments/DigitalDocument";
 import AIIntelligence from "../pages/admin/AIIntelligence/AIIntelligeance";
 import Settings from "../pages/admin/Settings/Settings";
@@ -14,6 +23,10 @@ import UserProfile from "../pages/admin/UserProfile/UserProfile";
 import UserActivityLog from "../components/admin/Profile/UserActivityLog";
 import AdminLayout from "../layouts/AdminLayout";
 import NotificationManager from "../pages/admin/notification_management/NotificationManager";
+import OrganizationsPage from "../pages/admin/Organizations/OrganizationsPage";
+import OrgChartPage from "../pages/admin/Organizations/OrgChartPage";
+import UnitsPage from "../pages/admin/Organizations/UnitsPage";
+import MembersPage from "../pages/admin/Organizations/MembersPage";
 
 // admin sub pages
 import SubAdminLayout from "../pages/admin_sub/SubAdminLayout";
@@ -38,9 +51,10 @@ import UserLayout from "../layouts/UserLayout";
 import UserDashboard from "../pages/user/Dashboard/Dashboard";
 import DigitalDocument from "../pages/user/DigitalDocument/DigitalDocument";
 import UserSetting from "../pages/user/Settings/UserSetting";
-import Profile from "../pages/user/Profile/Profile";
+import Profile from "../pages/user/profile/Profile";
 import Event from "../pages/user/Event/Event";
-import WalletPage from "../pages/user/Wallet/Wallet";
+import UserAwards from "../pages/user/Awards/UserAwards";
+import UserNotifications from "../pages/user/Notifications/Notifications";
 
 //public pages
 import PublicLayout from "../layouts/PublicLayout";
@@ -62,17 +76,39 @@ const AppRoutes = () => {
         <Route element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
-        <Route path="organization" element={<Organization />} />
-        <Route path="campaigns" element={<Campaigns />} />
-        <Route path="finance" element={<Finance />} />
-        <Route path="awards" element={<Awards />} />
-        <Route path="documents" element={<DigitalDocuments />} />
-        <Route path="ai" element={<AIIntelligence />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="activity-log" element={<UserActivityLog />} />
+          <Route
+            path="organization"
+            element={<Navigate to="/admin/organizations" replace />}
+          />
+          <Route path="organizations" element={<OrganizationsPage />} />
+          <Route path="organizations/units" element={<UnitsPage />} />
+          <Route path="organizations/units/:id/members" element={<UnitMembersPage />} />
+          <Route path="organizations/members" element={<MembersPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="campaigns/list" element={<CampaignListPage />} />
+          <Route path="campaigns/timeline" element={<CampaignTimelinePage />} />
+          <Route path="campaigns/calendar" element={<CampaignCalendarPage />} />
+          <Route path="campaigns/create" element={<CampaignCreatePage />} />
+          <Route path="campaigns/edit/:id" element={<CampaignEditPage />} />
+          <Route path="campaigns/details/:id" element={<CampaignDetailPage />} />
+          <Route path="campaigns/calendar/create-event" element={<EventCreatePage />} />
+          <Route path="campaigns/calendar/details/:id" element={<EventDetailPage />} />
+          <Route path="finance" element={<Finance />} />
+          
+          <Route path="awards">
+            <Route index element={<Awards />} />
+            <Route path="leaderboard" element={<AwardLeaderboardPage />} />
+          </Route>
+
+          <Route path="documents" element={<DigitalDocuments />} />
+          <Route path="ai" element={<AIIntelligence />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="profile" element={<UserProfile />} />
+          <Route path="activity-log" element={<UserActivityLog />} />
           <Route path="notifications" element={<NotificationManager />} />
         </Route>
+        {/* Standalone page without AdminLayout sidebar/header */}
+        <Route path="events/:id/live" element={<EventLiveReport />} />
       </Route>
 
       {/* admin_sub */}
@@ -86,10 +122,10 @@ const AppRoutes = () => {
         <Route path="classes" element={<SubAdminClasses />} />
         <Route path="clubs" element={<SubAdminClubs />} />
         <Route path="events" element={<SubAdminEvents />} />
-        <Route path="events/feedback" element={<EventFeedbackAnalysis />} />
-        <Route path="events/live-report" element={<EventLiveReport />} />
+        <Route path="events/:id/feedback" element={<EventFeedbackAnalysis />} />
+        <Route path="events/:id/live" element={<EventLiveReport />} />
         <Route path="events/manual-checkin" element={<EventManualCheckin />} />
-        <Route path="events/registration-approval" element={<EventRegistrationApproval />} />
+        <Route path="events/:id/registrations" element={<EventRegistrationApproval />} />
         <Route path="events/summary" element={<EventSummary />} />
         <Route path="finance" element={<SubAdminFinance />} />
         <Route path="awards" element={<SubAdminAwards />} />
@@ -110,7 +146,8 @@ const AppRoutes = () => {
         <Route path="settings" element={<UserSetting />} />
         <Route path="profile" element={<Profile />} />
         <Route path="event" element={<Event />} />
-          <Route path="wallet" element={<WalletPage />} />
+          <Route path="notifications" element={<UserNotifications />} />
+          <Route path="awards" element={<UserAwards />} />
         </Route>
       </Route>
 

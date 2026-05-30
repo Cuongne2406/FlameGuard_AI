@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from sqlalchemy import func
+from datetime import datetime, timedelta
 from app.api.deps import get_db
-from app.models.core import User
+from app.models.core import User, Organization
 from app.models.finance import Budget
 from app.models.events import Event
 from app.models.ai import AISentiment
@@ -12,17 +13,36 @@ router = APIRouter()
 
 @router.get("/dashboard")
 def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = None, db: Session = Depends(get_db)):
-    # 1. Total Members
-    total_members = db.query(User).count()
+    # 1. Total Students
+    total_students = db.query(User).count()
     
-    # 2. Total Budget
-    budget_sum = db.query(func.sum(Budget.total_amount)).scalar() or 0
-    total_budget_str = f"{budget_sum:,.0f} VNĐ"
+    # 2. Total Classes (Organizations of type CLASS)
+    total_classes = db.query(Organization).filter(Organization.type == "CLASS").count()
     
-    # 3. Active Events
-    active_events = db.query(Event).filter(Event.status == "LIVE").count()
+    # 3. Budget stats
+    budget_data = db.query(
+        func.sum(Budget.total_amount).label("total"),
+        func.sum(Budget.used_amount).label("used")
+    ).first()
+    
+    total_budget = float(budget_data.total or 0)
+    used_budget = float(budget_data.used or 0)
+    budget_left_percent = 100
+    if total_budget > 0:
+        budget_left_percent = round(((total_budget - used_budget) / total_budget) * 100)
 
-    # 4. Timeline Events (Real data from DB)
+    # 4. Events this week
+    today = datetime.utcnow().date()
+    # Get Monday of current week
+    start_of_week = today - timedelta(days=today.weekday())
+    end_of_week = start_of_week + timedelta(days=6)
+    events_this_week = db.query(Event).filter(
+        Event.start_time >= datetime.combine(start_of_week, datetime.min.time()),
+        Event.start_time <= datetime.combine(end_of_week, datetime.max.time())
+    ).count()
+    week_label = f"{start_of_week.strftime('%d/%m')} - {end_of_week.strftime('%d/%m/%Y')}"
+
+    # 5. Timeline Events (Real data from DB)
     upcoming_events = db.query(Event).order_by(Event.start_time.asc()).limit(3).all()
     timelines_data = []
     colors = ["bg-blue-600", "bg-yellow-500", "bg-emerald-500"]
@@ -43,10 +63,19 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
             "color": color_class
         })
 
-    # 5. Risks (No fake data, fetch real logic if available, else empty)
+    # 6. Risks (Fetch requests pending approval could be a risk)
+    from app.models.finance import FundRequest, FundRequestStatus
+    pending_funds_count = db.query(FundRequest).filter(FundRequest.status == FundRequestStatus.PENDING).count()
     risks_data = []
+    if pending_funds_count > 0:
+        risks_data.append({
+            "id": "risk-1",
+            "label": "Yêu cầu chi ngân sách chưa duyệt",
+            "value": f"{pending_funds_count} yêu cầu",
+            "status": "Warning"
+        })
     
-    # 6. AI Sentiments
+    # 7. AI Sentiments
     positive_count = db.query(AISentiment).filter(AISentiment.sentiment_score >= 0.7).count()
     negative_count = db.query(AISentiment).filter(AISentiment.sentiment_score <= 0.3).count()
     neutral_count = db.query(AISentiment).filter(
@@ -65,37 +94,28 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
             { "name": "Trung lập", "value": round((neutral_count / total_sentiments) * 100), "color": "#CBD5E1" }
         ]
         # Get latest distinct keywords
-        all_sentiments = db.query(AISentiment.detected_keywords).all()
+        all_sentiments = db.query(AISentiment.detected_keywords).scalars().all()
         keywords_set = set()
         for s in all_sentiments:
-            if s[0] and isinstance(s[0], list):
-                keywords_set.update(s[0])
-        ai_keywords = list(keywords_set)[:5]
-
-    # 7. Suggested Event for User Dashboard
-    suggested_event = db.query(Event).filter(Event.status == "LIVE").order_by(Event.start_time.asc()).first()
-    suggested_event_data = None
-    if suggested_event:
-        suggested_event_data = {
-            "id": str(suggested_event.id),
-            "name": suggested_event.name,
-            "date": suggested_event.start_time.strftime("%d/%m/%Y") if suggested_event.start_time else "TBA",
-            "location": suggested_event.location
-        }
+            if s and isinstance(s, list):
+                keywords_set.update(s)
+        ai_keywords = list(sorted(keywords_set))[:5]
 
     return {
         "stats": {
-            "totalMembers": f"{total_members:,}",
+            "totalStudents": total_students,
+            "totalClasses": total_classes,
+            "totalBudget": total_budget,
+            "usedBudget": used_budget,
+            "budgetLeftPercent": budget_left_percent,
+            "eventsThisWeek": events_this_week,
+            "eventsThisWeekLabel": week_label,
             "memberGrowth": "+5.2% so với kỳ trước",
-            "totalBudgetStr": total_budget_str,
-            "budgetLeftPercent": 15,
-            "activeEvents": active_events
         },
         "timelines": timelines_data,
         "risks": risks_data,
         "aiSentiment": sentiment_data,
         "aiKeywords": ai_keywords or ["Chưa có dữ liệu"],
-        "suggestedEvent": suggested_event_data,
         "quickActions": [
             {"id": 1, "title": "Giấy xác nhận SV", "icon": "file_text", "primary": True},
             {"id": 2, "title": "Bảng điểm Rèn luyện", "icon": "bar_chart", "primary": False},

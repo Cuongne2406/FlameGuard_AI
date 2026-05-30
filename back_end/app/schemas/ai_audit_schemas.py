@@ -132,3 +132,23 @@ class AuditLogResponse(AuditLogBase):
 
     class Config:
         from_attributes = True
+
+
+class AuditDisplayResponse(BaseModel):
+    id: UUID
+    time: str
+    user: str
+    initials: str
+    role: str
+    action: str
+    target: str
+    type: str
+
+    class Config:
+        from_attributes = True
+
+class PaginatedAuditLogResponse(BaseModel):
+    items: List[AuditDisplayResponse]
+    total: int
+    page: int
+    size: int

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Bell,
   ChevronDown,
-  Flame,
   ShieldAlert,
   Zap,
   Search,
@@ -184,10 +183,10 @@ const MainDashboard = () => {
           icon={<BankIcon />}
         />
         <StatCard
-          title="Sự kiện đang chạy"
-          value={dashboardData.stats.activeEvents || "0"}
-          sub="Đang hoạt động sôi nổi"
-          icon={<Flame size={24} className="text-orange-500" />}
+          title="Tổng sự kiện trong tuần này"
+          value={dashboardData.stats.eventsThisWeek ?? "0"}
+          sub={dashboardData.stats.eventsThisWeekLabel ? `Tuần: ${dashboardData.stats.eventsThisWeekLabel}` : "Tổng sự kiện 7 ngày qua"}
+          icon={<CalendarIcon />}
         />
       </div>
 
@@ -414,6 +413,24 @@ const BankIcon = () => (
     <path d="M8 14v3"></path>
     <path d="M12 14v3"></path>
     <path d="M16 14v3"></path>
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#8b5cf6"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+    <line x1="16" y1="2" x2="16" y2="6"></line>
+    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="3" y1="10" x2="21" y2="10"></line>
   </svg>
 );
 

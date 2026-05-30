@@ -1,40 +1,30 @@
-import React, { useState, useContext, useEffect } from "react";
-import { AuthContext } from "../../../context/AuthContext";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import {
   Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  RadarChart as RechartsRadarChart,
   ResponsiveContainer,
 } from "recharts";
 import {
-  CheckCircle,
-  ExternalLink,
-  FileDown,
-  MapPin,
-  GraduationCap,
   Award,
-  Zap,
-  X,
-  Globe,
-  Download,
+  CheckCircle,
   CheckCircle2,
-  FileText,
   Clock,
+  GraduationCap,
+  MapPin,
+  Zap,
 } from "lucide-react";
-
+import { AuthContext } from "../../../context/AuthContext";
 import { userService } from "../../../services/userService";
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
   const [profileStats, setProfileStats] = useState(null);
   const [skillData, setSkillData] = useState([]);
   const [recentCertificates, setRecentCertificates] = useState([]);
   const [experiences, setExperiences] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedSkillIndex, setSelectedSkillIndex] = useState(0);
 
   useEffect(() => {
     const fetchProfileStats = async () => {
@@ -44,334 +34,230 @@ const Profile = () => {
         setSkillData(data.skills || []);
         setRecentCertificates(data.recent_certificates || []);
         setExperiences(data.experiences || []);
-      } catch (err) {
-        console.error("Failed to fetch profile stats:", err);
-      } finally {
-        setLoading(false);
+      } catch (error) {
+        console.error("Failed to fetch profile stats:", error);
       }
     };
+
     fetchProfileStats();
   }, []);
 
+  const normalizedSkills = useMemo(
+    () =>
+      skillData.length
+        ? skillData.map((skill) => ({
+            subject: skill.subject,
+            score: skill.list_score || skill.A || 0,
+          }))
+        : [
+            { subject: "Lãnh đạo", score: 85 },
+            { subject: "Giao tiếp", score: 75 },
+            { subject: "Kỹ thuật", score: 70 },
+            { subject: "Sáng tạo", score: 80 },
+          ],
+    [skillData]
+  );
+
+  const selectedSkill = normalizedSkills[selectedSkillIndex] || normalizedSkills[0];
+
   return (
-    <div className="min-h-screen bg-slate-50/50 p-3 md:p-8 font-sans relative">
-      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-        {/* 1. COVER & BASIC INFO CARD */}
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 overflow-hidden shadow-sm">
-          <div className="h-32 md:h-40 bg-gradient-to-r from-blue-700 via-indigo-800 to-blue-900 relative">
-            <div className="absolute bottom-3 right-3 md:bottom-4 md:right-8 flex gap-2 md:gap-3">
-              <button className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg md:rounded-xl text-white text-[10px] md:text-xs font-bold hover:bg-white/20 transition-all">
-                <ExternalLink size={12} />
-                <span className="hidden sm:inline">Link Hồ sơ</span>
-              </button>
+    <div className="space-y-6">
+      <section className="app-card overflow-hidden">
+        <div className="app-hero relative px-5 pb-8 pt-6 md:px-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.22),transparent_28%)]" />
+          <div className="relative">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                <div className="relative">
+                  <img
+                    src={
+                      user?.avatar_url ||
+                      `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || "Felix"}`
+                    }
+                    alt="Avatar"
+                    className="h-24 w-24 rounded-full border-4 border-white/40 object-cover shadow-xl md:h-28 md:w-28"
+                  />
+                  <div className="absolute bottom-1 right-1 rounded-full border-2 border-white bg-white p-1 text-indigo-600">
+                    <CheckCircle size={14} fill="currentColor" />
+                  </div>
+                </div>
 
-              {/* NÚT XUẤT CV ĐÃ ĐƯỢC FIX */}
-              <button
-                onClick={() => {
-                  console.log("Opening Modal..."); // Debug check
-                  setIsModalOpen(true);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 bg-white text-blue-700 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 group z-20"
-              >
-                <FileDown size={12} className="group-hover:animate-bounce" />
-                Xuất CV
-              </button>
-            </div>
-          </div>
-
-          <div className="px-5 md:px-8 pb-6 md:pb-8 flex flex-col md:flex-row items-center md:items-end gap-4 md:gap-6 -mt-10 md:-mt-12 relative z-10">
-            <div className="relative group">
-              <img
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.student_id || 'Felix'}`}
-                alt="Avatar"
-                className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white shadow-xl bg-slate-100 object-cover"
-              />
-              <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 p-1 bg-blue-500 rounded-full border-2 border-white text-white">
-                <CheckCircle size={14} fill="currentColor" />
+                <div>
+                  <h2 className="text-3xl font-black tracking-tight text-white">
+                    {user?.full_name || "Sinh viên"}
+                  </h2>
+                  <div className="mt-3 inline-flex rounded-full bg-white/16 px-4 py-2 text-sm font-bold text-white backdrop-blur">
+                    MSSV: {user?.student_id || "Chưa cập nhật"}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-4 text-sm text-white/82">
+                    <span className="flex items-center gap-1.5">
+                      <Zap size={14} />
+                      {profileStats?.ranking || "Sinh viên nổi bật"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <GraduationCap size={14} />
+                      {user?.university || "ĐH Lạc Hồng"}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <MapPin size={14} />
+                      {user?.address || "Đồng Nai"}
+                    </span>
+                  </div>
+                </div>
               </div>
+
             </div>
 
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex flex-col md:flex-row items-center gap-2 mb-2">
-                <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">
-                  {user?.full_name || "Sinh viên"}
-                </h2>
-                <span className="text-[9px] md:text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 md:py-1 rounded-lg uppercase border border-blue-100">
-                  MSSV: {user?.student_id || "Chưa cập nhật"}
-                </span>
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              <div className="rounded-[24px] bg-white/16 p-4 text-white backdrop-blur">
+                <p className="text-sm text-white/74">Tiến trình cấp độ</p>
+                <p className="mt-3 text-2xl font-black">
+                  {profileStats?.training_score || user?.training_score || 0}/
+                  {(user?.level || 1) * 1000} XP
+                </p>
+                <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/18">
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#F59E0B,#FBBF24)]"
+                    style={{
+                      width: `${Math.min(
+                        (((profileStats?.training_score || user?.training_score || 0) /
+                          ((user?.level || 1) * 1000)) *
+                          100),
+                        100
+                      )}%`,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="flex flex-wrap justify-center md:justify-start gap-x-4 gap-y-1 text-xs font-medium text-slate-500">
-                <span className="text-blue-600 font-bold flex items-center gap-1">
-                  <Zap size={14} fill="currentColor" /> {profileStats?.ranking || "SV loại Giỏi"}
-                </span>
-                <span className="flex items-center gap-1">
-                  <GraduationCap size={14} /> {user?.university || "ĐH Lạc Hồng"}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin size={14} /> {user?.address || "Đồng Nai"}
-                </span>
+
+              <div className="rounded-[24px] bg-white/16 p-4 text-white backdrop-blur">
+                <p className="text-sm text-white/74">Cấp độ hiện tại</p>
+                <p className="mt-3 text-2xl font-black">Lvl {user?.level || 1}</p>
+                <p className="mt-2 text-sm text-white/82">
+                  Theo dõi điểm rèn luyện và huy hiệu giống app mobile.
+                </p>
+              </div>
+
+              <div className="rounded-[24px] bg-white/16 p-4 text-white backdrop-blur">
+                <p className="text-sm text-white/74">Chứng nhận gần đây</p>
+                <p className="mt-3 text-2xl font-black">{recentCertificates.length}</p>
+                <p className="mt-2 text-sm text-white/82">
+                  Hồ sơ luôn ưu tiên các thành tích mới nhất.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* NỘI DUNG NĂNG LỰC & HÀNH TRÌNH (GIỮ NGUYÊN) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-          {/* ... (Phần Năng lực và Hành trình của bạn) ... */}
-          <div className="lg:col-span-4 bg-white rounded-[1.5rem] p-5 shadow-sm">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">
-              Năng lực
-            </h4>
-            <div className="h-[250px]">
+        <div className="grid gap-6 p-5 lg:grid-cols-[1.3fr_0.9fr] md:p-6">
+          <div className="app-card p-6">
+            <div className="flex items-center justify-between">
+              <h3 className="app-section-title text-[1.5rem]">Năng lực cá nhân</h3>
+              <span className="app-chip">
+                <Award size={14} />
+                Theo dõi tiến bộ
+              </span>
+            </div>
+
+            <div className="mt-6 h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart
-                  cx="50%"
-                  cy="50%"
-                  outerRadius="80%"
-                  data={skillData}
-                >
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
+                <RadarChart data={normalizedSkills}>
+                  <PolarGrid stroke="#E2E8F0" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "#64748B" }} />
                   <Radar
-                    dataKey="A"
-                    stroke="#2563eb"
-                    fill="#3b82f6"
-                    fillOpacity={0.15}
+                    dataKey="score"
+                    stroke="#4F46E5"
+                    fill="#6366F1"
+                    fillOpacity={0.2}
                   />
                 </RadarChart>
               </ResponsiveContainer>
             </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              {normalizedSkills.map((skill, index) => (
+                <button
+                  key={skill.subject}
+                  onClick={() => setSelectedSkillIndex(index)}
+                  className={`${
+                    index === selectedSkillIndex ? "app-chip app-chip-active" : "app-chip"
+                  }`}
+                >
+                  {skill.subject}
+                </button>
+              ))}
+            </div>
+
+            <div className="app-card-muted mt-5 p-5">
+              <p className="text-sm font-semibold text-slate-500">Chi tiết khi bấm</p>
+              <h4 className="mt-3 text-3xl font-black text-slate-800">
+                {selectedSkill?.subject}
+              </h4>
+              <p className="mt-2 text-lg font-black text-indigo-600">
+                {selectedSkill?.score} điểm
+              </p>
+            </div>
           </div>
 
-          <div className="lg:col-span-8 bg-white rounded-[1.5rem] p-5 shadow-sm">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest">
-              Chứng nhận mới
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recentCertificates.length > 0 ? (
-                 recentCertificates.map(cert => (
-                    <div key={cert.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      <h5 className="font-black text-xs uppercase">
-                        {cert.title}
-                      </h5>
-                      <p className="text-[10px] text-slate-500">{cert.time}</p>
+          <div className="space-y-6">
+            <div className="app-card p-6">
+              <h3 className="text-xl font-black text-slate-800">Chứng nhận mới nhất</h3>
+              <div className="mt-5 space-y-3">
+                {recentCertificates.length > 0 ? (
+                  recentCertificates.slice(0, 4).map((certificate) => (
+                    <div
+                      key={certificate.id}
+                      className="app-card-muted flex items-center justify-between p-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-800">
+                          {certificate.title}
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                          <Clock size={12} />
+                          {certificate.time || "Xác thực bởi hệ thống"}
+                        </p>
+                      </div>
+                      <CheckCircle2 size={18} className="shrink-0 text-emerald-500" />
                     </div>
-                 ))
-              ) : (
-                 <div className="col-span-full text-[10px] text-slate-400 font-bold">Chưa có chứng nhận nào.</div>
-              )}
+                  ))
+                ) : (
+                  <div className="app-card-muted p-5 text-sm text-slate-500">
+                    Chưa có chứng nhận nào.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="app-card p-6">
+              <h3 className="text-xl font-black text-slate-800">Kinh nghiệm & hoạt động</h3>
+              <div className="mt-5 space-y-4">
+                {experiences.length > 0 ? (
+                  experiences.slice(0, 4).map((experience) => (
+                    <div key={experience.id} className="app-card-muted p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-black text-slate-800">
+                            {experience.role}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {experience.location}
+                          </p>
+                        </div>
+                        <span className="app-chip whitespace-nowrap">{experience.period}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="app-card-muted p-5 text-sm text-slate-500">
+                    Chưa có hoạt động nổi bật được thêm vào hồ sơ.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* 5. MODAL XUẤT PDF - FIXED PORTAL-LIKE STYLE */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center overflow-hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity duration-300"
-            onClick={() => setIsModalOpen(false)}
-          ></div>
-
-          {/* Modal Content */}
-          <div className="relative bg-white w-full max-w-5xl h-[90vh] md:h-[85vh] mx-2 md:mx-4 rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
-            {/* Header */}
-            <div className="p-4 md:p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600 text-white rounded-lg">
-                  <FileText size={20} />
-                </div>
-                <h3 className="font-black text-slate-800 uppercase text-sm md:text-base">
-                  Tùy chỉnh & Xuất CV
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-              >
-                <X size={24} className="text-slate-400" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-50">
-              {/* Preview */}
-              <div className="flex-[1.2] p-4 md:p-8 overflow-auto flex justify-center border-r border-slate-200">
-                <div className="bg-white w-[595px] min-h-[842px] shadow-2xl p-10 origin-top scale-[0.45] sm:scale-[0.6] md:scale-[0.8] lg:scale-[0.9]">
-                  <div className="border-b-4 border-blue-600 pb-4 mb-6">
-                    <h1 className="text-3xl font-black text-slate-900 uppercase">
-                      {user?.full_name || "Lê Trọng Phúc Hậu"}
-                    </h1>
-                    <p className="text-blue-600 font-bold text-xs uppercase tracking-widest mt-1">
-                      {profileStats?.ranking || "Sinh viên 5 Tốt | LHU"}
-                    </p>
-                    <div className="flex gap-4 mt-3 text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                      <span className="bg-slate-100 px-2 py-1 rounded">
-                        MSSV: {user?.student_id || "23CT112"}
-                      </span>
-                      <span>{user?.email || "letrongphuchau@email.com"}</span>
-                      <span>{user?.phone_number || "(+84) 909 123 456"}</span>
-                    </div>
-                  </div>
-                  {/* Summary */}
-                  <div className="mb-6">
-                    <h4 className="text-blue-600 font-black text-xs uppercase mb-2">
-                      Tóm tắt
-                    </h4>
-                    <p className="text-[11px] leading-relaxed text-slate-600">
-                      {profileStats?.summary || "Sinh viên năng động với nền tảng vững chắc về Công nghệ thông tin và kỹ năng lãnh đạo đã được kiểm chứng. Có kinh nghiệm tổ chức các sự kiện quy mô lớn và đạt nhiều giải thưởng trong các cuộc thi học thuật. Hướng tới mục tiêu trở thành một nhà quản lý dự án công nghệ chuyên nghiệp."}
-                    </p>
-                  </div>
-                  {/* Experience */}
-                  <div className="mb-6">
-                    <h4 className="text-blue-600 font-black text-xs uppercase mb-3">
-                      Kinh nghiệm & Hoạt động
-                    </h4>
-                    <div className="space-y-4">
-                      {experiences.length > 0 ? (
-                         experiences.map(exp => (
-                            <div key={exp.id}>
-                              <div className="flex justify-between items-start">
-                                <h5 className="font-bold text-xs uppercase">
-                                  {exp.role}
-                                </h5>
-                                <span className="text-[10px] text-slate-400">
-                                  {exp.period}
-                                </span>
-                              </div>
-                              <p className="text-[10px] text-slate-500 italic">
-                                {exp.location}
-                              </p>
-                              <ul className="list-disc ml-4 mt-1 text-[10px] text-slate-600 space-y-1">
-                                {exp.bullets?.map((bull, i) => (
-                                   <li key={i}>{bull}</li>
-                                ))}
-                              </ul>
-                            </div>
-                         ))
-                      ) : (
-                         <div className="text-[10px] text-slate-400">Chưa có kinh nghiệm hoạt động nổi bật.</div>
-                      )}
-                    </div>
-                  </div>
-                  {/* Awards */}
-                  <div className="mb-6">
-                    <h4 className="text-blue-600 font-black text-xs uppercase mb-3">
-                      Thành tích nổi bật
-                    </h4>
-                    <div className="space-y-3">
-                      {recentCertificates.length > 0 ? (
-                         recentCertificates.map(cert => (
-                            <div key={`cv-cert-${cert.id}`} className="flex justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
-                              <div>
-                                <h5 className="font-bold text-[11px]">
-                                  {cert.title}
-                                </h5>
-                                <p className="text-[10px] text-slate-500">
-                                  {cert.time}
-                                </p>
-                              </div>
-                              <div className="w-8 h-8 bg-white border rounded flex items-center justify-center">
-                                <Globe size={14} className="text-slate-300" />
-                              </div>
-                            </div>
-                         ))
-                      ) : (
-                         <div className="text-[10px] text-slate-400">Chưa có thành tích nổi bật.</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Controls */}
-              <div className="flex-1 p-6 md:p-8 bg-white overflow-y-auto">
-                {/* Section 1: Template */}
-                <section>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                    Giao diện (Template)
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button className="relative p-1 rounded-xl border-2 border-blue-600 bg-white group overflow-hidden">
-                      <div className="aspect-[4/3] bg-slate-50 rounded-lg mb-2 border border-slate-100 flex flex-col p-2 gap-1">
-                        <div className="h-1.5 w-1/2 bg-slate-200 rounded" />
-                        <div className="h-1 w-full bg-slate-100 rounded" />
-                        <div className="h-1 w-full bg-slate-100 rounded" />
-                      </div>
-                      <span className="text-[10px] font-black text-blue-600 uppercase">
-                        Chuẩn ATS (Minimalist)
-                      </span>
-                      <div className="absolute top-2 right-2 bg-blue-600 text-white rounded-full p-0.5">
-                        <CheckCircle2 size={12} />
-                      </div>
-                    </button>
-                    <button className="p-1 rounded-xl border-2 border-slate-50 bg-white group opacity-50">
-                      <div className="aspect-[4/3] bg-slate-50 rounded-lg mb-2 border border-slate-100" />
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">
-                        Sáng tạo (Creative)
-                      </span>
-                    </button>
-                  </div>
-                </section>
-
-                {/* Section 2: Language */}
-                <section className="mt-6">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                    Ngôn ngữ hiển thị
-                  </h4>
-                  <div className="flex p-1 bg-slate-50 rounded-xl">
-                    <button className="flex-1 py-2 text-[10px] font-black bg-white shadow-sm rounded-lg text-slate-800">
-                      Tiếng Việt
-                    </button>
-                    <button className="flex-1 py-2 text-[10px] font-bold text-slate-400">
-                      Tiếng Anh (Auto-translate)
-                    </button>
-                  </div>
-                </section>
-
-                <section className="mt-6">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                    Dữ liệu hiển thị
-                  </h4>
-                  <div className="space-y-2">
-                    {[
-                      "Thông tin cơ bản",
-                      "Biểu đồ năng lực",
-                      "Lịch sử cống hiến",
-                      "Chứng nhận & Giải thưởng",
-                    ].map((item) => (
-                      <label
-                        key={item}
-                        className="flex items-center gap-3 p-3 border border-slate-100 rounded-xl hover:bg-slate-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          defaultChecked
-                          className="w-4 h-4 rounded text-blue-600 focus:ring-0"
-                        />
-                        <span className="text-xs font-bold text-slate-600">
-                          {item}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 md:p-6 border-t bg-white flex flex-col sm:flex-row gap-3">
-              <button className="flex-1 py-3 px-6 bg-slate-100 text-slate-600 rounded-xl font-black text-[10px] uppercase">
-                Gửi qua Email
-              </button>
-              <button className="flex-[2] py-3 px-6 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
-                <Download size={16} /> Tải xuống PDF
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 };
