@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user
 from app.schemas.event_schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationCreate, EventRegistrationUpdate, EventRegistrationResponse,
@@ -205,6 +205,20 @@ def approve_event_registration(
     registration_id: UUID,
 ):
     return event_service.approve_registration(db=db, registration_id=registration_id)
+
+@router.post("/registrations/{registration_id}/check-in-secure", response_model=EventRegistrationResponse)
+def check_in_secure(
+    *,
+    db: Session = Depends(get_db),
+    registration_id: UUID,
+    qr_data: str,
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Secure QR check-in using a dynamic verification token.
+    Supports both event_id UUID or secure token format (event_id|timestamp|hash).
+    """
+    return event_service.check_in_secure(db=db, registration_id=registration_id, qr_data=qr_data, user_id=current_user.id)
 
 @router.get("/registrations/pending", response_model=List[EventRegistrationResponse])
 def get_pending_registrations(

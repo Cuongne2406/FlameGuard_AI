@@ -28,7 +28,7 @@ export const activityLogService = {
       const queryString = query.toString() ? `?${query.toString()}` : '';
 
       const token = localStorage.getItem('accessToken');
-      const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.100.241:8000/api/v1';
+      const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.10.51:8000/api/v1';
 
       const response = await fetch(`${API_URL}/audit-logs/export${queryString}`, {
         method: 'GET',

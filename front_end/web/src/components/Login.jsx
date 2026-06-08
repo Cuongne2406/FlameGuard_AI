@@ -101,7 +101,7 @@ const Login = () => {
             <ShieldCheck className="text-white" size={32} />
           </div>
           <h2 className="text-3xl font-black text-slate-800 tracking-tight">
-            LHU <span className="text-blue-600">YouthHub</span>
+            LHU <span className="text-blue-600">DYUS</span>
           </h2>
           <p className="mt-2 text-sm text-slate-500 font-medium">
             Hệ thống quản lý sinh viên & Đoàn viên thế hệ mới

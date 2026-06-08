@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   TouchableOpacity, 
   Modal, 
   TextInput,
-  Platform
+  Platform,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +35,10 @@ import FormInput from '../src/components/common/FormInput';
 import PremiumButton from '../src/components/common/PremiumButton';
 import GlassCard from '../src/components/common/GlassCard';
 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../src/context/AuthContext';
+import { getAwards, submitAwardRequest } from '../src/api/client';
+
 const awardRequestSchema = z.object({
   description: z.string().min(10, 'Mô tả quá ngắn. Vui lòng ghi chi tiết hơn.'),
   link: z.string().url('Vui lòng nhập đúng định dạng link Drive (http://... hoặc https://...)')
@@ -43,6 +49,8 @@ type AwardRequestFormData = z.infer<typeof awardRequestSchema>;
 export default function AwardsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<AwardRequestFormData>({
@@ -53,10 +61,39 @@ export default function AwardsScreen() {
     }
   });
 
+  const { data: rawAwards = [], isLoading: isLoadingAwards } = useQuery({
+    queryKey: ['userAwards', user?.id],
+    queryFn: () => getAwards(0, 100),
+    enabled: !!user,
+  });
+
+  const myAwards = useMemo(() => {
+    if (!user) return [];
+    return (rawAwards as any[]).filter((award: any) => award.user_id === user.id);
+  }, [rawAwards, user]);
+
+  const submitAwardMutation = useMutation({
+    mutationFn: (data: AwardRequestFormData) => submitAwardRequest({
+      user_id: user?.id,
+      award_name: "Sinh viên 5 Tốt",
+      description: data.description,
+      evidence_url: data.link,
+      points: 0
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userAwards', user?.id] });
+      setModalVisible(false);
+      reset();
+      Alert.alert('Thành công', 'Đã gửi hồ sơ xét duyệt thành công!');
+    },
+    onError: (err: any) => {
+      console.error(err);
+      Alert.alert('Lỗi', 'Gửi hồ sơ xét duyệt thất bại. Vui lòng thử lại sau.');
+    }
+  });
+
   const onSubmit = (data: AwardRequestFormData) => {
-    setModalVisible(false);
-    reset();
-    alert('Đã gửi hồ sơ xét duyệt thành công!');
+    submitAwardMutation.mutate(data);
   };
 
   const badges = [
@@ -107,33 +144,50 @@ export default function AwardsScreen() {
         {/* LỊCH SỬ HỒ SƠ */}
         <Text style={styles.sectionTitle}>Tiến trình Xét duyệt</Text>
         <GlassCard style={{ marginBottom: 30 }}>
-          <View style={styles.historyItem}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(255, 152, 0, 0.1)' }]}>
-              <Clock size={24} color="#FF9800" />
+          {isLoadingAwards ? (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 20 }} />
+          ) : myAwards.length === 0 ? (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: COLORS.textSecondary, fontSize: 13, fontWeight: '500' }}>
+                Chưa có hồ sơ xét duyệt nào được gửi.
+              </Text>
             </View>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyTitle}>Sinh viên 5 Tốt - Đợt 1</Text>
-              <Text style={styles.historyDate}>Nộp lúc: 15/04/2026</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: '#FFF3E0' }]}>
-              <Text style={[styles.statusText, { color: '#FF9800' }]}>ĐANG CHỜ</Text>
-            </View>
-          </View>
-          
-          <View style={styles.divider} />
+          ) : (
+            myAwards.map((award: any, index: number) => {
+              const isApproved = award.status === 'APPROVED' || award.status === 'Approved';
+              const isRejected = award.status === 'REJECTED' || award.status === 'Rejected';
+              
+              const badgeColor = isApproved ? '#4CAF50' : isRejected ? '#EF4444' : '#FF9800';
+              const badgeBg = isApproved ? '#E8F5E9' : isRejected ? '#FEE2E2' : '#FFF3E0';
+              const statusText = isApproved ? 'ĐÃ DUYỆT' : isRejected ? 'BỊ TỪ CHỐI' : 'ĐANG CHỜ';
 
-          <View style={styles.historyItem}>
-            <View style={[styles.iconBox, { backgroundColor: 'rgba(76, 175, 80, 0.1)' }]}>
-              <CheckCircle2 size={24} color="#4CAF50" />
-            </View>
-            <View style={styles.historyInfo}>
-              <Text style={styles.historyTitle}>Thanh niên Tiên tiến</Text>
-              <Text style={styles.historyDate}>Duyệt lúc: 10/01/2026</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={[styles.statusText, { color: '#4CAF50' }]}>ĐÃ DUYỆT</Text>
-            </View>
-          </View>
+              const formattedDate = award.awarded_date ? new Date(award.awarded_date).toLocaleDateString('vi-VN') : 'Mới gửi';
+
+              return (
+                <View key={award.id}>
+                  {index > 0 && <View style={styles.divider} />}
+                  <View style={styles.historyItem}>
+                    <View style={[styles.iconBox, { backgroundColor: `${badgeColor}15` }]}>
+                      {isApproved ? (
+                        <CheckCircle2 size={24} color="#4CAF50" />
+                      ) : isRejected ? (
+                        <X size={24} color="#EF4444" />
+                      ) : (
+                        <Clock size={24} color="#FF9800" />
+                      )}
+                    </View>
+                    <View style={styles.historyInfo}>
+                      <Text style={styles.historyTitle}>{award.award_name}</Text>
+                      <Text style={styles.historyDate} numberOfLines={1}>{award.description || 'Không có mô tả'}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
+                      <Text style={[styles.statusText, { color: badgeColor }]}>{statusText}</Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })
+          )}
         </GlassCard>
 
         {/* BADGES COLLECTION */}

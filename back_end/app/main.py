@@ -10,7 +10,7 @@ from app.models import Base
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="FlameGuard AI API",
+    title="DYUS API",
     description="Enterprise API Core for DYUS Management",
     version="1.0.0"
 )
@@ -30,4 +30,4 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to FlameGuard AI Enterprise API"}
+    return {"message": "Welcome to DYUS Enterprise API"}

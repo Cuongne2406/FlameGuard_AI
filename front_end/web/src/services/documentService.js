@@ -7,10 +7,10 @@ export const documentService = {
       return Array.isArray(res) ? res : [];
     } catch { return []; }
   },
-  
+
   createRequest: async (data) => {
-    return apiClient('/digital-documents/', { 
-      method: 'POST', 
+    return apiClient('/digital-documents/', {
+      method: 'POST',
       body: JSON.stringify(data)
     });
   },
@@ -19,7 +19,7 @@ export const documentService = {
     const token = localStorage.getItem('access_token');
     const formData = new FormData();
     formData.append('file', file);
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'}/digital-documents/upload-file`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://192.168.10.51:8000/api/v1'}/digital-documents/upload-file`, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {})

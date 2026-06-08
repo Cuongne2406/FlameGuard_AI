@@ -103,7 +103,7 @@ const EventDetailScreen = () => {
     if (!event) return;
     try {
       await Share.share({
-        message: `Tham gia sự kiện ${event.name} cùng mình trên YouthHub nhé!`,
+        message: `Tham gia sự kiện ${event.name} cùng mình trên DYUS nhé!`,
       });
     } catch (error) {
       console.error(error);
@@ -324,12 +324,12 @@ const EventDetailScreen = () => {
 
 // Sub-component for info cards
 const InfoCard = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
-  <GlassCard style={styles.infoCard}>
+  <GlassCard style={styles.infoCard} contentStyle={styles.infoCardGradient}>
     <View style={styles.infoCardContent}>
       <View style={styles.infoIconContainer}>{icon}</View>
-      <View>
+      <View style={styles.infoTextContainer}>
         <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue} numberOfLines={1}>{value}</Text>
+        <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
       </View>
     </View>
   </GlassCard>
@@ -446,29 +446,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#0EA5E9',
   },
-  infoRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 25,
+  // GlassCard gradient override — removes default 20px padding so we control spacing
+  infoCardGradient: {
+    padding: 0,
+    flex: 1,
   },
   infoCard: {
     flex: 1,
-    padding: 0,
-    borderRadius: 20,
+    borderRadius: 16,
   },
   infoCardContent: {
-    padding: 14,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+  },
+  infoTextContainer: {
+    flex: 1,
+    minWidth: 0,  // allow flex shrink below natural width
   },
   infoIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: 'rgba(67, 97, 238, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,  // icon never shrinks
   },
   infoLabel: {
     fontSize: 10,
@@ -481,7 +485,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.text,
     marginTop: 2,
-    maxWidth: width * 0.25,
+    flexShrink: 1,
   },
   sectionCard: {
     padding: 20,

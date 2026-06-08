@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 const expoApiUrl = Constants.expoConfig?.extra?.apiUrl;
 const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const API_URL = envApiUrl || expoApiUrl || 'http://192.168.100.241:8000/api/v1';
+const API_URL = envApiUrl || expoApiUrl || 'http://192.168.10.51:8000/api/v1';
 
 const apiClient = axios.create({
     baseURL: API_URL,
@@ -260,6 +260,61 @@ export const submitFeedback = async (eventId, rating, comment, userId) => {
         return response.data;
     } catch (error) {
         console.error('Submit feedback error:', error);
+        throw error;
+    }
+};
+
+// --- AWARDS APIS ---
+export const getAwards = async (skip = 0, limit = 100) => {
+    try {
+        const response = await apiClient.get('/awards/', { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Get awards error:', error);
+        throw error;
+    }
+};
+
+export const submitAwardRequest = async (awardData) => {
+    try {
+        const response = await apiClient.post('/awards/', awardData);
+        return response.data;
+    } catch (error) {
+        console.error('Submit award request error:', error);
+        throw error;
+    }
+};
+
+// --- DOCUMENTS APIS ---
+export const getDocuments = async (skip = 0, limit = 100) => {
+    try {
+        const response = await apiClient.get('/documents/', { params: { skip, limit } });
+        return response.data;
+    } catch (error) {
+        console.error('Get documents error:', error);
+        throw error;
+    }
+};
+
+export const createDocumentRequest = async (docData) => {
+    try {
+        const response = await apiClient.post('/documents/', docData);
+        return response.data;
+    } catch (error) {
+        console.error('Create document request error:', error);
+        throw error;
+    }
+};
+
+// --- SECURE CHECK-IN API ---
+export const checkInSecure = async (registrationId, qrData) => {
+    try {
+        const response = await apiClient.post(`/events/registrations/${registrationId}/check-in-secure`, null, {
+            params: { qr_data: qrData }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Check in secure error:', error);
         throw error;
     }
 };
