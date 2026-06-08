@@ -17,6 +17,8 @@ conf = ConnectionConfig(
 )
 
 async def send_otp_email(email: EmailStr, otp: str, full_name: str = "Người dùng"):
+    import html
+    safe_name = html.escape(full_name)
     message = MessageSchema(
         subject="DYUS Platform - Mã xác thực 2 lớp (2FA)",
         recipients=[email],
@@ -24,7 +26,7 @@ async def send_otp_email(email: EmailStr, otp: str, full_name: str = "Người d
         <html>
             <body style="font-family: sans-serif; padding: 20px; color: #333;">
                 <h2 style="color: #2563eb;">Xác thực đăng nhập DYUS Platform</h2>
-                <p>Chào <b>{full_name}</b>,</p>
+                <p>Chào <b>{safe_name}</b>,</p>
                 <p>Mã xác thực 2 lớp của bạn là: <b style="font-size: 24px; color: #1e40af; letter-spacing: 5px;">{otp}</b></p>
                 <p>Email nhận mã: {email}</p>
                 <p>Mã này sẽ hết hạn sau 5 phút. Nếu bạn không thực hiện đăng nhập, vui lòng đổi mật khẩu ngay lập tức.</p>

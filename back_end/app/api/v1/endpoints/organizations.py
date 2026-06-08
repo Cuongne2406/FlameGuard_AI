@@ -4,7 +4,7 @@ from typing import List
 from uuid import UUID
 from sqlalchemy import func
 
-from app.api.deps import get_db, get_current_active_user
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse, UserOrganizationCreate, UserOrganizationResponse
 from app.services import core_service
 from app.models.core import UserOrganization, Organization
@@ -14,7 +14,10 @@ from app.models.finance import Budget
 router = APIRouter()
 
 @router.get("/stats")
-def get_organization_stats(db: Session = Depends(get_db)):
+def get_organization_stats(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """
     Lấy thống kê thực tế từ Database cho Admin Dashboard.
     """
@@ -36,21 +39,30 @@ def get_organization_stats(db: Session = Depends(get_db)):
     }
 
 @router.get("/clubs/stats")
-def get_clubs_stats(db: Session = Depends(get_db)):
+def get_clubs_stats(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """
     Lấy thống kê riêng cho khối Câu lạc bộ.
     """
     return core_service.get_clubs_detailed_stats(db)
 
 @router.get("/clubs")
-def get_clubs_list(db: Session = Depends(get_db)):
+def get_clubs_list(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """
     Lấy danh sách CLB kèm chi tiết trạng thái, nhân sự, ngân sách.
     """
     return core_service.get_clubs_list_detailed(db)
 
 @router.get("/clubs/proposals")
-def get_club_proposals(db: Session = Depends(get_db)):
+def get_club_proposals(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """
     Lấy danh sách đề xuất từ các CLB.
     """
@@ -60,7 +72,7 @@ def get_club_proposals(db: Session = Depends(get_db)):
 def approve_club_proposal(
     prop_id: UUID, 
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_admin = Depends(get_current_active_admin)
 ):
     """
     Duyệt đề xuất.
@@ -72,6 +84,7 @@ def create_organization(
     *,
     db: Session = Depends(get_db),
     org_in: OrganizationCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.create_organization(db=db, org_in=org_in)
 
@@ -79,7 +92,8 @@ def create_organization(
 def read_organizations(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
 ):
     return core_service.get_organizations(db, skip=skip, limit=limit)
 
@@ -89,6 +103,7 @@ def update_organization(
     db: Session = Depends(get_db),
     org_id: UUID,
     org_in: OrganizationUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.update_organization(db=db, org_id=org_id, org_in=org_in)
 
@@ -97,6 +112,7 @@ def delete_organization(
     *,
     db: Session = Depends(get_db),
     org_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.delete_organization(db=db, org_id=org_id)
 
@@ -105,21 +121,31 @@ def assign_member(
     *,
     db: Session = Depends(get_db),
     assign_in: UserOrganizationCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Bổ nhiệm hoặc gán nhân sự vào một tổ chức/đơn vị.
     """
     return core_service.assign_member_to_org(db=db, assign_in=assign_in)
+
 @router.get("/classes")
-def get_classes_list(db: Session = Depends(get_db)):
+def get_classes_list(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """
     Lấy danh sách Chi đoàn kèm chi tiết trạng thái, nhân sự, đoàn phí.
     """
     return core_service.get_classes_list_detailed(db)
 
 @router.get("/{org_id}/members")
-def get_organization_members(org_id: UUID, db: Session = Depends(get_db)):
+def get_organization_members(
+    org_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """
     Lấy danh sách thành viên của một tổ chức/lớp, được sắp xếp theo tên.
     """
     return core_service.get_organization_members(db, org_id)
+

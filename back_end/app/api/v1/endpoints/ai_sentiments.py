@@ -3,24 +3,34 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 from app.models.ai import AISentiment, SentimentLabel
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.schemas.ai_audit_schemas import AISentimentCreate, AISentimentUpdate, AISentimentResponse
 from app.services import ai_audit_service
 
 router = APIRouter()
 
 @router.get("/sub-admin")
-def get_sub_admin_ai_sentiments(db: Session = Depends(get_db)):
+def get_sub_admin_ai_sentiments(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """Fetch AI Sentiments mixed with real database metrics for SubAdmin"""
     return ai_audit_service.get_sub_admin_dashboard_analysis(db=db)
 
 @router.get("/admin")
-def get_admin_ai_sentiments(db: Session = Depends(get_db)):
+def get_admin_ai_sentiments(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """Fetch overall AI analysis for Admin"""
     return ai_audit_service.get_admin_dashboard_analysis(db=db)
 
 @router.get("/event/{event_id}")
-def get_event_feedback_analysis(event_id: str, db: Session = Depends(get_db)):
+def get_event_feedback_analysis(
+    event_id: str, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """Fetch AI feedback analysis for a specific event"""
     # Query sentiments filtered by source_id (event id)
     sentiments = db.query(AISentiment).filter(AISentiment.source_id == event_id).all()
@@ -63,6 +73,7 @@ def create_ai_sentiment(
     *,
     db: Session = Depends(get_db),
     sentiment_in: AISentimentCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return ai_audit_service.create_ai_sentiment(db=db, sentiment_in=sentiment_in)
 
@@ -70,7 +81,8 @@ def create_ai_sentiment(
 def read_ai_sentiments(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     return ai_audit_service.get_ai_sentiments(db, skip=skip, limit=limit)
 
@@ -80,6 +92,7 @@ def update_ai_sentiment(
     db: Session = Depends(get_db),
     sentiment_id: UUID,
     sentiment_in: AISentimentUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return ai_audit_service.update_ai_sentiment(db=db, sentiment_id=sentiment_id, sentiment_in=sentiment_in)
 
@@ -88,5 +101,7 @@ def delete_ai_sentiment(
     *,
     db: Session = Depends(get_db),
     sentiment_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return ai_audit_service.delete_ai_sentiment(db=db, sentiment_id=sentiment_id)
+

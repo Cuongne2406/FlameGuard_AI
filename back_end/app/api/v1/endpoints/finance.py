@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.schemas.finance_schemas import (
     TransactionCreate, 
     TransactionResponse, 
@@ -14,14 +14,18 @@ from app.services import finance_service
 router = APIRouter()
 
 @router.get("/stats", response_model=FinanceDashboardStats)
-def get_finance_stats(db: Session = Depends(get_db)):
+def get_finance_stats(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     return finance_service.get_faculty_finance_stats(db)
 
 @router.get("/transactions", response_model=List[TransactionResponse])
 def get_transactions(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.get_transactions(db, skip=skip, limit=limit)
 
@@ -29,7 +33,8 @@ def get_transactions(
 def create_transaction(
     *,
     db: Session = Depends(get_db),
-    txn_in: TransactionCreate
+    txn_in: TransactionCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.create_transaction(db, txn_in=txn_in)
 
@@ -37,7 +42,8 @@ def create_transaction(
 @router.put("/transactions/{transaction_id}/approve", response_model=TransactionResponse)
 def approve_transaction(
     transaction_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     txn = db.query(finance_service.FinanceTransaction).filter(
         finance_service.FinanceTransaction.id == transaction_id,
@@ -51,3 +57,4 @@ def approve_transaction(
     db.commit()
     db.refresh(txn)
     return txn
+

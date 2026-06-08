@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.schemas.core_schemas import RoleCreate, RoleUpdate, RoleResponse
 from app.services import core_service
 
@@ -14,6 +14,7 @@ def create_role(
     *,
     db: Session = Depends(get_db),
     role_in: RoleCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.create_role(db=db, role_in=role_in)
 
@@ -21,7 +22,8 @@ def create_role(
 def read_roles(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.get_roles(db, skip=skip, limit=limit)
 
@@ -31,6 +33,7 @@ def update_role(
     db: Session = Depends(get_db),
     role_id: UUID,
     role_in: RoleUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.update_role(db=db, role_id=role_id, role_in=role_in)
 
@@ -39,5 +42,7 @@ def delete_role(
     *,
     db: Session = Depends(get_db),
     role_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.delete_role(db=db, role_id=role_id)
+

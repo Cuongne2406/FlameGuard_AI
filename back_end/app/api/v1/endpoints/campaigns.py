@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.schemas.event_schemas import CampaignCreate, CampaignUpdate, CampaignResponse
 from app.services import event_service
 
@@ -14,6 +14,7 @@ def create_campaign(
     *,
     db: Session = Depends(get_db),
     campaign_in: CampaignCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Tạo một chiến dịch mới.
@@ -24,7 +25,8 @@ def create_campaign(
 def read_campaigns(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
 ):
     """
     Lấy danh sách các chiến dịch.
@@ -36,6 +38,7 @@ def read_campaign(
     *,
     db: Session = Depends(get_db),
     campaign_id: UUID,
+    current_user = Depends(get_current_active_user),
 ):
     """
     Lấy chi tiết một chiến dịch.
@@ -48,6 +51,7 @@ def update_campaign(
     db: Session = Depends(get_db),
     campaign_id: UUID,
     campaign_in: CampaignUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Cập nhật thông tin chiến dịch.
@@ -59,8 +63,10 @@ def delete_campaign(
     *,
     db: Session = Depends(get_db),
     campaign_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Xóa chiến dịch.
     """
     return event_service.delete_campaign(db=db, campaign_id=campaign_id)
+

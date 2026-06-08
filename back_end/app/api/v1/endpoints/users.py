@@ -8,6 +8,7 @@ from app.schemas.core_schemas import UserCreate, UserUpdate, UserResponse
 from app.services import core_service, cloudinary_service
 from app.core.s4h_client import s4h_check_user_exists
 from app.models.core import User
+from app.utils.file_validator import verify_image_magic_bytes
 from app.models.settings import SystemSetting
 from app.services.webhook_service import send_webhook_event
 
@@ -92,6 +93,12 @@ async def upload_user_avatar(
     """
     Tải lên và cập nhật ảnh đại diện của người dùng hiện tại lên Cloudinary.
     """
+    # Kiểm tra Magic Bytes của ảnh tải lên
+    contents = await file.read()
+    await file.seek(0)
+    if not verify_image_magic_bytes(contents):
+        raise HTTPException(status_code=400, detail="Tệp tin hình ảnh không hợp lệ (Không đúng định dạng JPEG/PNG/GIF/WEBP)")
+
     # 1. Tải lên Cloudinary sử dụng logic cấu trúc thư mục phân cấp
     result = cloudinary_service.upload_image(file.file, user=current_user, category="avatar")
     

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.models.core import User, Organization
 from app.models.finance import Budget
 from app.models.events import Event
@@ -12,7 +12,12 @@ from app.models.ai import AISentiment
 router = APIRouter()
 
 @router.get("/dashboard")
-def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = None, db: Session = Depends(get_db)):
+def get_system_dashboard(
+    year: Optional[str] = None, 
+    semester: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     # 1. Total Students
     total_students = db.query(User).count()
     
