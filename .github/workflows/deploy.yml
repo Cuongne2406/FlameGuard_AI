@@ -1,0 +1,67 @@
+name: Deploy Frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'front_end/web/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build React App
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front_end/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: front_end/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build
+        env:
+          # Point to your deployed Render backend URL
+          # Update VITE_API_URL after deploying backend on Render.com
+          VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://flameguard-api.onrender.com/api/v1' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_URL || 'https://flameguard-api.onrender.com/api/v1' }}
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: front_end/web/dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
