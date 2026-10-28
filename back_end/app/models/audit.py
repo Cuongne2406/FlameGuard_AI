@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey, DateTime, Text
+from sqlalchemy import Column, String, ForeignKey, DateTime, Text, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.db.base_class import Base
@@ -19,6 +19,6 @@ class AuditLog(Base):
     old_values = Column(JSONB, nullable=True) # Dữ liệu trước khi sửa
     new_values = Column(JSONB, nullable=True) # Dữ liệu sau khi sửa
     ip_address = Column(String, nullable=True)
-    created_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
     
     user = relationship("User", backref="audit_logs")

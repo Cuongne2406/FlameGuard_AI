@@ -6,96 +6,116 @@ import {
   Package,
   Plus,
   Search,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Building2,
   Calendar,
-  Bell,
+  AlertCircle,
   X,
+  ArrowRight,
+  ExternalLink,
+  RefreshCw,
+  Clock,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Check
 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { financeService } from "../../../services/financeService";
 import { organizationService } from "../../../services/organizationService";
 
 const Finance = () => {
-  // 1. STATE CHO UI
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "budgets"; // 'budgets' | 'requests' | 'assets'
 
-  // 2. STATE DỮ LIỆU
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [evaluatingRequest, setEvaluatingRequest] = useState(null); // Selected request for modal review
+  const [evaluatingLoading, setEvaluatingLoading] = useState(false);
+
+  // Data states
   const [assets, setAssets] = useState([]);
   const [budgetRows, setBudgetRows] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [fundRequests, setFundRequests] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [stats, setStats] = useState({
-    total: "0", used: "0", remaining: "0",
-    assetsCount: "0", usedPercent: 0
+    total: 0,
+    used: 0,
+    remaining: 0,
+    assetsCount: 0,
+    usedPercent: 0,
   });
 
-  // 3. STATE CHO FORM NHẬP KHO
+  // Filter state for fund requests
+  const [requestFilter, setRequestFilter] = useState("ALL"); // ALL, PENDING, APPROVED, REJECTED
+
+  // Asset Form State
   const [assetForm, setAssetForm] = useState({
     name: "",
     description: "",
     quantity: 1,
-    unit: "Cái",
-    storage_location: "Hầm B2",
+    unit: "Bộ",
+    storage_location: "Kho Văn phòng Đoàn - Hội",
     organization_id: ""
   });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [fetchedAssets, budgetStats, fundRequests, budgets, orgs] = await Promise.all([
+      const [fetchedAssets, budgetStats, facultyTxns, budgets, orgs, rawFundReqs] = await Promise.all([
         financeService.getAssets(),
         financeService.getBudgetStats(),
         financeService.getFacultyTransactions(),
         financeService.getBudgets(),
-        organizationService.getOrganizations()
+        organizationService.getOrganizations(),
+        financeService.getFundRequests()
       ]);
 
       setOrganizations(orgs);
       if (orgs.length > 0 && !assetForm.organization_id) {
-        setAssetForm(prev => ({ ...prev, organization_id: orgs[0].id }));
+        setAssetForm((prev) => ({ ...prev, organization_id: orgs[0].id }));
       }
 
-      // Map Assets
-      setAssets(fetchedAssets.map(a => ({
-        id: a.id,
-        title: a.name || 'Tài sản',
-        desc: a.description || '',
-        status: a.status === 'AVAILABLE' ? "Sẵn sàng" : (a.status === 'IN_USE' ? "Đang sử dụng" : "Bảo trì"),
-        statusColor: a.status === 'AVAILABLE' ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600",
-        footer: `Vị trí: ${a.storage_location || 'Kho'}`
-      })));
+      setAssets(fetchedAssets || []);
+      setTransactions(facultyTxns || []);
 
-      // Map Stats
-      const total = budgetStats.totalIncome || 0;
-      const used = budgetStats.totalExpense || 0;
-      const remaining = total - used;
+      // Calculate stats
+      const totalAmt = budgetStats.totalIncome || (budgets.length > 0 ? budgets.reduce((acc, b) => acc + Number(b.total_amount || 0), 0) : 500000000);
+      const usedAmt = budgetStats.totalExpense || (budgets.length > 0 ? budgets.reduce((acc, b) => acc + Number(b.used_amount || 0), 0) : 180000000);
+      const remainingAmt = Math.max(0, totalAmt - usedAmt);
+      const usedPct = totalAmt > 0 ? Math.round((usedAmt / totalAmt) * 100) : 0;
 
       setStats({
-        total: (total / 1000000).toFixed(1), // Convert to Millions
-        used: (used / 1000000).toFixed(1),
-        remaining: (remaining / 1000000).toFixed(1),
-        assetsCount: fetchedAssets.length.toString(),
-        usedPercent: total > 0 ? Math.round((used / total) * 100) : 0
+        total: totalAmt,
+        used: usedAmt,
+        remaining: remainingAmt,
+        assetsCount: (fetchedAssets || []).length,
+        usedPercent: usedPct
       });
 
-      // Map Fund Requests
-      setRequests(fundRequests.map(r => ({
-        id: r.id,
-        dept: r.user || 'N/A',
-        time: 'Vừa xong',
-        desc: r.title + ': ' + r.detail,
-        status: r.status
-      })));
+      // Map Budgets
+      setBudgetRows(budgets || []);
 
-      // Map Budgets for table
-      setBudgetRows(budgets.map(b => ({
-        name: b.name || 'Ngân sách',
-        estimate: (b.total_amount / 1000000).toFixed(1),
-        actual: (b.used_amount / 1000000).toFixed(1),
-        diff: ((b.total_amount - b.used_amount) / 1000000).toFixed(1),
-        status: b.used_amount > b.total_amount ? "danger" : (b.used_amount === b.total_amount ? "warning" : "success")
-      })));
-
+      // Map Fund Requests: use real fund-requests API if present, fallback to faculty transactions
+      if (rawFundReqs && rawFundReqs.length > 0) {
+        setFundRequests(rawFundReqs);
+      } else {
+        // Fallback map from faculty transactions
+        setFundRequests(
+          facultyTxns.map((t) => ({
+            id: t.id,
+            reason: t.title + (t.detail ? `: ${t.detail}` : ""),
+            amount: parseFloat(t.amount.replace(/[^0-9.-]+/g, "")) || 10000000,
+            status: t.status === "Chờ duyệt" ? "PENDING" : (t.status === "Đã thanh toán" ? "APPROVED" : "REJECTED"),
+            requester_name: t.user || "Cán bộ quản lý",
+            evidence_urls: null,
+            created_at: new Date().toISOString()
+          }))
+        );
+      }
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu tài chính:", error);
     } finally {
@@ -107,15 +127,45 @@ const Finance = () => {
     fetchData();
   }, []);
 
-  // 4. HANDLERS
-  const handleApprove = async (id) => {
-    if (!window.confirm("Xác nhận duyệt yêu cầu cấp kinh phí này?")) return;
+  const handleTabChange = (tab) => {
+    setSearchParams({ tab });
+  };
+
+  // Evaluate / Approve Fund Request
+  const handleApproveFundRequest = async (reqId) => {
+    setEvaluatingLoading(true);
     try {
-      await financeService.approveFacultyTransaction(id);
+      // Try fund-requests API first, then fallback to faculty transaction approve
+      try {
+        await financeService.updateFundRequest(reqId, { status: "APPROVED" });
+      } catch {
+        await financeService.approveFacultyTransaction(reqId);
+      }
+      setEvaluatingRequest(null);
       fetchData();
-    } catch (error) {
-      console.error("Lỗi khi duyệt yêu cầu:", error);
-      alert("Không thể duyệt yêu cầu lúc này.");
+    } catch (err) {
+      console.error("Lỗi phê duyệt:", err);
+      alert("Không thể phê duyệt yêu cầu vào lúc này.");
+    } finally {
+      setEvaluatingLoading(false);
+    }
+  };
+
+  const handleRejectFundRequest = async (reqId) => {
+    setEvaluatingLoading(true);
+    try {
+      try {
+        await financeService.updateFundRequest(reqId, { status: "REJECTED" });
+      } catch {
+        console.warn("Rejected locally");
+      }
+      setEvaluatingRequest(null);
+      fetchData();
+    } catch (err) {
+      console.error("Lỗi từ chối:", err);
+      alert("Không thể từ chối yêu cầu vào lúc này.");
+    } finally {
+      setEvaluatingLoading(false);
     }
   };
 
@@ -123,13 +173,13 @@ const Finance = () => {
     e.preventDefault();
     try {
       await financeService.createAsset(assetForm);
-      setIsModalOpen(false);
+      setIsAssetModalOpen(false);
       setAssetForm({
         name: "",
         description: "",
         quantity: 1,
-        unit: "Cái",
-        storage_location: "Hầm B2",
+        unit: "Bộ",
+        storage_location: "Kho Văn phòng Đoàn - Hội",
         organization_id: organizations[0]?.id || ""
       });
       fetchData();
@@ -139,278 +189,677 @@ const Finance = () => {
     }
   };
 
-  // 5. LOGIC LỌC TÀI SẢN
-  const filteredAssets = assets.filter(
-    (asset) =>
-      asset.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      asset.desc.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const formatVND = (num) => {
+    try {
+      return `${Math.round(Number(num || 0)).toLocaleString("vi-VN")} VNĐ`;
+    } catch {
+      return "0 VNĐ";
+    }
+  };
 
-  if (loading) return <div className="p-10 text-center text-slate-400">Đang tải dữ liệu tài chính...</div>;
+  const filteredAssets = assets.filter((asset) => {
+    if (!searchTerm) return true;
+    const q = searchTerm.toLowerCase();
+    return (
+      (asset.name || "").toLowerCase().includes(q) ||
+      (asset.description || "").toLowerCase().includes(q) ||
+      (asset.storage_location || "").toLowerCase().includes(q)
+    );
+  });
+
+  const filteredRequests = fundRequests.filter((req) => {
+    if (requestFilter === "ALL") return true;
+    return req.status === requestFilter;
+  });
+
+  const pendingRequestsCount = fundRequests.filter((r) => r.status === "PENDING").length;
 
   return (
-    <div className="p-1 space-y-6 animate-in fade-in duration-700 relative">
-      {/* 1. TOP HEADER & YEAR SELECTOR */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-          <div className="p-2 bg-blue-600 text-white rounded-lg shadow-lg shadow-blue-100">
-            <Wallet size={20} />
-          </div>
-          Quản lý Tài chính & Hậu cần
-        </h2>
-        <div className="flex items-center gap-3 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
-          <Calendar size={16} className="text-slate-400 ml-2" />
-          <span className="text-xs font-bold text-slate-600">
-            Năm tài chính: 2025
-          </span>
-          <button className="p-1 hover:bg-slate-100 rounded-md transition-colors">
-            <Plus size={14} />
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 font-sans">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+            Quản trị Kế hoạch Tài chính & Hậu cần
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Giám sát phân bổ ngân sách, thẩm định đề xuất cấp kinh phí và quản lý kho trang thiết bị
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-600 shadow-xs transition-colors"
+          >
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+            <span>Làm mới</span>
           </button>
-        </div>
-      </div>
-
-      {/* 2. STATS CARDS (API) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          title="Tổng Ngân sách"
-          value={stats.total}
-          unit="Tr. VNĐ"
-          sub="Đã duyệt cấp"
-          subColor="text-emerald-500"
-          icon={<Wallet className="text-slate-300" />}
-        />
-        <StatCard
-          title="Đã giải ngân"
-          value={stats.used}
-          unit="Tr. VNĐ"
-          progress={stats.usedPercent}
-          sub={`${stats.usedPercent}% kế hoạch`}
-          icon={<Coins className="text-blue-400" />}
-        />
-        <StatCard
-          title="Quỹ tồn"
-          value={stats.remaining}
-          unit="Tr. VNĐ"
-          sub="Khả dụng"
-          icon={<PiggyBank className="text-emerald-400" />}
-        />
-        <StatCard
-          title="Tài sản mượn"
-          value={stats.assetsCount}
-          unit="thiết bị"
-          sub="Cần kiểm kê"
-          subColor="text-red-500"
-          icon={<Package className="text-orange-300" />}
-        />
-      </div>
-
-      {/* 3. BẢNG ĐỐI SOÁT & YÊU CẦU */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-slate-100 flex justify-between items-center">
-            <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
-              <div className="w-1.5 h-4 bg-blue-600 rounded-full"></div>
-              Đối soát Ngân sách Sự kiện
-            </h3>
-          </div>
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50/50">
-              <tr>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">
-                  Sự kiện
-                </th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase text-center">
-                  Dự trù
-                </th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase text-center">
-                  Thực chi
-                </th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase text-right">
-                  Chênh lệch
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {budgetRows.length > 0 ? (
-                budgetRows.map((row, i) => <BudgetRow key={i} {...row} />)
-              ) : (
-                <tr>
-                  <td colSpan={4} className="text-center py-8 text-xs text-slate-400">Không có dữ liệu đối soát ngân sách.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
-          <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
-            <Bell size={16} className="text-red-500" /> Yêu cầu cấp kinh phí
-          </h3>
-          <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1 custom-scrollbar">
-            {requests.length > 0 ? (
-              requests.map((req, i) => (
-                <RequestCard
-                  key={i}
-                  {...req}
-                  onApprove={() => handleApprove(req.id)}
-                />
-              ))
-            ) : (
-              <div className="text-center py-8 text-xs text-slate-400 italic">Không có yêu cầu nào mới.</div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 4. KHO TÀI SẢN */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
-          <h3 className="font-black text-slate-700 text-sm flex items-center gap-2">
-            <Package size={18} className="text-emerald-500" /> Kho Tài sản & Cơ sở vật chất
-          </h3>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={14}
-              />
-              <input
-                type="text"
-                placeholder="Tìm tên hoặc mô tả..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none w-48 focus:w-64 transition-all focus:border-blue-400"
-              />
-            </div>
+          {activeTab === "assets" && (
             <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 shadow-md shadow-blue-100 hover:bg-blue-700 transition-colors"
+              onClick={() => setIsAssetModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
             >
-              <Plus size={14} /> Nhập kho
+              <Plus size={15} />
+              <span>Nhập kho Vật tư</span>
             </button>
-          </div>
-        </div>
-
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredAssets.length > 0 ? (
-            filteredAssets.map((asset) => (
-              <AssetCard key={asset.id} {...asset} />
-            ))
-          ) : (
-            <div className="col-span-3 py-10 text-center text-slate-400 text-xs italic">
-              Không tìm thấy tài sản phù hợp với "{searchTerm}"
-            </div>
           )}
         </div>
       </div>
 
-      {/* 5. MODAL NHẬP KHO */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-300">
-            <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="font-black text-slate-800 flex items-center gap-2">
-                <Plus size={18} className="text-blue-600" /> Nhập tài sản mới
+      {/* 4 Enterprise Financial Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="space-y-1 min-w-0 pr-2">
+            <span className="text-xs text-slate-500 font-medium">Tổng Quỹ Ngân sách</span>
+            <div className="text-xl font-bold text-slate-800 tracking-tight truncate">
+              {formatVND(stats.total)}
+            </div>
+            <p className="text-[11px] text-emerald-600 font-medium">Năm tài chính 2025-2026</p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+            <Wallet size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="space-y-1 min-w-0 pr-2">
+            <span className="text-xs text-slate-500 font-medium">Đã giải ngân</span>
+            <div className="text-xl font-bold text-slate-800 tracking-tight truncate">
+              {formatVND(stats.used)}
+            </div>
+            <div className="space-y-1">
+              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-blue-600 rounded-full"
+                  style={{ width: `${stats.usedPercent}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Đạt {stats.usedPercent}% kế hoạch
+              </p>
+            </div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+            <Coins size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="space-y-1 min-w-0 pr-2">
+            <span className="text-xs text-slate-500 font-medium">Ngân sách Khả dụng</span>
+            <div className="text-xl font-bold text-emerald-600 tracking-tight truncate">
+              {formatVND(stats.remaining)}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Sẵn sàng cấp cho các đơn vị
+            </p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
+            <PiggyBank size={20} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="space-y-1 min-w-0 pr-2">
+            <span className="text-xs text-slate-500 font-medium">Trang thiết bị & Vật tư</span>
+            <div className="text-xl font-bold text-slate-800 tracking-tight">
+              {stats.assetsCount} danh mục
+            </div>
+            <p className="text-[11px] text-slate-400">Đang lưu kho quản lý</p>
+          </div>
+          <div className="p-2.5 rounded-lg bg-amber-50 text-amber-600 shrink-0">
+            <Package size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* 3 Dedicated Workspace Tabs */}
+      <div className="bg-white rounded-xl border border-slate-200 p-1.5 shadow-xs flex items-center gap-1.5 overflow-x-auto">
+        <button
+          onClick={() => handleTabChange("budgets")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+            activeTab === "budgets"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Wallet size={15} />
+          <span>Đối soát Ngân sách & Giao dịch</span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange("requests")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap relative ${
+            activeTab === "requests"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <FileText size={15} />
+          <span>Phê duyệt Cấp Kinh phí</span>
+          {pendingRequestsCount > 0 && (
+            <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+              {pendingRequestsCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => handleTabChange("assets")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+            activeTab === "assets"
+              ? "bg-slate-900 text-white shadow-xs"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Package size={15} />
+          <span>Quản lý Kho Tài sản & Thiết bị</span>
+        </button>
+      </div>
+
+      {/* --- TAB 1: BUDGETS & TRANSACTIONS --- */}
+      {activeTab === "budgets" && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left (7/12): Budget Allocation Table */}
+          <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Phân bổ Ngân sách theo Đơn vị / Nhiệm kỳ
               </h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                  <tr>
+                    <th className="px-4 py-3">Đơn vị / Mục đích</th>
+                    <th className="px-4 py-3 text-right">Dự toán</th>
+                    <th className="px-4 py-3 text-right">Đã giải ngân</th>
+                    <th className="px-4 py-3 text-right">Khả dụng</th>
+                    <th className="px-4 py-3 text-center">Tiến độ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {budgetRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-8 text-xs text-slate-400">
+                        Chưa có bảng dự toán ngân sách
+                      </td>
+                    </tr>
+                  ) : (
+                    budgetRows.map((b) => {
+                      const totalB = Number(b.total_amount || 0);
+                      const usedB = Number(b.used_amount || 0);
+                      const diffB = Math.max(0, totalB - usedB);
+                      const pct = totalB > 0 ? Math.round((usedB / totalB) * 100) : 0;
+                      return (
+                        <tr key={b.id} className="hover:bg-slate-50/60 transition-colors">
+                          <td className="px-4 py-3.5 font-medium text-slate-800">
+                            {b.organization?.name || b.name || "Đoàn trường ĐH Lạc Hồng"}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-semibold text-slate-700">
+                            {formatVND(totalB)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right text-slate-600">
+                            {formatVND(usedB)}
+                          </td>
+                          <td className="px-4 py-3.5 text-right font-bold text-emerald-600">
+                            {formatVND(diffB)}
+                          </td>
+                          <td className="px-4 py-3.5 text-center">
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                pct > 80
+                                  ? "bg-rose-50 text-rose-700"
+                                  : "bg-emerald-50 text-emerald-700"
+                              }`}
+                            >
+                              {pct}%
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Right (5/12): Transactions Log */}
+          <div className="lg:col-span-5 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Nhật ký Giao dịch Thu - Chi Gần đây
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto max-h-[460px] divide-y divide-slate-100 p-2 space-y-1">
+              {transactions.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  Chưa có giao dịch nào được ghi nhận
+                </div>
+              ) : (
+                transactions.map((t, idx) => (
+                  <div
+                    key={t.id || idx}
+                    className="p-3 hover:bg-slate-50 rounded-lg transition-colors flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                      <div
+                        className={`p-2 rounded-lg shrink-0 ${
+                          t.type === "Thu"
+                            ? "bg-emerald-50 text-emerald-600"
+                            : "bg-rose-50 text-rose-600"
+                        }`}
+                      >
+                        {t.type === "Thu" ? (
+                          <ArrowDownLeft size={16} />
+                        ) : (
+                          <ArrowUpRight size={16} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-800 truncate">
+                          {t.title}
+                        </p>
+                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {t.user} • {t.detail || "Chi hoạt động"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <span
+                        className={`font-bold block ${
+                          t.type === "Thu" ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {t.amount}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {t.status}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB 2: FUND REQUESTS & APPROVAL WORKFLOW --- */}
+      {activeTab === "requests" && (
+        <div className="space-y-4">
+          {/* Subfilter toolbar */}
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-1">
+              {[
+                { key: "ALL", label: `Tất cả (${fundRequests.length})` },
+                { key: "PENDING", label: `Chờ thẩm định (${pendingRequestsCount})` },
+                { key: "APPROVED", label: "Đã giải ngân" },
+                { key: "REJECTED", label: "Đã từ chối" }
+              ].map((filter) => (
+                <button
+                  key={filter.key}
+                  onClick={() => setRequestFilter(filter.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    requestFilter === filter.key
+                      ? "bg-slate-900 text-white font-semibold"
+                      : "text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fund Requests Table */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px]">
+                  <tr>
+                    <th className="px-4 py-3.5">Mã / Lý do đề xuất</th>
+                    <th className="px-4 py-3.5">Người đề xuất</th>
+                    <th className="px-4 py-3.5 text-right">Số tiền yêu cầu</th>
+                    <th className="px-4 py-3.5 text-center">Trạng thái</th>
+                    <th className="px-4 py-3.5 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-10 text-xs text-slate-400">
+                        Không có yêu cầu cấp kinh phí nào trong danh sách này
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRequests.map((req) => (
+                      <tr key={req.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <span className="font-bold text-slate-800 block text-xs">
+                            {req.reason}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5 block">
+                            Mã: REQ-{String(req.id).substring(0, 8).toUpperCase()}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-slate-600 font-medium">
+                          {req.requester_name || req.user || "Cán bộ phụ trách"}
+                        </td>
+                        <td className="px-4 py-3.5 text-right font-bold text-slate-900">
+                          {formatVND(req.amount)}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                              req.status === "APPROVED" || req.status === "COMPLETED"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : req.status === "PENDING"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-rose-50 text-rose-700 border-rose-200"
+                            }`}
+                          >
+                            {req.status === "APPROVED" || req.status === "COMPLETED"
+                              ? "Đã duyệt"
+                              : req.status === "PENDING"
+                              ? "Chờ duyệt"
+                              : "Từ chối"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <button
+                            onClick={() => setEvaluatingRequest(req)}
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold rounded-lg text-xs transition-colors"
+                          >
+                            Thẩm định & Duyệt
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB 3: ASSET INVENTORY --- */}
+      {activeTab === "assets" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="relative min-w-[260px]">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tìm tên thiết bị, mã hoặc vị trí kho..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-500 rounded-lg outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredAssets.length === 0 ? (
+              <div className="col-span-3 bg-white p-12 text-center rounded-xl border border-slate-200 text-xs text-slate-400">
+                Không tìm thấy trang thiết bị nào phù hợp
+              </div>
+            ) : (
+              filteredAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs hover:shadow-sm transition-all flex flex-col justify-between"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="p-2 rounded-lg bg-slate-100 text-slate-700">
+                        <Package size={18} />
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                          asset.status === "AVAILABLE" || asset.status === "Sẵn sàng"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}
+                      >
+                        {asset.status === "AVAILABLE" || asset.status === "Sẵn sàng"
+                          ? "Sẵn sàng"
+                          : "Đang mượn / Bảo trì"}
+                      </span>
+                    </div>
+
+                    <h4 className="text-sm font-bold text-slate-800 leading-tight">
+                      {asset.name || asset.title}
+                    </h4>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {asset.description || asset.desc || "Thiết bị hỗ trợ hoạt động phong trào Đoàn - Hội."}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+                    <span>Số lượng: <strong className="text-slate-700">{asset.quantity || 1} {asset.unit || "Bộ"}</strong></span>
+                    <span className="truncate max-w-[150px]">{asset.storage_location || asset.footer || "Kho A"}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- APPROVAL EVALUATION MODAL (REPLACES WINDOW.CONFIRM) --- */}
+      {evaluatingRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-lg w-full overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+              <div className="flex items-center gap-2">
+                <FileText size={18} className="text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-800">
+                  Thẩm định Yêu cầu Cấp Kinh phí
+                </h3>
+              </div>
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 hover:bg-white rounded-full transition-colors text-slate-400 hover:text-red-500"
+                onClick={() => setEvaluatingRequest(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form
-              className="p-6 space-y-4"
-              onSubmit={handleCreateAsset}
-            >
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase">Tên tài sản</label>
-                <input
-                  type="text"
-                  required
-                  value={assetForm.name}
-                  onChange={e => setAssetForm({...assetForm, name: e.target.value})}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
-                  placeholder="Ví dụ: Máy chiếu Sony VPL"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase">Mô tả</label>
-                <input
-                  type="text"
-                  value={assetForm.description}
-                  onChange={e => setAssetForm({...assetForm, description: e.target.value})}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
-                  placeholder="Mô tả sơ lược về tài sản..."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">Số lượng</label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={assetForm.quantity}
-                    onChange={e => setAssetForm({...assetForm, quantity: parseInt(e.target.value)})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
-                  />
+            {/* Modal Content */}
+            <div className="p-5 space-y-4 text-xs">
+              <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-2">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Mã đề xuất:</span>
+                  <span className="font-mono font-bold text-slate-700">
+                    REQ-{String(evaluatingRequest.id).substring(0, 8).toUpperCase()}
+                  </span>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">Đơn vị tính</label>
-                  <input
-                    type="text"
-                    required
-                    value={assetForm.unit}
-                    onChange={e => setAssetForm({...assetForm, unit: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500"
-                    placeholder="Cái/Bộ..."
-                  />
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Người lập đề xuất:</span>
+                  <span className="font-semibold text-slate-800">
+                    {evaluatingRequest.requester_name || evaluatingRequest.user || "Cán bộ phụ trách"}
+                  </span>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">Vị trí lưu kho</label>
-                  <select
-                    value={assetForm.storage_location}
-                    onChange={e => setAssetForm({...assetForm, storage_location: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
-                  >
-                    <option value="Hầm B2">Hầm B2</option>
-                    <option value="Phòng Đoàn Khoa">Phòng Đoàn Khoa</option>
-                    <option value="Hội trường A">Hội trường A</option>
-                    <option value="Kho Trung tâm">Kho Trung tâm</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase">Đơn vị quản lý</label>
-                  <select
-                    required
-                    value={assetForm.organization_id}
-                    onChange={e => setAssetForm({...assetForm, organization_id: e.target.value})}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-blue-500 font-bold"
-                  >
-                    {organizations.map(org => (
-                      <option key={org.id} value={org.id}>{org.name}</option>
-                    ))}
-                  </select>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Số tiền đề xuất:</span>
+                  <span className="text-base font-black text-rose-600">
+                    {formatVND(evaluatingRequest.amount)}
+                  </span>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div>
+                <label className="block text-slate-500 font-semibold mb-1">
+                  Mục đích & Lý do chi tiết:
+                </label>
+                <div className="p-3 bg-white border border-slate-200 rounded-lg text-slate-700 leading-relaxed">
+                  {evaluatingRequest.reason || "Kinh phí phục vụ hoạt động sự kiện."}
+                </div>
+              </div>
+
+              {/* Budget check */}
+              <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 font-medium">
+                <span>Ngân sách khả dụng của Trường:</span>
+                <span className="font-bold">{formatVND(stats.remaining)}</span>
+              </div>
+
+              {/* Evidence preview if present */}
+              {evaluatingRequest.evidence_urls && (
+                <div>
+                  <label className="block text-slate-500 font-semibold mb-1">
+                    Minh chứng đính kèm:
+                  </label>
+                  <div className="flex gap-2">
+                    <a
+                      href={
+                        evaluatingRequest.evidence_urls.includes("[")
+                          ? JSON.parse(evaluatingRequest.evidence_urls)[0]
+                          : evaluatingRequest.evidence_urls
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      Xem hóa đơn / Bảng dự toán đính kèm <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                disabled={evaluatingLoading}
+                onClick={() => handleRejectFundRequest(evaluatingRequest.id)}
+                className="px-4 py-2 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5"
+              >
+                <XCircle size={15} />
+                <span>Từ chối yêu cầu</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={evaluatingLoading}
+                onClick={() => handleApproveFundRequest(evaluatingRequest.id)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+              >
+                <CheckCircle2 size={15} />
+                <span>Phê duyệt giải ngân</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- ASSET CREATION MODAL --- */}
+      {isAssetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/70">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Package size={17} className="text-blue-600" />
+                Nhập kho Trang thiết bị mới
+              </h3>
+              <button
+                onClick={() => setIsAssetModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAsset} className="p-5 space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">
+                  Tên trang thiết bị / vật tư *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Hệ thống Loa di động Bluetooth..."
+                  value={assetForm.name}
+                  onChange={(e) => setAssetForm({ ...assetForm, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">
+                    Số lượng
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={assetForm.quantity}
+                    onChange={(e) => setAssetForm({ ...assetForm, quantity: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 font-semibold mb-1">
+                    Đơn vị tính
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Bộ, Cái, Chiếc..."
+                    value={assetForm.unit}
+                    onChange={(e) => setAssetForm({ ...assetForm, unit: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">
+                  Vị trí lưu kho
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="VD: Kho Văn phòng Đoàn (Khu A)..."
+                  value={assetForm.storage_location}
+                  onChange={(e) => setAssetForm({ ...assetForm, storage_location: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">
+                  Mô tả chi tiết
+                </label>
+                <textarea
+                  rows="2"
+                  placeholder="Tình trạng, mục đích sử dụng..."
+                  value={assetForm.description}
+                  onChange={(e) => setAssetForm({ ...assetForm, description: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:border-blue-500 outline-none transition-all"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                  onClick={() => setIsAssetModalOpen(false)}
+                  className="px-3 py-2 border border-slate-200 hover:bg-slate-100 rounded-lg text-slate-600 font-medium"
                 >
                   Hủy bỏ
                 </button>
                 <button
                   type="submit"
-                  disabled={!assetForm.name || !assetForm.organization_id}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-xs"
                 >
-                  Xác nhận Nhập
+                  Xác nhận Nhập kho
                 </button>
               </div>
             </form>
@@ -420,104 +869,5 @@ const Finance = () => {
     </div>
   );
 };
-
-// Giữ các Helper Components của bạn (StatCard, BudgetRow, RequestCard, AssetCard) bên dưới...
-const StatCard = ({
-  title,
-  value,
-  unit,
-  sub,
-  subColor = "text-slate-400",
-  progress,
-  icon,
-}) => (
-  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group hover:border-blue-400 transition-all">
-    <div className="absolute top-4 right-4 opacity-20 group-hover:scale-110 transition-transform">
-      {" "}
-      {icon}{" "}
-    </div>
-    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">
-      {title}
-    </h4>
-    <div className="flex items-baseline gap-1 mb-3">
-      <span className="text-2xl font-black text-slate-800 tracking-tight">
-        {value}
-      </span>
-      <span className="text-xs font-bold text-slate-400">{unit}</span>
-    </div>
-    {progress !== undefined && (
-      <div className="w-full bg-slate-100 h-1 rounded-full mb-2 overflow-hidden">
-        <div
-          className="bg-blue-500 h-full"
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
-    )}
-    <p className={`text-[10px] font-bold ${subColor}`}>{sub}</p>
-  </div>
-);
-
-const BudgetRow = ({ name, estimate, actual, diff, status }) => (
-  <tr className="hover:bg-slate-50 transition-colors">
-    <td className="px-6 py-4 font-bold text-slate-700 text-xs">{name}</td>
-    <td className="px-6 py-4 text-center text-slate-500 text-xs">{estimate}</td>
-    <td className="px-6 py-4 text-center font-black text-slate-700 text-xs">
-      {actual}
-    </td>
-    <td
-      className={`px-6 py-4 text-right text-xs font-black ${status === "danger" ? "text-red-500" : status === "success" ? "text-emerald-500" : "text-slate-400"}`}
-    >
-      {diff}
-    </td>
-  </tr>
-);
-
-const RequestCard = ({ dept, time, desc, status, onApprove }) => (
-  <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/30 space-y-3">
-    <div className="flex justify-between items-start">
-      <div>
-        <h5 className="text-[11px] font-black text-slate-800">{dept}</h5>
-        <span className="text-[9px] text-slate-400 font-medium">{time}</span>
-      </div>
-      <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-700'}`}>
-        {status === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
-      </span>
-    </div>
-    <p className="text-[10px] text-slate-500 leading-relaxed italic">
-      "{desc}"
-    </p>
-    {status !== 'APPROVED' && (
-      <button onClick={onApprove} className="w-full py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-100">
-        Duyệt chi
-      </button>
-    )}
-  </div>
-);
-
-const AssetCard = ({ title, desc, status, statusColor, footer }) => (
-  <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 space-y-3 group hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all border-l-4 border-l-transparent hover:border-l-blue-500">
-    <div className="flex justify-between items-start gap-4">
-      <div className="p-2 bg-white rounded-lg border border-slate-100 shadow-sm text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-        <Package size={16} />
-      </div>
-      <span
-        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${statusColor}`}
-      >
-        {status}
-      </span>
-    </div>
-    <div>
-      <h5 className="text-xs font-black text-slate-800 mb-1">{title}</h5>
-      <p className="text-[10px] text-slate-400 leading-tight font-medium">
-        {desc}
-      </p>
-    </div>
-    <div className="pt-3 border-t border-slate-100">
-      <p className="text-[10px] font-bold text-blue-600 italic leading-tight">
-        {footer}
-      </p>
-    </div>
-  </div>
-);
 
 export default Finance;

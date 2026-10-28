@@ -54,10 +54,10 @@ const EventDetailPage = () => {
           <p>{error || "Sự kiện không tồn tại."}</p>
         </div>
         <button 
-          onClick={() => navigate("/admin/campaigns/calendar")}
+          onClick={() => navigate(-1)}
           className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline"
         >
-          <ChevronLeft size={16} /> Quay lại Lịch
+          <ChevronLeft size={16} /> Quay lại
         </button>
       </div>
     );
@@ -69,7 +69,7 @@ const EventDetailPage = () => {
       <div className="flex items-center justify-between border-b border-slate-100 pb-5">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/admin/campaigns/calendar")}
+            onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors border border-slate-200 bg-white shadow-sm"
           >
             <ChevronLeft size={20} />

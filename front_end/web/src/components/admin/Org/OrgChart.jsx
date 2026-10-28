@@ -166,7 +166,7 @@ const ListView = ({ orgTree }) => {
   return (
     <div
       id="org-list-container"
-      className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm max-w-5xl mx-auto space-y-4 my-8"
+      className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs max-w-5xl mx-auto space-y-4 my-6"
     >
       <div className="flex items-center justify-between border-b pb-4 mb-2">
         <div>
@@ -235,7 +235,7 @@ const ListView = ({ orgTree }) => {
 /* ─────────────────────────────────────────────────────── */
 const ExportModal = ({ onClose, onExport }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full p-6 space-y-5 relative m-4">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-5 relative m-4">
       <button
         onClick={onClose}
         className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
@@ -363,7 +363,7 @@ const OrgChart = () => {
   return (
     <div className="space-y-4">
       {/* ── Control bar ── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
         <div className="flex bg-slate-100 p-1 rounded-xl">
           {[
             { key: "tree", label: "Sơ đồ hình cây", Icon: Users },
@@ -395,7 +395,7 @@ const OrgChart = () => {
 
       {/* ── Tree View ── */}
       {displayMode === "tree" && (
-        <div className="relative w-full overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-3xl min-h-[750px] border border-slate-200 shadow-sm">
+        <div className="relative w-full overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-xl min-h-[750px] border border-slate-200 shadow-xs">
           <TransformWrapper
             initialScale={0.75}
             centerOnInit={true}

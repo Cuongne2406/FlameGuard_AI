@@ -1,4 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Home, Save, Edit2, Mail, CheckCircle, CheckCircle2, Phone, 
+  FileSignature, PenTool, Shield, Laptop, Smartphone, LogOut, 
+  Bell, UserPlus, Plus, Edit, Trash2, Eraser, Undo, Upload, 
+  X, Search 
+} from 'lucide-react';
 import Toast from '../../../components/ui/Toast';
 import Toggle from '../../../components/ui/Toggle';
 import Modal from '../../../components/ui/Modal';
@@ -55,6 +61,7 @@ const SubAdminSettings = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [newMember, setNewMember] = useState({ id: '', name: '', mssv: '', role: '' });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -176,20 +183,26 @@ const SubAdminSettings = () => {
   };
 
   // Signature handlers
-  const clearSignature = async () => {
-    if (window.confirm('Bạn có chắc muốn xóa chữ ký hiện tại?')) {
-      if (signatureCanvasRef.current) {
-        signatureCanvasRef.current.clear();
+  const clearSignature = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xác nhận xóa chữ ký',
+      message: 'Bạn có chắc chắn muốn xóa chữ ký điện tử hiện tại? Thao tác này không thể hoàn tác.',
+      onConfirm: async () => {
+        if (signatureCanvasRef.current) {
+          signatureCanvasRef.current.clear();
+        }
+        setSignature(null);
+        setSignatureImage(null);
+        try {
+          await userService.updateMe({ signature_data: null });
+          setToast({ message: 'Đã xóa chữ ký số!', type: 'success' });
+        } catch (error) {
+          setToast({ message: 'Lỗi khi xóa chữ ký!', type: 'error' });
+        }
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
-      setSignature(null);
-      setSignatureImage(null);
-      try {
-        await userService.updateMe({ signature_data: null });
-        setToast({ message: 'Đã xóa chữ ký số!', type: 'success' });
-      } catch (error) {
-         setToast({ message: 'Lỗi khi xóa chữ ký!', type: 'error' });
-      }
-    }
+    });
   };
 
   const undoSignature = () => {
@@ -261,16 +274,22 @@ const SubAdminSettings = () => {
     setShowPermissionsModal(true);
   };
 
-  const handleDeleteMember = async (id) => {
-    if (window.confirm('Bạn có chắc muốn xóa thành viên này?')) {
-      try {
-        await userService.removeTeamMember(id);
-        setToast({ message: 'Đã xóa thành viên', type: 'success' });
-        fetchData();
-      } catch (error) {
-        setToast({ message: 'Lỗi xóa thành viên', type: 'error' });
+  const handleDeleteMember = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Xóa cán bộ Ban Thường vụ',
+      message: 'Bạn có chắc chắn muốn xóa thành viên này khỏi Ban Thường vụ Khoa?',
+      onConfirm: async () => {
+        try {
+          await userService.removeTeamMember(id);
+          setToast({ message: 'Đã xóa thành viên khỏi Ban Thường vụ', type: 'success' });
+          fetchData();
+        } catch (error) {
+          setToast({ message: 'Lỗi xóa thành viên: ' + error.message, type: 'error' });
+        }
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
-    }
+    });
   };
 
   const handlePermissionChange = (memberId, perm) => {
@@ -312,76 +331,76 @@ const SubAdminSettings = () => {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-[#F8FAFC] min-h-screen space-y-8 font-sans">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-            <span className="material-symbols-outlined text-sm">home</span>
-            <span>Tổng quan</span>
-            <span>/</span>
-            <span className="text-blue-600 underline">Cài đặt & Hồ sơ</span>
-          </nav>
-          <h1 className="text-2xl font-bold text-slate-900">Thiết lập Tài khoản & Cấu hình Khoa</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Shield size={22} className="text-blue-600" />
+            Thiết lập Tài khoản & Cấu hình Khoa
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Quản trị thông tin cán bộ, chữ ký số điện tử, bảo mật 2 lớp và phân quyền Ban Thường vụ.
+          </p>
         </div>
         <button
           onClick={handleSaveSettings}
-          className="px-6 py-3 w-full lg:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5 self-start sm:self-auto"
         >
-          <span className="material-symbols-outlined">save</span>
-          LƯU THAY ĐỔI
+          <Save size={14} />
+          Lưu thay đổi
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column */}
-        <div className="lg:col-span-4 space-y-8">
+        <div className="lg:col-span-4 space-y-6">
           {/* Profile Card */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8 text-center relative overflow-hidden">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6 text-center relative overflow-hidden">
             <div className="relative inline-block">
-              <div className="h-32 w-32 rounded-full bg-blue-500 flex items-center justify-center text-white text-4xl font-bold shadow-2xl mx-auto ring-8 ring-blue-50">
+              <div className="h-28 w-28 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold shadow-md mx-auto ring-4 ring-blue-50">
                 {avatarPreview ? (
                   <img src={avatarPreview} alt="avatar" className="w-full h-full rounded-full object-cover" />
                 ) : (
                   profile.name.split(' ').map(w => w[0]).join('').slice(0,2)
                 )}
               </div>
-              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 h-10 w-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all cursor-pointer">
-                <span className="material-symbols-outlined text-xl">edit</span>
+              <label htmlFor="avatar-upload" className="absolute bottom-0 right-0 h-8 w-8 bg-white rounded-full shadow-md border border-slate-200 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-all cursor-pointer">
+                <Edit2 size={14} />
                 <input type="file" id="avatar-upload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
               </label>
             </div>
             <div>
-              <h3 className="text-2xl font-bold text-slate-900">{profile.name}</h3>
-              <div className="mt-3 px-4 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-widest inline-block border border-blue-100">
+              <h3 className="text-lg font-bold text-slate-900">{profile.name}</h3>
+              <div className="mt-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-semibold inline-block border border-blue-200">
                 {profile.role}
               </div>
             </div>
 
-            <div className="space-y-6 pt-6 text-left border-t border-slate-50">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Email</label>
+            <div className="space-y-4 pt-4 text-left border-t border-slate-100">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500">Email</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-3 text-slate-300">mail</span>
+                  <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={profile.email}
                     onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                    className="w-full h-12 pl-12 pr-10 rounded-xl border border-slate-100 bg-white focus:bg-slate-50 text-sm font-bold text-slate-700 outline-none transition-all focus:border-blue-400"
+                    className="w-full h-9 pl-9 pr-8 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 outline-none transition-all focus:border-blue-500"
                     placeholder="Nhập email của bạn"
                   />
-                  <span className="material-symbols-outlined absolute right-4 top-3 text-emerald-500">check_circle</span>
+                  <CheckCircle2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Số điện thoại</label>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500">Số điện thoại</label>
                 <div className="relative">
-                  <span className="material-symbols-outlined absolute left-4 top-3 text-slate-300">call</span>
+                  <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={profile.phone}
                     onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="w-full h-12 pl-12 pr-4 rounded-xl border border-slate-100 bg-white focus:bg-slate-50 text-sm font-bold text-slate-700 outline-none transition-all focus:border-blue-400"
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-800 outline-none transition-all focus:border-blue-500"
                     placeholder="Nhập số điện thoại"
                   />
                 </div>
@@ -390,47 +409,57 @@ const SubAdminSettings = () => {
           </div>
 
           {/* E-Signature */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 text-blue-600 border-b border-slate-50 pb-4">
-              <span className="material-symbols-outlined font-bold">edit_square</span>
-              <h3 className="text-xs font-bold uppercase tracking-widest">Chữ ký số (E-Signature)</h3>
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-blue-600 border-b border-slate-100 pb-3">
+              <FileSignature size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Chữ ký số (E-Signature)</h3>
             </div>
-            <div className="h-32 rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/50 flex items-center justify-center p-6 opacity-80 hover:opacity-100 transition-all cursor-pointer">
+            <div className="h-28 rounded-lg border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center p-4">
               {signature ? (
-                <img src={signature} alt="Signature" className="h-16 object-contain" />
+                <img src={signature} alt="Signature" className="h-14 object-contain" />
               ) : (
-                <p className="text-xs text-slate-400">Chưa có chữ ký</p>
+                <p className="text-xs text-slate-400">Chưa tạo chữ ký điện tử</p>
               )}
             </div>
-            <p className="text-xs font-medium text-slate-400 leading-relaxed">Chữ ký này sẽ được áp dụng lên các văn bản và phiếu chi điện tử.</p>
-            <button onClick={() => setShowSignatureModal(true)} className="w-full h-12 rounded-xl bg-white border border-slate-200 text-slate-900 text-xs font-bold uppercase tracking-widest shadow-sm hover:bg-slate-900 hover:text-white transition-all flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined text-sm">draw</span> Cập nhật Chữ ký
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Chữ ký được áp dụng khi Bí thư Khoa phê duyệt văn bản hoặc xác nhận phiếu chi.
+            </p>
+            <button 
+              onClick={() => setShowSignatureModal(true)} 
+              className="w-full py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5"
+            >
+              <PenTool size={13} /> Cập nhật Chữ ký
             </button>
           </div>
         </div>
 
         {/* Right Column */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 space-y-6">
           {/* Account Security */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8 relative">
-            <div className="flex items-center gap-3 text-blue-600">
-              <span className="material-symbols-outlined font-bold">security</span>
-              <h3 className="text-sm font-bold uppercase tracking-widest">Account Security</h3>
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+            <div className="flex items-center gap-2 text-blue-600">
+              <Shield size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Bảo mật tài khoản</h3>
             </div>
 
-            <div className="space-y-10">
-              <div className="flex items-center justify-between">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div>
-                  <p className="text-sm font-bold text-slate-700">Mật khẩu</p>
-                  <p className="text-xs font-medium text-slate-300 mt-1 tracking-widest">••••••••••••</p>
+                  <p className="text-xs font-semibold text-slate-800">Mật khẩu đăng nhập</p>
+                  <p className="text-xs text-slate-400 mt-0.5 tracking-widest">••••••••••••</p>
                 </div>
-                <button onClick={() => setShowPasswordModal(true)} className="text-xs font-bold text-blue-600 uppercase hover:underline">Đổi mật khẩu</button>
+                <button 
+                  onClick={() => setShowPasswordModal(true)} 
+                  className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-semibold text-blue-600 transition-all"
+                >
+                  Đổi mật khẩu
+                </button>
               </div>
 
-              <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50/50 border border-slate-50 hover:bg-white hover:shadow-xl hover:border-blue-100 group">
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-slate-900 uppercase">Xác thực 2 lớp (2FA)</p>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tăng cường bảo mật cho tài khoản</p>
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-slate-800">Xác thực 2 lớp (2FA)</p>
+                  <p className="text-[11px] text-slate-500">Bảo vệ tài khoản qua mã OTP email khi đăng nhập</p>
                 </div>
                 <Toggle
                   checked={toggles.twoFactor}
@@ -438,31 +467,44 @@ const SubAdminSettings = () => {
                 />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                    Thiết bị đang đăng nhập
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Thiết bị đang đăng nhập ({devices.length})
                   </p>
-                  <button onClick={handleLogoutAll} className="text-xs font-bold text-rose-500 uppercase tracking-widest hover:underline">Đăng xuất tất cả</button>
+                  <button 
+                    onClick={handleLogoutAll} 
+                    className="text-xs font-semibold text-rose-600 hover:underline"
+                  >
+                    Đăng xuất tất cả
+                  </button>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {devices.map(d => (
-                    <div key={d.id} className="p-4 rounded-xl border border-slate-50 bg-white flex items-center justify-between group hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
-                          <span className="material-symbols-outlined">{d.icon}</span>
+                    <div key={d.id} className="p-3.5 rounded-lg border border-slate-200 bg-white flex items-center justify-between hover:bg-slate-50/50 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          {d.icon === 'phone' ? <Smartphone size={15} /> : <Laptop size={15} />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-slate-700">{d.name}</p>
-                            {d.status === 'Current' && <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold uppercase rounded tracking-widest">Current</span>}
+                            <p className="text-xs font-bold text-slate-800">{d.name}</p>
+                            {d.status === 'Current' && (
+                              <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold rounded">
+                                Hiện tại
+                              </span>
+                            )}
                           </div>
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{d.location} • {d.browser} • {d.ip || d.time}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{d.location} • {d.browser} • {d.ip || d.time}</p>
                         </div>
                       </div>
                       {d.status !== 'Current' && (
-                        <button onClick={() => handleLogoutDevice(d.id)} className="h-8 w-8 text-slate-300 hover:text-rose-500 transition-colors">
-                          <span className="material-symbols-outlined text-lg">logout</span>
+                        <button 
+                          onClick={() => handleLogoutDevice(d.id)} 
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                          title="Đăng xuất thiết bị này"
+                        >
+                          <LogOut size={15} />
                         </button>
                       )}
                     </div>
@@ -473,22 +515,22 @@ const SubAdminSettings = () => {
           </div>
 
           {/* Notification Settings */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8">
-            <div className="flex items-center gap-3 text-blue-600">
-              <span className="material-symbols-outlined font-bold">notifications_active</span>
-              <h3 className="text-sm font-bold uppercase tracking-widest">Notification Settings</h3>
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 text-blue-600">
+              <Bell size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Tùy chọn Thông báo</h3>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-3">
               {[
-                { key: 'emailAlert', title: 'Email Alert', desc: 'Nhận thông báo khi có yêu cầu rút tiền mới' },
-                { key: 'zaloAlert', title: 'Zalo Alert', desc: 'Nhắc nhở lịch họp qua Zalo OA' },
-                { key: 'dailyDigest', title: 'Daily Digest', desc: 'Tổng hợp hoạt động trong ngày gửi vào 8:00 PM' },
+                { key: 'emailAlert', title: 'Thông báo Email', desc: 'Nhận email khi có văn bản hoặc đăng ký sự kiện cần duyệt' },
+                { key: 'zaloAlert', title: 'Thông báo Zalo OA', desc: 'Nhận tin nhắn báo cáo tiến độ và lịch công tác' },
+                { key: 'dailyDigest', title: 'Báo cáo tổng kết ngày (8:00 PM)', desc: 'Tổng hợp số lượng hoàn thành và KPI trong ngày' },
               ].map(n => (
-                <div key={n.key} className="flex items-center justify-between p-4 bg-white">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-slate-900">{n.title}</p>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{n.desc}</p>
+                <div key={n.key} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-slate-800">{n.title}</p>
+                    <p className="text-[11px] text-slate-500">{n.desc}</p>
                   </div>
                   <Toggle
                     checked={toggles[n.key]}
@@ -500,73 +542,84 @@ const SubAdminSettings = () => {
           </div>
 
           {/* Permissions Table */}
-          <div className="bg-white border border-slate-100 rounded-[2rem] p-10 shadow-sm space-y-8">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-slate-800">
-                <span className="material-symbols-outlined font-bold">group_add</span>
-                <h3 className="text-sm font-bold uppercase tracking-widest">Phân quyền Ban Thường vụ</h3>
+              <div className="flex items-center gap-2 text-slate-900">
+                <UserPlus size={16} className="text-blue-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider">Phân quyền Ban Thường vụ Khoa</h3>
               </div>
-              <button onClick={() => setShowAddMemberModal(true)} className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-2 hover:underline">
-                <span className="material-symbols-outlined text-lg">add</span> Thêm người
+              <button 
+                onClick={() => setShowAddMemberModal(true)} 
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1 transition-all"
+              >
+                <Plus size={13} /> Thêm cán bộ
               </button>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-4 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">Thành viên</th>
-                    <th className="px-4 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Duyệt sự kiện</th>
-                    <th className="px-4 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Duyệt tài chính</th>
-                    <th className="px-4 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Đăng bài viết</th>
-                    <th className="px-4 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Hành động</th>
+                  <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                    <th className="py-2.5 px-4">Thành viên</th>
+                    <th className="py-2.5 px-3 text-center">Duyệt sự kiện</th>
+                    <th className="py-2.5 px-3 text-center">Duyệt tài chính</th>
+                    <th className="py-2.5 px-3 text-center">Đăng bài viết</th>
+                    <th className="py-2.5 px-4 text-right">Thao tác</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
                   {team.map(m => (
-                    <tr key={m.id} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-6">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-xs border border-blue-100 shadow-inner">
+                    <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
                             {m.initial}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-900 uppercase">{m.name}</p>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{m.role}</p>
+                            <p className="font-bold text-slate-900">{m.name}</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5">{m.role}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-6 text-center">
+                      <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={m.permissions.events}
+                          checked={m.permissions?.events}
                           onChange={() => handlePermissionChange(m.id, 'events')}
-                          className="h-5 w-5 rounded border-2 border-slate-200 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-6 text-center">
+                      <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={m.permissions.finance}
+                          checked={m.permissions?.finance}
                           onChange={() => handlePermissionChange(m.id, 'finance')}
-                          className="h-5 w-5 rounded border-2 border-slate-200 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-6 text-center">
+                      <td className="py-3 px-3 text-center">
                         <input
                           type="checkbox"
-                          checked={m.permissions.posts}
+                          checked={m.permissions?.posts}
                           onChange={() => handlePermissionChange(m.id, 'posts')}
-                          className="h-5 w-5 rounded border-2 border-slate-200 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
                       </td>
-                      <td className="px-4 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => handleEditPermissions(m)} className="h-8 w-8 rounded-lg bg-white border border-slate-100 text-slate-400 hover:text-blue-600 transition-all shadow-sm">
-                            <span className="material-symbols-outlined text-sm">edit</span>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            onClick={() => handleEditPermissions(m)} 
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                            title="Chỉnh sửa quyền"
+                          >
+                            <Edit size={14} />
                           </button>
-                          <button onClick={() => handleDeleteMember(m.id)} className="h-8 w-8 rounded-lg bg-white border border-slate-100 text-slate-400 hover:text-rose-600 transition-all shadow-sm">
-                            <span className="material-symbols-outlined text-sm">delete</span>
+                          <button 
+                            onClick={() => handleDeleteMember(m.id)} 
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title="Xóa khỏi Ban Thường vụ"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -658,14 +711,14 @@ const SubAdminSettings = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => signatureCanvasRef.current?.clear()}>
-                  <span className="material-symbols-outlined text-lg">ink_eraser</span> Xóa
+                <Button variant="outline" size="sm" onClick={() => signatureCanvasRef.current?.clear()} className="flex items-center gap-1">
+                  <Eraser size={14} /> Xóa
                 </Button>
-                <Button variant="outline" size="sm" onClick={undoSignature}>
-                  <span className="material-symbols-outlined text-lg">undo</span> Undo
+                <Button variant="outline" size="sm" onClick={undoSignature} className="flex items-center gap-1">
+                  <Undo size={14} /> Hoàn tác
                 </Button>
-                <Button variant="outline" size="sm" onClick={clearSignature}>
-                  <span className="material-symbols-outlined text-lg">delete</span> Xóa tất cả
+                <Button variant="outline" size="sm" onClick={clearSignature} className="flex items-center gap-1 text-rose-600">
+                  <Trash2 size={14} /> Xóa tất cả
                 </Button>
               </div>
             </div>
@@ -687,7 +740,7 @@ const SubAdminSettings = () => {
                   id="signature-upload"
                 />
                 <label htmlFor="signature-upload" className="cursor-pointer">
-                  <span className="material-symbols-outlined text-4xl text-slate-300">cloud_upload</span>
+                  <Upload size={36} className="mx-auto text-slate-300" />
                   <p className="text-sm font-bold text-slate-700 mt-2">Click để chọn ảnh</p>
                   <p className="text-xs text-slate-400">PNG, JPG tối đa 2MB</p>
                 </label>
@@ -697,9 +750,9 @@ const SubAdminSettings = () => {
                   <img src={signatureImage} alt="Signature" className="h-20 border rounded" />
                   <button
                     onClick={() => setSignatureImage(null)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                    className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm"
                   >
-                    <span className="material-symbols-outlined text-sm">close</span>
+                    <X size={12} />
                   </button>
                 </div>
               )}
@@ -740,11 +793,11 @@ const SubAdminSettings = () => {
           <div className="space-y-4">
             <p className="text-sm font-bold text-slate-700">Hoặc tìm kiếm từ danh sách cán bộ</p>
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-4 top-3 text-slate-300">search</span>
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Nhập tên hoặc MSSV..."
-                className="w-full h-12 pl-12 pr-4 rounded-xl border border-slate-200 outline-none focus:border-blue-500"
+                className="w-full h-10 pl-9 pr-4 rounded-xl border border-slate-200 text-xs outline-none focus:border-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -766,7 +819,7 @@ const SubAdminSettings = () => {
                       <p className="text-xs text-slate-500">{r.mssv} • {r.role}</p>
                     </div>
                   </div>
-                  {newMember.id === r.id ? <span className="material-symbols-outlined text-blue-600">check_circle</span> : <span className="text-blue-600 text-sm">Chọn</span>}
+                  {newMember.id === r.id ? <CheckCircle2 size={16} className="text-blue-600" /> : <span className="text-blue-600 text-sm font-semibold">Chọn</span>}
                 </div>
               ))}
             </div>
@@ -840,6 +893,34 @@ const SubAdminSettings = () => {
           </div>
         </Modal>
       )}
+
+      {/* Enterprise Confirmation Modal */}
+      <Modal 
+        isOpen={confirmModal.isOpen} 
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} 
+        title={confirmModal.title} 
+        size="sm"
+      >
+        <div className="space-y-4 py-2 text-xs">
+          <p className="text-slate-600 leading-relaxed font-medium">
+            {confirmModal.message}
+          </p>
+          <div className="flex gap-2 pt-3 border-t border-slate-100">
+            <button
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 font-semibold"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={confirmModal.onConfirm}
+              className="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold shadow-sm"
+            >
+              Xác nhận
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>

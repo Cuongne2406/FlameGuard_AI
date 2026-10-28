@@ -31,10 +31,14 @@ async def upload_document_file(
     ALLOWED_TYPES = [
         "application/pdf",
         "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/webp"
     ]
     if file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF hoặc DOCX")
+        raise HTTPException(status_code=400, detail="Chỉ chấp nhận file PDF, DOCX hoặc ảnh (JPG, PNG)")
 
     MAX_SIZE = 20 * 1024 * 1024  # 20 MB
     contents = await file.read()

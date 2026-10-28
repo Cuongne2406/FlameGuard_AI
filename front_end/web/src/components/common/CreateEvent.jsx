@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../ui/Modal';
 import { eventService } from '../../services/eventService';
+import { campaignService } from '../../services/campaignService';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Toggle from '../ui/Toggle';
 
 const CreateEvent = ({ isOpen, onClose, onSuccess }) => {
     const [step, setStep] = useState(1);
+    const [campaigns, setCampaigns] = useState([]);
     const [formData, setFormData] = useState({
         title: '',
+        campaign_id: '',
         description: '',
         location: '',
         locationType: 'preset',
@@ -48,12 +51,14 @@ const CreateEvent = ({ isOpen, onClose, onSuccess }) => {
         if (!isOpen) return;
         const fetchFormData = async () => {
             try {
-                const [locs, temps] = await Promise.all([
+                const [locs, temps, camps] = await Promise.all([
                     eventService.getLocations(),
-                    eventService.getTemplates()
+                    eventService.getTemplates(),
+                    campaignService.getCampaigns().catch(() => [])
                 ]);
                 setAvailableLocations(locs?.data || locs || []);
                 setCertificateTemplates(temps?.data || temps || []);
+                setCampaigns(Array.isArray(camps) ? camps : []);
             } catch (err) {
                 console.error("Failed to fetch event form data:", err);
             }
@@ -67,6 +72,7 @@ const CreateEvent = ({ isOpen, onClose, onSuccess }) => {
             setStep(1);
             setFormData({
                 title: '',
+                campaign_id: '',
                 description: '',
                 location: '',
                 locationType: 'preset',
@@ -222,7 +228,8 @@ const CreateEvent = ({ isOpen, onClose, onSuccess }) => {
             statusColor: 'orange',
             actions: [
                 { label: 'Xem chi tiết', icon: 'visibility', primary: false, action: () => {} }
-            ]
+            ],
+            campaign_id: formData.campaign_id || null
         };
         onSuccess(newEvent);
         onClose();
@@ -275,6 +282,24 @@ const CreateEvent = ({ isOpen, onClose, onSuccess }) => {
                         placeholder="Cuộc thi Lập trình Code War 2026"
                         className="w-full h-12 px-6 rounded-xl border border-slate-200 outline-none focus:border-blue-500 font-bold text-slate-700"
                     />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">
+                        Thuộc Chiến dịch cấp Trường (Tùy chọn)
+                    </label>
+                    <select
+                        name="campaign_id"
+                        value={formData.campaign_id}
+                        onChange={handleInputChange}
+                        className="w-full h-12 px-6 rounded-xl border border-slate-200 outline-none font-medium text-slate-700 bg-white"
+                    >
+                        <option value="">-- Sự kiện độc lập / Không thuộc chiến dịch --</option>
+                        {campaigns.map(c => (
+                            <option key={c.id} value={c.id}>
+                                {c.name || c.title}
+                            </option>
+                        ))}
+                    </select>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">

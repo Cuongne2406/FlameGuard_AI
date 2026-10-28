@@ -55,6 +55,7 @@ import Profile from "../pages/user/profile/Profile";
 import Event from "../pages/user/Event/Event";
 import UserAwards from "../pages/user/Awards/UserAwards";
 import UserNotifications from "../pages/user/Notifications/Notifications";
+import Wallet from "../pages/user/Wallet/Wallet";
 
 //public pages
 import PublicLayout from "../layouts/PublicLayout";
@@ -81,6 +82,8 @@ const AppRoutes = () => {
             element={<Navigate to="/admin/organizations" replace />}
           />
           <Route path="organizations" element={<OrganizationsPage />} />
+          <Route path="organizations/chart" element={<OrgChartPage />} />
+          <Route path="organizations/org-chart" element={<Navigate to="/admin/organizations/chart" replace />} />
           <Route path="organizations/units" element={<UnitsPage />} />
           <Route path="organizations/units/:id/members" element={<UnitMembersPage />} />
           <Route path="organizations/members" element={<MembersPage />} />
@@ -125,8 +128,11 @@ const AppRoutes = () => {
         <Route path="events/:id/feedback" element={<EventFeedbackAnalysis />} />
         <Route path="events/:id/live" element={<EventLiveReport />} />
         <Route path="events/manual-checkin" element={<EventManualCheckin />} />
+        <Route path="events/:id/checkin" element={<EventManualCheckin />} />
         <Route path="events/:id/registrations" element={<EventRegistrationApproval />} />
+        <Route path="events/:id/approvals" element={<EventRegistrationApproval />} />
         <Route path="events/summary" element={<EventSummary />} />
+        <Route path="events/:id/summary" element={<EventSummary />} />
         <Route path="finance" element={<SubAdminFinance />} />
         <Route path="awards" element={<SubAdminAwards />} />
         <Route path="notifications" element={<SubAdminNotifications />} />
@@ -148,6 +154,7 @@ const AppRoutes = () => {
         <Route path="event" element={<Event />} />
           <Route path="notifications" element={<UserNotifications />} />
           <Route path="awards" element={<UserAwards />} />
+          <Route path="wallet" element={<Wallet />} />
         </Route>
       </Route>
 

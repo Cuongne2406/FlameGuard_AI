@@ -1,25 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import UnitList from "../../../components/admin/Org/UnitList";
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
 
 const UnitsPage = () => {
   const location = useLocation();
-  const [triggerCreateModal, setTriggerCreateModal] = useState(false);
-
-  useEffect(() => {
-    if (location.state?.openCreate) {
-      setTriggerCreateModal(true);
-    }
-  }, [location.state]);
-
-  return (
-    <div className="space-y-6">
-      <UnitList
-        triggerCreateModal={triggerCreateModal}
-        onModalClose={() => setTriggerCreateModal(false)}
-      />
-    </div>
-  );
+  return <Navigate to="/admin/organizations?tab=units" state={location.state} replace />;
 };
 
 export default UnitsPage;

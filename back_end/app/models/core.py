@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Boolean, Enum, ForeignKey, Date, Table, Text, Numeric, DateTime, func
+from sqlalchemy import Column, String, Integer, Float, Boolean, Enum, ForeignKey, Date, Table, Text, Numeric, DateTime, func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base_class import Base
@@ -62,6 +62,26 @@ class User(Base):
     device_id = Column(String, nullable=True)
     push_token = Column(String, nullable=True)
     is_profile_updated = Column(Boolean, default=False)
+    
+    # Thông tin cá nhân phục vụ SV5T
+    cccd = Column(String, nullable=True)
+    gender = Column(String, nullable=True, default="Nam")
+    date_of_birth = Column(Date, nullable=True)
+    ethnicity = Column(String, nullable=True, default="Kinh")
+    religion = Column(String, nullable=True, default="Không")
+    address = Column(String, nullable=True)
+    
+    # Thông tin học tập phục vụ SV5T
+    academic_year_num = Column(Integer, nullable=True, default=3)
+    school_name = Column(String, nullable=True, default="Trường Đại học Lạc Hồng")
+    faculty_name = Column(String, nullable=True)
+    education_level = Column(String, nullable=True, default="Đại học")
+    gpa = Column(Float, nullable=True, default=0.0)
+    
+    # Đoàn - Hội & Thành tích phục vụ SV5T
+    union_position = Column(String, nullable=True, default="Đoàn viên")
+    political_status = Column(String, nullable=True, default="Đoàn viên")
+    achievement_summary = Column(Text, nullable=True)
     
     # Settings & Profile
     is_2fa_enabled = Column(Boolean, default=False)

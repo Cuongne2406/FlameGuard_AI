@@ -4,7 +4,7 @@ import { awardService } from "../../../services/awardService";
 import { Trophy, ArrowLeft, Download, Search } from "lucide-react";
 import * as XLSX from "xlsx";
 
-const AwardLeaderboardPage = () => {
+const AwardLeaderboardPage = ({ embedded = false }) => {
   const navigate = useNavigate();
   const [rankings, setRankings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,9 +25,10 @@ const AwardLeaderboardPage = () => {
     fetchLeaderboard();
   }, []);
 
-  const filteredRankings = rankings.filter(r => 
-    r.class?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.university?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRankings = rankings.filter((r) =>
+    (r.class || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.dept || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.university || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const exportToExcel = () => {
@@ -35,8 +36,8 @@ const AwardLeaderboardPage = () => {
       alert("Không có dữ liệu để xuất!");
       return;
     }
-    const dataToExport = filteredRankings.map(r => ({
-      "Hạng": r.rank,
+    const dataToExport = filteredRankings.map((r) => ({
+      Hạng: r.rank,
       "Tên Đơn vị": r.class,
       "Khoa/Viện": r.dept,
       "Điểm Thi Đua": r.score,
@@ -50,88 +51,113 @@ const AwardLeaderboardPage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 relative bg-gray-50 min-h-screen p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 bg-slate-50 text-slate-500 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-            <Trophy className="text-amber-500" size={24} />
-            Bảng Vàng Thi Đua Toàn Trường
-          </h2>
+    <div className={`space-y-4 ${embedded ? "" : "p-6 max-w-7xl mx-auto"}`}>
+      {/* Header Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+        <div className="flex items-center gap-3">
+          {!embedded && (
+            <button
+              onClick={() => navigate(-1)}
+              className="p-1.5 bg-slate-50 text-slate-500 rounded-lg hover:bg-slate-100 transition-colors border border-slate-200"
+            >
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-amber-50 rounded-lg text-amber-600 border border-amber-200">
+              <Trophy size={20} />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-800 leading-tight">
+                Bảng Vàng Thi Đua & Xếp Hạng Đơn vị
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Xếp hạng thi đua phong trào Sinh viên 5 Tốt toàn trường
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+
+        <div className="flex items-center gap-2.5">
+          <div className="relative min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
             <input
               type="text"
-              placeholder="Tìm kiếm đơn vị..."
+              placeholder="Tìm theo tên đơn vị..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 w-64 transition-all"
+              className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:border-blue-500 bg-slate-50 focus:bg-white transition-all"
             />
           </div>
           <button
             onClick={exportToExcel}
-            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-emerald-700 transition-colors"
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
-            <Download size={16} />
-            Xuất Excel
+            <Download size={14} />
+            <span>Xuất Excel</span>
           </button>
         </div>
       </div>
 
       {/* Leaderboard Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 font-bold">Đang tải bảng xếp hạng...</div>
+          <div className="p-12 text-center text-slate-400 text-xs font-medium">
+            Đang tải dữ liệu bảng vàng thi đua...
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 text-left text-[11px] font-black text-slate-500 uppercase tracking-widest border-b border-slate-200">
-                  <th className="px-6 py-4 w-20 text-center">Hạng</th>
-                  <th className="px-6 py-4">Tên Đơn vị</th>
-                  <th className="px-6 py-4">Khoa/Viện</th>
-                  <th className="px-6 py-4 text-center">Điểm số</th>
-                  <th className="px-6 py-4 text-right">Đánh giá</th>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/70 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                <tr>
+                  <th className="px-4 py-3.5 w-16 text-center">Hạng</th>
+                  <th className="px-4 py-3.5">Tên Đơn vị</th>
+                  <th className="px-4 py-3.5">Khoa / Viện</th>
+                  <th className="px-4 py-3.5 text-center">Điểm Thi Đua</th>
+                  <th className="px-4 py-3.5 text-right">Xu hướng</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredRankings.length > 0 ? (
                   filteredRankings.map((r) => (
-                    <tr key={r.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-4 text-center">
-                        <div className={`w-8 h-8 mx-auto rounded-full flex items-center justify-center text-xs font-black shadow-sm ${
-                          r.rank === 1 ? 'bg-amber-100 text-amber-600 border border-amber-200' :
-                          r.rank === 2 ? 'bg-slate-200 text-slate-600 border border-slate-300' :
-                          r.rank === 3 ? 'bg-orange-100 text-orange-600 border border-orange-200' :
-                          'bg-slate-50 text-slate-500 border border-slate-100'
-                        }`}>
+                    <tr key={r.id || r.rank} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="px-4 py-3.5 text-center">
+                        <div
+                          className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center text-xs font-bold ${
+                            r.rank === 1
+                              ? "bg-amber-100 text-amber-700 border border-amber-300 shadow-xs"
+                              : r.rank === 2
+                              ? "bg-slate-200 text-slate-700 border border-slate-300 shadow-xs"
+                              : r.rank === 3
+                              ? "bg-orange-100 text-orange-700 border border-orange-300 shadow-xs"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                        >
                           {r.rank}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{r.class}</span>
+                      <td className="px-4 py-3.5">
+                        <span className="font-bold text-slate-800 text-xs block">
+                          {r.class}
+                        </span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-medium text-slate-500">{r.dept}</td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="font-black text-blue-600 text-lg">{r.score}</span>
+                      <td className="px-4 py-3.5 text-slate-600 font-medium">
+                        {r.dept}
                       </td>
-                      <td className={`px-6 py-4 text-right text-xs font-bold ${r.trendColor}`}>
-                        {r.trend}
+                      <td className="px-4 py-3.5 text-center">
+                        <span className="font-extrabold text-blue-600 text-sm">
+                          {r.score}
+                        </span>
+                      </td>
+                      <td className={`px-4 py-3.5 text-right text-xs font-semibold ${r.trendColor || "text-emerald-600"}`}>
+                        {r.trend || "+5 hạng"}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-slate-400 font-medium">
-                      Không tìm thấy đơn vị nào phù hợp.
+                    <td colSpan="5" className="px-4 py-12 text-center text-slate-400">
+                      Không tìm thấy đơn vị nào phù hợp với bộ lọc tìm kiếm.
                     </td>
                   </tr>
                 )}

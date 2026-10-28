@@ -57,3 +57,58 @@ def get_current_active_admin(
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+def get_user_faculty_org(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Xác định Organization (Khoa/Đơn vị) mà user đang quản lý hoặc trực thuộc.
+    - Nếu là UNIVERSITY_ADMIN / ADMIN (và không phải chỉ là FACULTY_ADMIN): trả về None (xem toàn trường).
+    - Nếu là FACULTY_ADMIN: trả về đối tượng Organization của Khoa tương ứng.
+    """
+    from app.models.core import Organization, OrgType, UserOrganization
+    
+    is_university_admin = any(r.name in ["ADMIN", "UNIVERSITY_ADMIN"] for r in current_user.roles)
+    is_faculty_admin = any(r.name == "FACULTY_ADMIN" for r in current_user.roles)
+
+    if is_university_admin and not is_faculty_admin:
+        return None
+
+    # 1. Tìm org mà user làm leader_user_id (ưu tiên FACULTY)
+    leader_org = db.query(Organization).filter(
+        Organization.leader_user_id == current_user.id,
+        Organization.type == OrgType.FACULTY
+    ).first()
+    if leader_org:
+        return leader_org
+
+    # 2. Tìm qua UserOrganization có Organization.type == OrgType.FACULTY
+    fac_uo = db.query(UserOrganization).join(Organization).filter(
+        UserOrganization.user_id == current_user.id,
+        Organization.type == OrgType.FACULTY
+    ).first()
+    if fac_uo and fac_uo.organization:
+        return fac_uo.organization
+
+    # 3. Tìm qua class_id (nếu lớp có parent là FACULTY)
+    if current_user.class_id:
+        cls = db.query(Organization).filter(Organization.id == current_user.class_id).first()
+        if cls and cls.parent and cls.parent.type == OrgType.FACULTY:
+            return cls.parent
+
+    # 4. Tìm qua bất kỳ org nào user tham gia có parent là FACULTY
+    user_orgs = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).all()
+    for uo in user_orgs:
+        if uo.organization and uo.organization.parent and uo.organization.parent.type == OrgType.FACULTY:
+            return uo.organization.parent
+
+    # 5. Nếu là FACULTY_ADMIN nhưng chưa gán, fallback lấy Khoa CNTT hoặc Khoa đầu tiên
+    if is_faculty_admin:
+        fallback = db.query(Organization).filter(
+            Organization.type == OrgType.FACULTY,
+            Organization.name.ilike("%Công nghệ thông tin%")
+        ).first() or db.query(Organization).filter(Organization.type == OrgType.FACULTY).first()
+        return fallback
+
+    return None

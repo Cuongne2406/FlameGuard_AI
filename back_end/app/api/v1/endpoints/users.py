@@ -3,10 +3,11 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db, get_current_active_admin, get_current_active_user
-from app.schemas.core_schemas import UserCreate, UserUpdate, UserResponse
+from app.api.deps import get_db, get_current_active_admin, get_current_active_user, get_user_faculty_org
+from app.schemas.core_schemas import UserCreate, UserUpdate, UserResponse, UserChangePassword
 from app.services import core_service, cloudinary_service
 from app.core.s4h_client import s4h_check_user_exists
+from app.core.security import verify_password, get_password_hash
 from app.models.core import User
 from app.models.settings import SystemSetting
 from app.services.webhook_service import send_webhook_event
@@ -80,7 +81,41 @@ def update_user_me(
     """
     Update own profile and settings.
     """
-    return core_service.update_user(db=db, user_id=current_user.id, user_in=user_in)
+    return core_service.update_user(db=db, user_id=current_user.id, user_in=user_in, is_admin=True)
+
+@router.post("/me/change-password")
+def change_password(
+    password_data: UserChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Đổi mật khẩu người dùng hiện tại theo chính sách bảo mật SystemSetting.
+    """
+    if not current_user.password_hash or not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Mật khẩu hiện tại không chính xác.")
+    
+    # Đọc cấu hình chính sách mật khẩu từ SystemSetting
+    settings_dict = {
+        s.key: s.value for s in db.query(SystemSetting).filter(
+            SystemSetting.key.in_(["PW_MIN_LENGTH", "PW_REQUIRE_UPPERCASE", "PW_REQUIRE_SYMBOLS"])
+        ).all()
+    }
+    min_length = int(settings_dict.get("PW_MIN_LENGTH", "6"))
+    require_uppercase = settings_dict.get("PW_REQUIRE_UPPERCASE", "false").lower() == "true"
+    require_symbols = settings_dict.get("PW_REQUIRE_SYMBOLS", "false").lower() == "true"
+    
+    new_pw = password_data.new_password
+    if len(new_pw) < min_length:
+        raise HTTPException(status_code=400, detail=f"Mật khẩu mới phải có ít nhất {min_length} ký tự.")
+    if require_uppercase and not any(c.isupper() for c in new_pw):
+        raise HTTPException(status_code=400, detail="Mật khẩu mới phải chứa ít nhất 1 chữ hoa.")
+    if require_symbols and not any(not c.isalnum() for c in new_pw):
+        raise HTTPException(status_code=400, detail="Mật khẩu mới phải chứa ít nhất 1 ký tự đặc biệt.")
+        
+    current_user.password_hash = get_password_hash(new_pw)
+    db.commit()
+    return {"message": "Đổi mật khẩu thành công."}
 
 @router.post("/me/avatar", response_model=UserResponse)
 async def upload_user_avatar(
@@ -253,15 +288,30 @@ def read_faculty_team(
     """
     Lấy danh sách thành viên cùng Khoa (Ban Thường vụ).
     """
-    from app.models.core import UserOrganization
-    # 1. Tìm organization của user hiện tại
-    user_org = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).first()
-    if not user_org:
+    from app.models.core import UserOrganization, Organization, OrgType
+    # 1. Ưu tiên lấy Faculty Org của user
+    faculty_org = get_user_faculty_org(db, current_user)
+    target_org_id = faculty_org.id if faculty_org else None
+    
+    if not target_org_id:
+        user_org = db.query(UserOrganization).join(
+            Organization, UserOrganization.organization_id == Organization.id
+        ).filter(
+            UserOrganization.user_id == current_user.id,
+            Organization.type.in_([OrgType.FACULTY, OrgType.UNIVERSITY])
+        ).first()
+        if user_org:
+            target_org_id = user_org.organization_id
+        else:
+            first_org = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).first()
+            if first_org:
+                target_org_id = first_org.organization_id
+                
+    if not target_org_id:
         return []
         
-    # 2. Lấy tất cả user trong cùng organization đó
     team_members = db.query(UserOrganization).filter(
-        UserOrganization.organization_id == user_org.organization_id
+        UserOrganization.organization_id == target_org_id
     ).all()
     
     result = []
@@ -270,11 +320,11 @@ def read_faculty_team(
             result.append({
                 "id": str(m.user.id),
                 "name": m.user.full_name,
-                "role": m.title or "Thành viên",
-                "initial": "".join([w[0] for w in m.user.full_name.split()]).upper()[:2],
+                "role": m.title or "Ủy viên BCH Đoàn Khoa",
+                "initial": "".join([w[0] for w in m.user.full_name.split()]).upper()[:2] if m.user.full_name else "TV",
                 "permissions": {
-                    "events": True, # Giả lập quyền dựa trên Role trong tương lai
-                    "finance": m.title == "Bí thư" or m.title == "Phó Bí thư",
+                    "events": True,
+                    "finance": m.title in ["Bí thư", "Phó Bí thư", "Trưởng ban"],
                     "posts": True
                 }
             })
@@ -297,10 +347,31 @@ def search_users(
         {
             "id": str(u.id),
             "name": u.full_name,
+            "full_name": u.full_name,
+            "student_id": u.student_id or "",
+            "student_code": u.student_id or "",
             "mssv": u.student_id or "N/A",
+            "email": u.email,
+            "phone_number": u.phone_number or "",
             "role": "Sinh viên",
-            "initial": "".join([w[0] for w in u.full_name.split()]).upper()[:2],
-            "color": "blue"
+            "initial": "".join([w[0] for w in u.full_name.split()]).upper()[:2] if u.full_name else "SV",
+            "color": "blue",
+            "cccd": u.cccd or "",
+            "gender": u.gender or "Nam",
+            "date_of_birth": u.date_of_birth.isoformat() if u.date_of_birth else None,
+            "ethnicity": u.ethnicity or "Kinh",
+            "religion": u.religion or "Không",
+            "address": u.address or "",
+            "academic_year_num": u.academic_year_num or 3,
+            "school_name": u.school_name or "Trường Đại học Lạc Hồng",
+            "faculty_name": u.faculty_name or "",
+            "class_name": u.class_name or "",
+            "education_level": u.education_level or "Đại học",
+            "gpa": u.gpa if u.gpa is not None else 0.0,
+            "training_score": u.training_score or 0,
+            "union_position": u.union_position or "Đoàn viên",
+            "political_status": u.political_status or "Đoàn viên",
+            "achievement_summary": u.achievement_summary or ""
         }
         for u in users
     ]
@@ -317,22 +388,28 @@ def add_team_member(
     from app.models.core import UserOrganization
     import uuid
     
-    # Tìm org hiện tại của admin
-    user_org = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).first()
-    if not user_org:
-        return {"error": "Bạn chưa thuộc Đơn vị nào."}
+    faculty_org = get_user_faculty_org(db, current_user)
+    target_org_id = faculty_org.id if faculty_org else None
+    
+    if not target_org_id:
+        user_org = db.query(UserOrganization).filter(UserOrganization.user_id == current_user.id).first()
+        if user_org:
+            target_org_id = user_org.organization_id
+            
+    if not target_org_id:
+        raise HTTPException(status_code=400, detail="Bạn chưa thuộc Đơn vị/Khoa nào.")
         
     try:
         new_org = UserOrganization(
             user_id=uuid.UUID(user_data["user_id"]),
-            organization_id=user_org.organization_id,
-            title=user_data.get("role", "Thành viên")
+            organization_id=target_org_id,
+            title=user_data.get("role", "Thành viên Ban Thường vụ")
         )
         db.add(new_org)
         db.commit()
     except Exception as e:
         db.rollback()
-        return {"error": "Lỗi thêm thành viên hoặc thành viên đã có."}
+        raise HTTPException(status_code=400, detail="Lỗi thêm thành viên hoặc thành viên đã có trong đơn vị.")
         
     return {"message": "Success"}
 
@@ -346,9 +423,11 @@ def remove_team_member(
     Xóa thành viên khỏi Tổ chức.
     """
     from app.models.core import UserOrganization
-    user_org = db.query(UserOrganization).filter(
-        UserOrganization.user_id == member_id
-    ).first()
+    faculty_org = get_user_faculty_org(db, current_user)
+    query = db.query(UserOrganization).filter(UserOrganization.user_id == member_id)
+    if faculty_org:
+        query = query.filter(UserOrganization.organization_id == faculty_org.id)
+    user_org = query.first()
     
     if user_org:
         db.delete(user_org)
@@ -363,9 +442,33 @@ def update_team_permissions(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Cập nhật quyền hạn thành viên. (Hiện tại mock DB return Success)
+    Cập nhật quyền hạn/vai trò thành viên trong Tổ chức.
     """
-    return {"message": "Permissions updated successfully", "permissions": permissions}
+    import uuid
+    from app.models.core import UserOrganization
+    
+    try:
+        target_uuid = uuid.UUID(member_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="ID thành viên không hợp lệ.")
+        
+    user_org = db.query(UserOrganization).filter(
+        UserOrganization.user_id == target_uuid
+    ).first()
+    
+    if not user_org:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thành viên trong đơn vị.")
+        
+    if "role" in permissions:
+        user_org.title = permissions["role"]
+    if "title" in permissions:
+        user_org.title = permissions["title"]
+    if "is_primary" in permissions:
+        user_org.is_primary = bool(permissions["is_primary"])
+        
+    db.commit()
+    db.refresh(user_org)
+    return {"message": "Permissions updated successfully", "title": user_org.title, "is_primary": user_org.is_primary}
 
 @router.get("/me/profile_stats")
 def read_user_profile_stats(
@@ -463,21 +566,54 @@ def read_user_spending_stats(
     """
     Lấy thống kê chi tiêu cho biểu đồ Wallet.
     """
-    from app.models.finance import FundRequest, FinanceTransaction, TransactionType
+    from app.models.finance import FundRequest, FundRequestStatus, StudentFee
     from sqlalchemy import func
     
     total_approved = db.query(func.sum(FundRequest.amount)).filter(
         FundRequest.requested_by == current_user.id,
-        FundRequest.status == "APPROVED"
+        FundRequest.status == FundRequestStatus.APPROVED
     ).scalar() or 0
     
-    # Calculate real distribution if possible, or use logic based on transaction titles
+    # Calculate real distribution based on user requests/fees
+    fund_reqs = db.query(FundRequest).filter(FundRequest.requested_by == current_user.id).all()
+    fees = db.query(StudentFee).filter(StudentFee.user_id == current_user.id).all()
+    
+    cat_youth = 0.0
+    cat_dev = 0.0
+    cat_other = 0.0
+    
+    for fr in fund_reqs:
+        amt = float(fr.amount or 0)
+        reason_lower = (fr.reason or "").lower()
+        if "đoàn" in reason_lower or "hội" in reason_lower or "hoạt động" in reason_lower:
+            cat_youth += amt
+        elif "phát triển" in reason_lower or "kỹ năng" in reason_lower or "học tập" in reason_lower:
+            cat_dev += amt
+        else:
+            cat_other += amt
+            
+    for f in fees:
+        amt = float(f.amount or 0)
+        title_lower = (f.title or "").lower()
+        if "đoàn" in title_lower:
+            cat_youth += amt
+        else:
+            cat_other += amt
+            
+    total_sum = cat_youth + cat_dev + cat_other
+    if total_sum > 0:
+        pct_youth = round((cat_youth / total_sum) * 100)
+        pct_dev = round((cat_dev / total_sum) * 100)
+        pct_other = max(0, 100 - pct_youth - pct_dev)
+    else:
+        pct_youth, pct_dev, pct_other = 60, 25, 15
+        
     return {
         "total_expense": float(total_approved),
         "data": [
-            {"label": "Hoạt động Đoàn", "value": 70, "color": "bg-blue-600"},
-            {"label": "Phát triển", "value": 20, "color": "bg-orange-500"},
-            {"label": "Khác", "value": 10, "color": "bg-slate-400"}
+            {"label": "Hoạt động Đoàn", "value": pct_youth, "color": "bg-blue-600"},
+            {"label": "Phát triển", "value": pct_dev, "color": "bg-orange-500"},
+            {"label": "Khác", "value": pct_other, "color": "bg-slate-400"}
         ]
     }
 

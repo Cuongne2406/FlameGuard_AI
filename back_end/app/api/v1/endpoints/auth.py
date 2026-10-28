@@ -2,6 +2,7 @@ from datetime import timedelta
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api import deps
@@ -140,7 +141,9 @@ async def login_access_token(
             }
     
     # 2. Xử lý Local Fallback (nếu S4H báo lỗi)
-    user = db.query(User).filter(User.student_id == form_data.username).first()
+    user = db.query(User).filter(
+        or_(User.student_id == form_data.username, User.email == form_data.username)
+    ).first()
     if not user or not user.password_hash or not security.verify_password(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

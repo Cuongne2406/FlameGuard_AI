@@ -26,12 +26,26 @@ from fastapi import Response
 # ==========================================
 # AI Sentiment Services
 # ==========================================
-def get_sub_admin_dashboard_analysis(db: Session):
+def get_sub_admin_dashboard_analysis(db: Session, faculty_org=None):
     """
     Phân tích dữ liệu SubAdmin Dashboard thực tế từ Database. Loại bỏ Mock/Random.
+    Hỗ trợ lọc theo phạm vi Khoa chủ quản (Faculty Scoping).
     """
-    active_classes_count = db.query(Organization).filter(Organization.type == OrgType.CLASS).count()
-    student_count = db.query(User).count()
+    classes_query = db.query(Organization).filter(Organization.type == OrgType.CLASS)
+    if faculty_org:
+        classes_query = classes_query.filter(Organization.parent_id == faculty_org.id)
+    
+    active_classes = classes_query.all()
+    active_classes_count = len(active_classes)
+    class_ids = [c.id for c in active_classes]
+
+    if faculty_org and class_ids:
+        student_count = db.query(User).filter(User.class_id.in_(class_ids)).count()
+    elif faculty_org:
+        student_count = 0
+    else:
+        student_count = db.query(User).count()
+
     event_count = db.query(Event).count()
     feedback_count = db.query(AISentiment).count()
     
@@ -42,8 +56,7 @@ def get_sub_admin_dashboard_analysis(db: Session):
     sentiment_score = round(float(avg_sentiment), 1) if avg_sentiment is not None else 0.0
     
     # Top Tier Classes
-    classes = db.query(Organization).filter(Organization.type == OrgType.CLASS).order_by(Organization.name).limit(5).all()
-    top_tier = [c.name for c in classes]
+    top_tier = [c.name for c in active_classes[:5]]
 
     # ROI Analysis from actual Events
     recent_events = db.query(Event).order_by(Event.start_time.desc()).limit(3).all()

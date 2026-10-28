@@ -1,3 +1,4 @@
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from uuid import UUID
 from fastapi import HTTPException
@@ -420,6 +421,30 @@ def format_user_dict(db: Session, user: User):
         activity_count = 0
         award_count = 0
 
+    # Xác định managed_org (Khoa/Đơn vị phụ trách)
+    from app.models.core import OrgType, Organization, UserOrganization
+    managed_org = None
+    lead_org = db.query(Organization).filter(
+        Organization.leader_user_id == user.id,
+        Organization.type.in_([OrgType.FACULTY, OrgType.UNIVERSITY])
+    ).first()
+    if lead_org:
+        managed_org = lead_org
+    else:
+        fac_uo = db.query(UserOrganization).join(Organization).filter(
+            UserOrganization.user_id == user.id,
+            Organization.type == OrgType.FACULTY
+        ).first()
+        if fac_uo and fac_uo.organization:
+            managed_org = fac_uo.organization
+        elif user.study_class and user.study_class.parent and user.study_class.parent.type == OrgType.FACULTY:
+            managed_org = user.study_class.parent
+        elif any(r.name == "FACULTY_ADMIN" for r in user.roles):
+            managed_org = db.query(Organization).filter(
+                Organization.type == OrgType.FACULTY,
+                Organization.name.ilike("%Công nghệ thông tin%")
+            ).first() or db.query(Organization).filter(Organization.type == OrgType.FACULTY).first()
+
     return {
         "id": user.id,
         "student_id": user.student_id,
@@ -448,7 +473,23 @@ def format_user_dict(db: Session, user: User):
                 "permissions": [] # Fallback cho Schema
             } for r in user.roles
         ],
-        "last_login_at": user.last_login_at
+        "last_login_at": user.last_login_at,
+        "cccd": user.cccd,
+        "gender": user.gender or "Nam",
+        "date_of_birth": user.date_of_birth,
+        "ethnicity": user.ethnicity or "Kinh",
+        "religion": user.religion or "Không",
+        "address": user.address,
+        "academic_year_num": user.academic_year_num or 3,
+        "school_name": user.school_name or "Trường Đại học Lạc Hồng",
+        "faculty_name": user.faculty_name,
+        "education_level": user.education_level or "Đại học",
+        "gpa": user.gpa if user.gpa is not None else 0.0,
+        "union_position": user.union_position or "Đoàn viên",
+        "political_status": user.political_status or "Đoàn viên",
+        "achievement_summary": user.achievement_summary,
+        "managed_org_id": managed_org.id if managed_org else None,
+        "managed_org_name": managed_org.name if managed_org else (user.faculty_name or "Khoa Công nghệ Thông tin")
     }
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
@@ -524,14 +565,62 @@ def delete_user(db: Session, user_id: UUID):
 # ==========================================
 # Club Specific Services
 # ==========================================
-def get_organization_stats(db: Session):
+def get_organization_stats(db: Session, faculty_id: Optional[UUID] = None):
+    if faculty_id:
+        scoped_org_ids = [o[0] for o in db.query(Organization.id).filter(Organization.parent_id == faculty_id).all()]
+        if not scoped_org_ids:
+            scoped_org_ids = [faculty_id]
+        else:
+            scoped_org_ids.append(faculty_id)
+
+        org_count = db.query(func.count(Organization.id)).filter(Organization.parent_id == faculty_id).scalar() or 0
+        leader_count = db.query(func.count(User.id)).join(UserOrganization).filter(
+            UserOrganization.organization_id.in_(scoped_org_ids),
+            UserOrganization.is_primary == True
+        ).scalar() or 0
+        member_count = db.query(func.count(UserOrganization.id)).filter(
+            UserOrganization.organization_id.in_(scoped_org_ids)
+        ).scalar() or 0
+        
+        classes_count = db.query(func.count(Organization.id)).filter(
+            Organization.type == OrgType.CLASS,
+            Organization.parent_id == faculty_id
+        ).scalar() or 0
+        
+        alert_classes = db.query(func.count(Organization.id)).filter(
+            Organization.type == OrgType.CLASS,
+            Organization.parent_id == faculty_id,
+            Organization.warning_message != None
+        ).scalar() or 0
+        
+        avg_fee = db.query(func.avg(Organization.fee_percentage)).filter(
+            Organization.type == OrgType.CLASS,
+            Organization.parent_id == faculty_id
+        ).scalar() or 0.0
+
+        if classes_count == 0:
+            classes_count = db.query(func.count(Organization.id)).filter(Organization.type == OrgType.CLASS).scalar() or 0
+            org_count = classes_count
+            member_count = db.query(func.count(UserOrganization.id)).scalar() or 0
+            avg_fee = db.query(func.avg(Organization.fee_percentage)).filter(Organization.type == OrgType.CLASS).scalar() or 0.0
+
+        return {
+            "totalUnits": org_count,
+            "totalLeaders": leader_count,
+            "totalMembers": member_count,
+            "totalClasses": classes_count,
+            "alertClasses": alert_classes,
+            "feePercent": round(float(avg_fee), 1),
+            "totalStudents": member_count,
+            "subInfo": "Dữ liệu thống kê phân hệ Khoa"
+        }
+
     org_count = db.query(func.count(Organization.id)).scalar() or 0
     leader_count = db.query(func.count(User.id)).join(UserOrganization).filter(
         UserOrganization.is_primary == True
     ).scalar() or 0
     member_count = db.query(func.count(UserOrganization.id)).scalar() or 0
     
-    # New stats for Classes
     alert_classes = db.query(func.count(Organization.id)).filter(
         Organization.type == OrgType.CLASS,
         Organization.warning_message != None
@@ -541,7 +630,6 @@ def get_organization_stats(db: Session):
         Organization.type == OrgType.CLASS
     ).scalar() or 0
     
-    # Calculate average fee percent
     avg_fee = db.query(func.avg(Organization.fee_percentage)).filter(
         Organization.type == OrgType.CLASS
     ).scalar() or 0
@@ -554,14 +642,21 @@ def get_organization_stats(db: Session):
         "alertClasses": alert_classes,
         "feePercent": round(float(avg_fee), 1),
         "totalStudents": total_students,
-        "subInfo": f"Dữ liệu được cập nhật từ hệ thống"
+        "subInfo": "Dữ liệu được cập nhật từ hệ thống"
     }
 
-def get_clubs_detailed_stats(db: Session):
+def get_clubs_detailed_stats(db: Session, faculty_id: Optional[UUID] = None):
     from app.models.finance import Budget
-    total_clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB).count()
-    total_members = db.query(UserOrganization).join(Organization).filter(Organization.type == OrgType.CLUB).count()
-    total_budget = db.query(func.sum(Budget.total_amount)).join(Organization).filter(Organization.type == OrgType.CLUB).scalar() or 0
+    q_clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB)
+    if faculty_id:
+        has_scoped = db.query(Organization).filter(Organization.type == OrgType.CLUB, Organization.parent_id == faculty_id).first()
+        if has_scoped:
+            q_clubs = q_clubs.filter(Organization.parent_id == faculty_id)
+            
+    total_clubs = q_clubs.count()
+    club_ids = [c.id for c in q_clubs.all()]
+    total_members = db.query(UserOrganization).filter(UserOrganization.organization_id.in_(club_ids)).count() if club_ids else 0
+    total_budget = db.query(func.sum(Budget.total_amount)).filter(Budget.organization_id.in_(club_ids)).scalar() or 0 if club_ids else 0
     
     return {
         "totalClubs": total_clubs,
@@ -569,9 +664,15 @@ def get_clubs_detailed_stats(db: Session):
         "totalBudget": float(total_budget)
     }
 
-def get_clubs_list_detailed(db: Session):
+def get_clubs_list_detailed(db: Session, faculty_id: Optional[UUID] = None):
     from app.models.finance import Budget
-    clubs = db.query(Organization).filter(Organization.type == OrgType.CLUB).all()
+    q = db.query(Organization).filter(Organization.type == OrgType.CLUB)
+    if faculty_id:
+        scoped = q.filter(Organization.parent_id == faculty_id).all()
+        clubs = scoped if scoped else q.all()
+    else:
+        clubs = q.all()
+        
     results = []
     for club in clubs:
         leader = db.query(User).join(UserOrganization).filter(
@@ -593,7 +694,7 @@ def get_clubs_list_detailed(db: Session):
             "members": str(member_count),
             "nextEvent": "Cập nhật sau",
             "activity": club.activity_points or 0,
-            "budget": budget_percent or int(club.fee_percentage or 0), # Temporary fallback
+            "budget": budget_percent or int(club.fee_percentage or 0),
             "status": club.status.value.lower() if club.status else "active",
             "statusText": club.classification or "Đang hoạt động",
             "statusColor": "emerald" if club.status == OrgStatus.ACTIVE else "rose",
@@ -604,8 +705,14 @@ def get_clubs_list_detailed(db: Session):
         })
     return results
 
-def get_classes_list_detailed(db: Session):
-    classes = db.query(Organization).filter(Organization.type == OrgType.CLASS).all()
+def get_classes_list_detailed(db: Session, faculty_id: Optional[UUID] = None):
+    q = db.query(Organization).filter(Organization.type == OrgType.CLASS)
+    if faculty_id:
+        scoped = q.filter(Organization.parent_id == faculty_id).all()
+        classes = scoped if scoped else q.all()
+    else:
+        classes = q.all()
+        
     results = []
     for cls in classes:
         leader = db.query(User).join(UserOrganization).filter(

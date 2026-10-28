@@ -3,6 +3,7 @@ import Modal from '../ui/Modal';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
+import { UploadCloud, CheckCircle2, X, ArrowLeft, ArrowRight, Check, User } from 'lucide-react';
 
 const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
     const [step, setStep] = useState(1);
@@ -187,11 +188,11 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                                     id="file-upload"
                                 />
                                 <label htmlFor="file-upload" className="cursor-pointer">
-                                    <div className="material-symbols-outlined text-4xl text-gray-400 mx-auto mb-2">
-                                        cloud_upload
+                                    <div className="flex justify-center mb-2">
+                                        <UploadCloud size={36} className="text-gray-400" />
                                     </div>
                                     <p className="text-sm text-gray-700 font-medium">
-                                        Tải lên Hoặc kéo thả vào đây
+                                        Tải lên hoặc kéo thả vào đây
                                     </p>
                                     <p className="text-xs text-gray-500 mt-1">
                                         Excel, CSV lên đến 10MB
@@ -199,9 +200,7 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                                 </label>
                                 {selectedFile && (
                                     <div className="mt-4 p-3 bg-green-50 rounded-lg flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-green-600">
-                                            check_circle
-                                        </span>
+                                        <CheckCircle2 size={20} className="text-green-600 shrink-0" />
                                         <div className="text-left">
                                             <p className="text-sm font-medium text-green-700">
                                                 {selectedFile.name}
@@ -212,9 +211,9 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                                         </div>
                                         <button
                                             onClick={() => setSelectedFile(null)}
-                                            className="ml-auto text-red-500"
+                                            className="ml-auto text-red-500 p-1 hover:bg-red-50 rounded"
                                         >
-                                            <span className="material-symbols-outlined">close</span>
+                                            <X size={16} />
                                         </button>
                                     </div>
                                 )}
@@ -316,7 +315,7 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                 variant="secondary"
                 onClick={handlePrev}
                 disabled={step === 1}
-                leftIcon={<span className="material-symbols-outlined">arrow_back</span>}
+                leftIcon={<ArrowLeft size={16} />}
             >
                 Quay Lại
             </Button>
@@ -332,7 +331,7 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                     <Button
                         variant="primary"
                         onClick={handleNext}
-                        rightIcon={<span className="material-symbols-outlined">arrow_forward</span>}
+                        rightIcon={<ArrowRight size={16} />}
                     >
                         Tiếp Tục
                     </Button>
@@ -340,7 +339,7 @@ const AddClassModal = ({ isOpen, onClose, onSubmit }) => {
                     <Button
                         variant="primary"
                         onClick={handleSubmit}
-                        leftIcon={<span className="material-symbols-outlined">check</span>}
+                        leftIcon={<Check size={16} />}
                     >
                         Hoàn Tất & Khởi Tạo
                     </Button>

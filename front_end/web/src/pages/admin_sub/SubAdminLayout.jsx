@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, useContext } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
-import Sidebar from '../../components/admin_sub/Sidebar';
-import Header from '../../components/admin_sub/Header';
+import React, { useState, useRef, useEffect, useContext } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
+import Sidebar from "../../components/admin_sub/Sidebar";
+import Header from "../../components/admin_sub/Header";
 
 const SubAdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -11,7 +11,7 @@ const SubAdminLayout = () => {
   const location = useLocation();
   const mainRef = useRef(null);
 
-  // Tự động cuộn lên đầu khi chuyển trang
+  // Auto scroll to top on route change
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTo(0, 0);
@@ -20,33 +20,22 @@ const SubAdminLayout = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex">
+    <div className="flex h-screen bg-slate-50/70 overflow-hidden relative font-sans text-slate-900">
       {/* Sidebar */}
-      <div
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white transform transition-transform duration-300 lg:relative lg:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <Sidebar />
-      </div>
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      {/* Overlay */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <Header 
+          onToggleSidebar={() => setIsSidebarOpen(true)} 
+          onLogout={handleLogout} 
         />
-      )}
-
-      {/* Main content area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <Header onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} onLogout={handleLogout} />
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="max-w-[1600px] mx-auto">
+        <main ref={mainRef} className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6 lg:p-7 max-w-[1600px] mx-auto w-full">
             <Outlet />
           </div>
         </main>

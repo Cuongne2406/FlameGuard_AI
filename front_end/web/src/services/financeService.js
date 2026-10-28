@@ -59,6 +59,23 @@ export const financeService = {
     });
   },
 
+  // Quản lý đề xuất cấp kinh phí (Fund Requests)
+  getFundRequests: async () => {
+    try {
+      const res = await apiClient('/fund-requests/');
+      return Array.isArray(res) ? res : [];
+    } catch {
+      return [];
+    }
+  },
+
+  updateFundRequest: async (id, data) => {
+    return apiClient(`/fund-requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  },
+
   getBudgets: async () => {
     try {
       const res = await apiClient('/budgets/');
@@ -77,6 +94,28 @@ export const financeService = {
     return apiClient('/assets/', {
       method: 'POST',
       body: JSON.stringify(data)
+    });
+  },
+
+  createFundRequest: async (data) => {
+    return apiClient('/fund-requests/', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  getStudentFees: async () => {
+    try {
+      return await apiClient('/finance/student-fees');
+    } catch {
+      return { totalStudents: 0, paidCount: 0, pendingCount: 0, totalCollected: 0, percentPaid: 0, items: [] };
+    }
+  },
+
+  updateStudentFeeStatus: async (feeId, status) => {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return apiClient(`/finance/student-fees/${feeId}/status${query}`, {
+      method: 'PUT'
     });
   }
 };

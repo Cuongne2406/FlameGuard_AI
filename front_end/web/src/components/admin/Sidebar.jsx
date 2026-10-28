@@ -2,103 +2,78 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import {
-  Building2,
-  Calendar,
-  CalendarDays,
-  ChevronRight,
-  Cpu,
-  FileText,
-  GitBranch,
   LayoutDashboard,
-  List,
-  LogOut,
-  Megaphone,
-  Settings,
-  Trophy,
-  User,
-  UserRound,
   Users,
+  Megaphone,
   Wallet,
-  X,
+  Trophy,
+  FileText,
+  Cpu,
+  Settings,
+  Bell,
+  Calendar,
+  User,
+  LogOut,
+  ChevronRight,
+  Shield,
+  X
 } from "lucide-react";
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const [showProfileCard, setShowProfileCard] = useState(false);
-  const [openMenus, setOpenMenus] = useState({});
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const profileRef = useRef(null);
 
+  // 8 Flat Primary Navigation Items
   const menuItems = [
     {
-      icon: <LayoutDashboard size={20} />,
-      label: "Dashboard",
+      icon: <LayoutDashboard size={19} />,
+      label: "Tổng quan Điều hành",
       path: "/admin/dashboard",
-      children: null,
     },
     {
-      icon: <Users size={20} />,
-      label: "Tổ chức & Nhân sự",
+      icon: <Users size={19} />,
+      label: "Tổ chức & Cán bộ",
       path: "/admin/organizations",
-      children: [
-        {
-          label: "Danh sách đơn vị",
-          path: "/admin/organizations/units",
-          icon: <Building2 size={16} />,
-        },
-        {
-          label: "Hồ sơ cán bộ",
-          path: "/admin/organizations/members",
-          icon: <UserRound size={16} />,
-        },
-      ],
     },
     {
-      icon: <Megaphone size={20} />,
+      icon: <Megaphone size={19} />,
       label: "Chiến dịch & Sự kiện",
       path: "/admin/campaigns",
-      children: [
-        {
-          label: "Danh sách chiến dịch",
-          path: "/admin/campaigns/list",
-          icon: <List size={16} />,
-        },
-        {
-          label: "Timeline",
-          path: "/admin/campaigns/timeline",
-          icon: <GitBranch size={16} />,
-        },
-        {
-          label: "Lịch sự kiện",
-          path: "/admin/campaigns/calendar",
-          icon: <CalendarDays size={16} />,
-        },
-      ],
     },
     {
-      icon: <Wallet size={20} />,
+      icon: <Wallet size={19} />,
       label: "Tài chính & Hậu cần",
       path: "/admin/finance",
-      children: null,
     },
     {
-      icon: <Trophy size={20} />,
-      label: "Thi đua & Khen thưởng",
+      icon: <Trophy size={19} />,
+      label: "Thi đua & Khen thưởng (SV5T)",
       path: "/admin/awards",
-      children: null,
     },
     {
-      icon: <FileText size={20} />,
-      label: "Văn bản số",
+      icon: <FileText size={19} />,
+      label: "Văn bản Hành chính",
       path: "/admin/documents",
-      children: null,
+    },
+    {
+      icon: <Cpu size={19} />,
+      label: "Phân tích AI & Kiểm duyệt",
+      path: "/admin/ai",
+      badge: "AI",
+    },
+    {
+      icon: <Settings size={19} />,
+      label: "Cấu hình & Bảo mật",
+      path: "/admin/settings",
     },
   ];
 
   const getInitials = (name) => {
-    if (!name) return "U";
-    const parts = name.split(" ");
+    if (!name) return "AD";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
@@ -118,212 +93,107 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     };
   }, []);
 
-  useEffect(() => {
-    menuItems.forEach((item) => {
-      if (!item.children) return;
-
-      const isChildActive = item.children.some((child) =>
-        location.pathname.startsWith(child.path),
-      );
-
-      if (isChildActive) {
-        setOpenMenus((prev) => ({
-          ...prev,
-          [item.label]: true,
-        }));
-      }
-    });
-  }, [location.pathname]);
-
-  const toggleMenu = (label) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [label]: !prev[label],
-    }));
-  };
-
   return (
     <>
+      {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[50] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 md:hidden"
+          className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm transition-opacity md:hidden"
           onClick={() => setIsOpen(false)}
-        ></div>
+        />
       )}
 
+      {/* Main Sidebar */}
       <aside
         className={`
-        fixed inset-y-0 left-0 z-[60] flex h-screen w-72 shrink-0 flex-col border-r border-slate-100 bg-white shadow-sm transition-transform duration-300 ease-in-out md:relative
-        ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-      `}
+          fixed inset-y-0 left-0 z-50 flex h-screen w-72 shrink-0 flex-col border-r border-slate-200/80 bg-white transition-transform duration-200 ease-in-out md:relative
+          ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
       >
+        {/* Mobile Close Button */}
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute right-4 top-6 p-2 text-slate-400 transition-colors hover:text-slate-600 md:hidden"
+          className="absolute right-3 top-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg md:hidden"
+          aria-label="Close sidebar"
         >
           <X size={20} />
         </button>
 
-        <div className="flex items-center gap-3 p-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-100">
-            <span className="text-xl font-bold uppercase text-white">D</span>
+        {/* Enterprise Brand Header */}
+        <div className="flex items-center gap-3.5 px-6 py-5 border-b border-slate-100">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-200">
+            <Shield size={20} strokeWidth={2.5} />
           </div>
-          <div>
-            <h1 className="text-lg font-black uppercase leading-tight tracking-tight text-blue-600">
-              DYUS <span className="text-red-500">Master</span>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 uppercase leading-none">
+              FlameGuard Admin
             </h1>
-            <p className="text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
-              Enterprise v2.1
+            <p className="text-[11px] font-medium text-slate-400 truncate mt-1.5">
+              Quản trị Đoàn - Hội LHU
             </p>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-4 pt-2">
-          <p className="mb-4 px-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Danh mục chính
-          </p>
+        {/* Navigation Section */}
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+          <div className="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            Không gian làm việc
+          </div>
 
           {menuItems.map((item) => {
-            const hasChildren = Boolean(item.children?.length);
-            const isChildActive = item.children?.some((child) =>
-              location.pathname.startsWith(child.path),
-            );
-            const isParentActive =
+            const isActive =
               location.pathname === item.path ||
-              location.pathname.startsWith(`${item.path}/`) ||
-              isChildActive;
+              (item.path !== "/admin/dashboard" && location.pathname.startsWith(`${item.path}/`)) ||
+              (item.path === "/admin/organizations" && location.pathname.startsWith("/admin/organizations"));
 
             return (
-              <div key={item.path} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <NavLink
-                    to={item.path}
-                    onClick={() => {
-                      if (hasChildren) {
-                        toggleMenu(item.label);
-                      }
-                      setIsOpen(false);
-                    }}
-                    className={() =>
-                      `group flex min-w-0 flex-1 items-center gap-4 rounded-xl px-4 py-3 text-left transition-all ${
-                        isParentActive
-                          ? "bg-blue-50 font-bold text-blue-600 shadow-sm"
-                          : "text-slate-500 hover:bg-slate-50"
-                      }`
-                    }
-                  >
-                    <span className="transition-transform group-hover:scale-110">
-                      {item.icon}
-                    </span>
-                    <span className="whitespace-nowrap text-[14.5px]">
-                      {item.label}
-                    </span>
-                  </NavLink>
-
-                  {hasChildren && (
-                    <button
-                      type="button"
-                      aria-label={`Toggle ${item.label}`}
-                      onClick={() => toggleMenu(item.label)}
-                      className={`rounded-xl p-3 transition-all hover:bg-slate-50 ${
-                        isParentActive ? "text-blue-600" : "text-slate-400"
-                      }`}
-                    >
-                      <ChevronRight
-                        size={18}
-                        className={`transition-transform duration-200 ${
-                          openMenus[item.label] ? "rotate-90" : "rotate-0"
-                        }`}
-                      />
-                    </button>
-                  )}
-                </div>
-
-                {hasChildren && (
-                  <div
-                    className={`overflow-hidden transition-all duration-200 ${
-                      openMenus[item.label]
-                        ? "max-h-64 opacity-100"
-                        : "max-h-0 opacity-0"
+              <NavLink
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsOpen(false)}
+                className={`group flex items-center justify-between rounded-lg px-3 py-2.5 text-xs font-medium transition-all ${
+                  isActive
+                    ? "bg-blue-50 text-blue-700 font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <span
+                    className={`transition-colors shrink-0 ${
+                      isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-600"
                     }`}
                   >
-                    <div className="ml-4 mt-1 space-y-1 border-l-2 border-slate-100 pl-4">
-                      {item.children.map((child) => (
-                        <NavLink
-                          key={child.path}
-                          to={child.path}
-                          onClick={() => setIsOpen(false)}
-                          className={({ isActive }) =>
-                            `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
-                              isActive
-                                ? "bg-blue-50 font-semibold text-blue-600"
-                                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                            }`
-                          }
-                        >
-                          <span>{child.icon}</span>
-                          <span>{child.label}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  </div>
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </div>
+
+                {item.badge && (
+                  <span className="rounded bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-indigo-600">
+                    {item.badge}
+                  </span>
                 )}
-              </div>
+              </NavLink>
             );
           })}
-
-          <div className="mx-4 my-6 border-t border-slate-50"></div>
-
-          <NavLink
-            to="/admin/ai"
-            onClick={() => setIsOpen(false)}
-            className={({ isActive }) =>
-              `group flex items-center justify-between rounded-xl px-4 py-3 transition-all ${
-                isActive
-                  ? "bg-indigo-50 font-bold text-indigo-700"
-                  : "text-indigo-600 hover:bg-indigo-50"
-              }`
-            }
-          >
-            <div className="flex items-center gap-4">
-              <Cpu size={20} className="animate-pulse" />
-              <span className="text-[14.5px]">DYUS Intelligence</span>
-            </div>
-            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-indigo-700">
-              AI
-            </span>
-          </NavLink>
-
-          <NavLink
-            to="/admin/settings"
-            onClick={() => setIsOpen(false)}
-            className={({ isActive }) =>
-              `group mt-2 flex items-center gap-4 rounded-xl px-4 py-3 transition-all ${
-                isActive
-                  ? "bg-indigo-50 font-bold text-indigo-600"
-                  : "text-slate-500 hover:bg-slate-50"
-              }`
-            }
-          >
-            <Settings size={20} />
-            <span className="text-[14.5px]">Cấu hình hệ thống</span>
-          </NavLink>
         </nav>
 
-        <div className="relative border-t border-slate-50 p-4" ref={profileRef}>
+        {/* User Profile & Actions Footer */}
+        <div className="relative border-t border-slate-100 p-3" ref={profileRef}>
+          {/* User Profile Dropup Card */}
           {showProfileCard && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 absolute bottom-full left-4 right-4 z-50 mb-3 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl duration-200">
-              <div className="flex items-center justify-between border-b border-slate-50 bg-slate-50/50 p-4">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Trạng thái
+            <div className="animate-in fade-in slide-in-from-bottom-2 absolute bottom-full left-3 right-3 z-50 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl duration-150">
+              <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Tài khoản Quản trị
                 </span>
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  Online
+                <span className="flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  Đang hoạt động
                 </span>
               </div>
 
-              <div className="p-2 text-left">
+              <div className="p-1 text-left space-y-0.5">
                 <NavLink
                   to="/admin/profile"
                   onClick={() => {
@@ -331,18 +201,15 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     setIsOpen(false);
                   }}
                   className={({ isActive }) =>
-                    `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                    `group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
                       isActive
-                        ? "bg-blue-50 font-bold text-blue-600"
-                        : "text-slate-600 hover:bg-slate-50"
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }`
                   }
                 >
-                  <User
-                    size={16}
-                    className="text-slate-400 group-hover:text-blue-600"
-                  />
-                  Thông tin tài khoản
+                  <User size={15} className="text-slate-400 group-hover:text-blue-600" />
+                  <span>Thông tin tài khoản</span>
                 </NavLink>
 
                 <NavLink
@@ -352,67 +219,78 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     setIsOpen(false);
                   }}
                   className={({ isActive }) =>
-                    `group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                    `group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
                       isActive
-                        ? "bg-blue-50 font-bold text-blue-600"
-                        : "text-slate-600 hover:bg-slate-50"
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                     }`
                   }
                 >
-                  <Calendar
-                    size={16}
-                    className="text-slate-400 group-hover:text-blue-600"
-                  />
-                  Nhật ký hoạt động
+                  <Calendar size={15} className="text-slate-400 group-hover:text-blue-600" />
+                  <span>Nhật ký hệ thống</span>
                 </NavLink>
 
-                <div className="my-1 border-t border-slate-50"></div>
+                <NavLink
+                  to="/admin/notifications"
+                  onClick={() => {
+                    setShowProfileCard(false);
+                    setIsOpen(false);
+                  }}
+                  className={({ isActive }) =>
+                    `group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors ${
+                      isActive
+                        ? "bg-blue-50 text-blue-700 font-semibold"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`
+                  }
+                >
+                  <Bell size={15} className="text-slate-400 group-hover:text-blue-600" />
+                  <span>Trung tâm thông báo</span>
+                </NavLink>
+
+                <div className="my-1 border-t border-slate-100"></div>
 
                 <button
                   onClick={() => {
                     logout();
                     navigate("/login");
                   }}
-                  className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-red-500 transition-all hover:bg-red-50"
+                  className="group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
                 >
-                  <LogOut
-                    size={16}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
-                  Đăng xuất
+                  <LogOut size={15} className="transition-transform group-hover:translate-x-0.5" />
+                  <span>Đăng xuất</span>
                 </button>
               </div>
             </div>
           )}
 
+          {/* Profile Trigger Button */}
           <button
             onClick={() => setShowProfileCard(!showProfileCard)}
-            className={`w-full rounded-xl border p-2 shadow-sm transition-all ${
+            className={`w-full rounded-lg border p-2 text-left transition-all ${
               showProfileCard
-                ? "border-blue-100 bg-blue-50"
-                : "border-slate-100 bg-white shadow-slate-200/50 hover:border-blue-200"
+                ? "border-blue-300 bg-blue-50/50"
+                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50"
             }`}
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-black text-white shadow-md shadow-blue-100">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-xs font-bold text-white shadow-xs">
                 {getInitials(user?.full_name)}
               </div>
-              <div className="min-w-0 flex-1 text-left">
-                <span className="mb-1 block truncate text-[13px] font-black leading-none text-slate-800">
-                  {user?.full_name || "Admin Khoa"}
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-slate-800 leading-tight">
+                  {user?.full_name || "Quản trị viên"}
                 </span>
-                <span className="flex items-center gap-1 text-[9px] font-black uppercase leading-none text-emerald-500">
-                  <div className="h-1.5 w-1.5 rounded-full bg-emerald-500"></div>
-                  Online
+                <span className="block text-[10px] text-slate-400 truncate mt-0.5">
+                  {user?.roles?.[0]?.name || "UNIVERSITY_ADMIN"}
                 </span>
               </div>
-              <div
-                className={`ml-auto transition-transform duration-200 ${
-                  showProfileCard ? "rotate-90 text-blue-600" : "text-slate-300"
+              <ChevronRight
+                size={14}
+                className={`text-slate-400 transition-transform duration-150 ${
+                  showProfileCard ? "rotate-90 text-blue-600" : ""
                 }`}
-              >
-                <ChevronRight size={16} strokeWidth={3} />
-              </div>
+              />
             </div>
           </button>
         </div>

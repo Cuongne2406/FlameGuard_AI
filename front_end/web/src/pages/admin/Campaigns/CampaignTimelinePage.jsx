@@ -1,12 +1,9 @@
 import React from "react";
-import TimeLineView from "../../../components/admin/Campaign/TimeLineView";
+import { Navigate, useLocation } from "react-router-dom";
 
 const CampaignTimelinePage = () => {
-  return (
-    <div className="space-y-6">
-      <TimeLineView />
-    </div>
-  );
+  const location = useLocation();
+  return <Navigate to="/admin/campaigns?view=timeline" state={location.state} replace />;
 };
 
 export default CampaignTimelinePage;

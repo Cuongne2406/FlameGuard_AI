@@ -1,12 +1,9 @@
 import React from "react";
-import OrgChart from "../../../components/admin/Org/OrgChart";
+import { Navigate, useLocation } from "react-router-dom";
 
 const OrgChartPage = () => {
-  return (
-    <div className="space-y-6">
-      <OrgChart />
-    </div>
-  );
+  const location = useLocation();
+  return <Navigate to="/admin/organizations?tab=chart" state={location.state} replace />;
 };
 
 export default OrgChartPage;

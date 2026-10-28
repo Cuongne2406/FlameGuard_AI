@@ -1,25 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import ListView from "../../../components/admin/Campaign/ListView";
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
 
 const CampaignListPage = () => {
   const location = useLocation();
-  const [triggerCreateModal, setTriggerCreateModal] = useState(false);
-
-  useEffect(() => {
-    if (location.state?.openCreate) {
-      setTriggerCreateModal(true);
-    }
-  }, [location.state]);
-
-  return (
-    <div className="space-y-6">
-      <ListView
-        triggerCreateModal={triggerCreateModal}
-        onModalClose={() => setTriggerCreateModal(false)}
-      />
-    </div>
-  );
+  return <Navigate to="/admin/campaigns?view=list" state={location.state} replace />;
 };
 
 export default CampaignListPage;

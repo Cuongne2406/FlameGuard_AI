@@ -1,12 +1,9 @@
 import React from "react";
-import CalendarView from "../../../components/admin/Campaign/CalendarView";
+import { Navigate, useLocation } from "react-router-dom";
 
 const CampaignCalendarPage = () => {
-  return (
-    <div className="space-y-6">
-      <CalendarView />
-    </div>
-  );
+  const location = useLocation();
+  return <Navigate to="/admin/campaigns?view=calendar" state={location.state} replace />;
 };
 
 export default CampaignCalendarPage;

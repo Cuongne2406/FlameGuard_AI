@@ -1,221 +1,267 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   Download,
   History,
-  ChevronDown,
   LogIn,
-  FileCheck,
+  Save,
+  RefreshCw,
+  Trash2,
   FileText,
-  UserCog,
-  AlertCircle,
+  User,
+  Shield,
+  Calendar,
+  Filter
 } from "lucide-react";
+import { activityLogService } from "../../../services/activityLogService";
 
 const UserActivityLog = () => {
-  // Dữ liệu mẫu dựa trên ảnh thiết kế của bạn
-  const logData = [
-    {
-      date: "14/02/2026",
-      isToday: true,
-      activities: [
-        {
-          id: 1,
-          time: "09:45",
-          action: "Đăng nhập hệ thống",
-          details: "IP: 113.161.x.x • Trình duyệt Chrome (Windows 11)",
-          type: "login",
-          color: "bg-blue-500",
-        },
-        {
-          id: 2,
-          time: "09:50",
-          action: (
-            <>
-              Phê duyệt ngân sách cho{" "}
-              <span className="text-blue-600 font-bold">
-                Chiến dịch Mùa Hè Xanh
-              </span>
-            </>
-          ),
-          details: "Thao tác duyệt cấp 2 (Final Approval)",
-          type: "approve",
-          color: "bg-emerald-500",
-        },
-        {
-          id: 3,
-          time: "10:15",
-          action: (
-            <>
-              Ban hành văn bản mới:{" "}
-              <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-mono">
-                KH-102/ĐTN
-              </span>{" "}
-              - Kế hoạch Hiến máu
-            </>
-          ),
-          details: (
-            <div className="flex gap-2 mt-2">
-              <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                Công khai
-              </span>
-              <span className="bg-slate-50 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold">
-                File PDF đính kèm
-              </span>
-            </div>
-          ),
-          type: "document",
-          color: "bg-indigo-500",
-          icon: <FileText size={14} className="text-white" />,
-        },
-      ],
-    },
-    {
-      date: "13/02/2026",
-      isToday: false,
-      activities: [
-        {
-          id: 4,
-          time: "14:20",
-          action: "Cập nhật thông tin Ban Chấp Hành Khoa CNTT",
-          details: "Thay đổi nhân sự: Bí thư Đoàn khoa",
-          type: "update",
-          color: "bg-orange-500",
-        },
-        {
-          id: 5,
-          time: "16:00",
-          action: "Xóa một bài viết vi phạm",
-          details: "Lý do: AI detected toxic content (Mức độ tin cậy: 98%)",
-          type: "alert",
-          color: "bg-red-500",
-          isWarning: true,
-        },
-      ],
-    },
-  ];
+  const [logs, setLogs] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [roleFilter, setRoleFilter] = useState("Tất cả vai trò");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+  const pageSize = 20;
+
+  const fetchLogs = async () => {
+    setLoading(true);
+    try {
+      const data = await activityLogService.getLogs({
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
+        date_from: dateFrom,
+        date_to: dateTo,
+        role: roleFilter
+      });
+      setLogs(data.items || []);
+      setTotal(data.total || 0);
+    } catch (error) {
+      console.error("Failed to fetch logs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, [page, dateFrom, dateTo, roleFilter]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      await activityLogService.exportLogs({
+        date_from: dateFrom,
+        date_to: dateTo,
+        role: roleFilter
+      });
+    } catch (err) {
+      alert("Lỗi khi xuất dữ liệu");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return "Gần đây";
+    const d = new Date(dateStr);
+    return d.toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric"
+    });
+  };
+
+  const getLogIcon = (action = "") => {
+    const act = action.toLowerCase();
+    if (act.includes("delete") || act.includes("xóa")) {
+      return <Trash2 size={15} className="text-rose-600" />;
+    }
+    if (act.includes("login") || act.includes("đăng nhập")) {
+      return <LogIn size={15} className="text-blue-600" />;
+    }
+    if (act.includes("approve") || act.includes("duyệt")) {
+      return <Save size={15} className="text-emerald-600" />;
+    }
+    return <FileText size={15} className="text-indigo-600" />;
+  };
+
+  const filteredLogs = logs.filter((log) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (log.action || "").toLowerCase().includes(q) ||
+      (log.user_name || "").toLowerCase().includes(q) ||
+      (log.ip_address || "").toLowerCase().includes(q) ||
+      (log.details || "").toLowerCase().includes(q)
+    );
+  });
+
+  const totalPages = Math.ceil(total / pageSize) || 1;
 
   return (
-    <div className="max-w-5xl mx-auto p-6 animate-in fade-in duration-500">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 font-sans">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200">
         <div>
-          <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-            <History className="text-blue-600" size={24} />
-            Nhật ký Hoạt động Cá nhân
-          </h2>
-          <p className="text-sm text-slate-500 font-medium mt-1">
-            Danh sách các thao tác bạn đã thực hiện trên hệ thống trong 30 ngày
-            qua.
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+            <History size={22} className="text-blue-600" />
+            Nhật ký Hoạt động Hệ thống (Audit Log)
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Theo dõi vết kiểm toán toàn diện các thao tác đăng nhập, chỉnh sửa dữ liệu và phê duyệt
           </p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-2.5 bg-[#0056D2] text-white rounded-xl text-xs font-black shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">
-          <Download size={16} /> Xuất báo cáo cá nhân
+
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+        >
+          <Download size={15} />
+          <span>{isExporting ? "Đang xuất..." : "Xuất File CSV"}</span>
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4 mb-6">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300"
-            size={18}
-          />
+      {/* Filter Toolbar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Date range */}
+          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+            <Calendar size={14} className="text-slate-400" />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="bg-transparent text-slate-600 outline-none text-xs"
+            />
+            <span className="text-slate-300">-</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="bg-transparent text-slate-600 outline-none text-xs"
+            />
+          </div>
+
+          {/* Role Filter */}
+          <select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 font-medium outline-none focus:bg-white"
+          >
+            <option value="Tất cả vai trò">Tất cả vai trò</option>
+            <option value="UNIVERSITY_ADMIN">Quản trị viên Trường</option>
+            <option value="FACULTY_ADMIN">Cán bộ Khoa / Viện</option>
+            <option value="STUDENT">Sinh viên</option>
+          </select>
+
+          <button
+            onClick={fetchLogs}
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold transition-colors"
+          >
+            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+            Lọc
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="relative min-w-[220px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
-            placeholder="Tìm kiếm thao tác..."
-            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-transparent rounded-2xl text-sm font-bold outline-none focus:bg-white focus:border-blue-500 transition-all"
+            placeholder="Tìm theo hành động, người dùng..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:bg-white focus:border-blue-500"
           />
-        </div>
-        <div className="flex items-center gap-2 bg-slate-50 px-4 py-3 rounded-2xl border border-transparent hover:border-slate-200 cursor-pointer transition-all">
-          <span className="text-[11px] font-black text-slate-400 uppercase">
-            Lọc theo:
-          </span>
-          <span className="text-sm font-bold text-slate-700">
-            Tất cả loại thao tác
-          </span>
-          <ChevronDown size={16} className="text-slate-400" />
         </div>
       </div>
 
-      {/* Timeline Content */}
-      <div className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm relative overflow-hidden">
-        {/* Decorative background line */}
-        <div className="absolute left-[111px] top-0 bottom-0 w-0.5 bg-slate-100 hidden md:block"></div>
-
-        <div className="space-y-12">
-          {logData.map((group, gIdx) => (
-            <div key={gIdx} className="relative">
-              {/* Date Header */}
-              <div className="flex items-center gap-4 mb-8 relative z-10">
-                <div
-                  className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider ${group.isToday ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}
-                >
-                  {group.isToday ? "Hôm nay" : "Hôm qua"}
-                </div>
-                <span className="text-sm font-bold text-slate-400">
-                  {group.date}
-                </span>
-              </div>
-
-              {/* Activities under this date */}
-              <div className="space-y-8">
-                {group.activities.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col md:flex-row gap-4 md:gap-8 relative group"
-                  >
-                    {/* Time & Dot */}
-                    <div className="flex items-center md:w-20 shrink-0">
-                      <span className="text-sm font-black text-slate-800">
-                        {item.time}
-                      </span>
-                      <div
-                        className={`absolute left-[103px] w-4 h-4 rounded-full border-4 border-white shadow-sm z-20 transition-transform group-hover:scale-125 hidden md:block ${item.color}`}
-                      ></div>
-                    </div>
-
-                    {/* Content Card */}
-                    <div
-                      className={`flex-1 p-5 rounded-[24px] border transition-all ${
-                        item.isWarning
-                          ? "bg-red-50/50 border-red-100 hover:bg-red-50"
-                          : "bg-slate-50/50 border-transparent hover:bg-white hover:border-slate-100 hover:shadow-xl hover:shadow-slate-100/50"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        {item.isWarning && (
-                          <AlertCircle
-                            className="text-red-500 shrink-0 mt-0.5"
-                            size={18}
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h4
-                            className={`text-[14px] font-bold ${item.isWarning ? "text-red-700" : "text-slate-800"}`}
-                          >
-                            {item.action}
-                          </h4>
-                          <div
-                            className={`text-xs mt-1 font-medium ${item.isWarning ? "text-red-500" : "text-slate-500"}`}
-                          >
-                            {item.details}
-                          </div>
-                        </div>
+      {/* Log Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 text-xs">
+            <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-blue-600" />
+            Đang tải dữ liệu kiểm toán hệ thống...
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 text-xs">
+            <Shield size={32} className="mx-auto text-slate-300 mb-2" />
+            <p className="font-semibold text-slate-600">Không có nhật ký nào được ghi nhận</p>
+            <p className="text-slate-400 mt-1">Các thao tác trên hệ thống sẽ tự động được ghi lại tại đây</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-3.5 w-12 text-center">Loại</th>
+                  <th className="px-4 py-3.5">Hành động</th>
+                  <th className="px-4 py-3.5">Người thực hiện</th>
+                  <th className="px-4 py-3.5">Chi tiết / IP</th>
+                  <th className="px-4 py-3.5 text-right">Thời gian</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredLogs.map((log, idx) => (
+                  <tr key={log.id || idx} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-4 py-3.5 text-center">
+                      <div className="p-1.5 rounded-md bg-slate-100 inline-flex items-center justify-center">
+                        {getLogIcon(log.action)}
                       </div>
-                    </div>
-                  </div>
+                    </td>
+                    <td className="px-4 py-3.5 font-bold text-slate-800">
+                      {log.action}
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-600 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <User size={13} className="text-slate-400" />
+                        <span>{log.user_name || log.user?.full_name || "Quản trị viên"}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-500 font-mono text-[11px]">
+                      {log.details || log.ip_address || "IP: 127.0.0.1"}
+                    </td>
+                    <td className="px-4 py-3.5 text-right text-slate-400 whitespace-nowrap">
+                      {formatDateTime(log.created_at || log.timestamp)}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </div>
-          ))}
-        </div>
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {/* Footer info */}
-        <div className="mt-12 pt-6 border-t border-slate-50 text-center">
-          <p className="text-[11px] font-bold text-slate-400 italic">
-            * Hiển thị dữ liệu 30 ngày gần nhất
-          </p>
-        </div>
+        {/* Pagination Footer */}
+        {totalPages > 1 && (
+          <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              Trang {page} / {totalPages} (Tổng {total} bản ghi)
+            </span>
+            <div className="flex gap-1.5">
+              <button
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium disabled:opacity-40"
+              >
+                Trước
+              </button>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                className="px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-medium disabled:opacity-40"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

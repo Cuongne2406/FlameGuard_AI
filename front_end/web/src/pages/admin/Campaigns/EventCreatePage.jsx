@@ -185,7 +185,7 @@ const EventCreatePage = () => {
       };
 
       await eventService.createEvent(payload);
-      navigate("/admin/campaigns/calendar");
+      navigate("/admin/campaigns");
     } catch (err) {
       console.error("Error creating event:", err);
       setError(err.message || "Đã xảy ra lỗi khi tạo sự kiện. Vui lòng kiểm tra lại.");
@@ -209,7 +209,7 @@ const EventCreatePage = () => {
       <div className="flex items-center justify-between border-b border-slate-100 pb-5">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/admin/campaigns/calendar")}
+            onClick={() => navigate(-1)}
             className="p-2 hover:bg-slate-100 rounded-lg text-slate-600 transition-colors border border-slate-200 bg-white shadow-sm"
           >
             <ChevronLeft size={20} />
@@ -862,7 +862,7 @@ const EventCreatePage = () => {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => navigate("/admin/campaigns/calendar")}
+              onClick={() => navigate(-1)}
               className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-500 font-bold text-sm bg-white hover:bg-slate-50 transition-colors"
             >
               Hủy bỏ

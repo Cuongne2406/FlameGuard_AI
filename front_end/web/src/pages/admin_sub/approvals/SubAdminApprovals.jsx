@@ -1,413 +1,620 @@
 import React, { useState, useEffect } from 'react';
+import { 
+  FileText, Calendar, Sparkles, CheckCircle2, XCircle, Search, 
+  Clock, Download, Eye, AlertCircle, RefreshCw, Filter, UserCheck, ShieldCheck
+} from 'lucide-react';
 import Toast from '../../../components/ui/Toast';
 import Modal from '../../../components/ui/Modal';
 import Button from '../../../components/ui/Button';
-import Input from '../../../components/ui/Input';
+import { documentService } from '../../../services/documentService';
 import { eventService } from '../../../services/eventService';
-import { financeService } from '../../../services/financeService';
+import { organizationService } from '../../../services/organizationService';
 
 const SubAdminApprovals = () => {
-    const [toast, setToast] = useState(null);
-    const [activeTab, setActiveTab] = useState('Queue'); // 'Queue' hoặc 'Repo'
-    const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState('documents'); // 'documents' | 'registrations' | 'proposals'
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-    const [queueItems, setQueueItems] = useState([]);
-    const [repoItems, setRepoItems] = useState([]);
-    const [loading, setLoading] = useState(false);
+  // Data states
+  const [documents, setDocuments] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
+  const [proposals, setProposals] = useState([]);
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const [events, fundReqs, pendingRegs] = await Promise.all([
-                eventService.getEvents(),
-                financeService.getFacultyTransactions(),
-                eventService.getPendingRegistrations()
-            ]);
+  // Detail / Action modal states
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [selectedProposal, setSelectedProposal] = useState(null);
+  const [showProposalModal, setShowProposalModal] = useState(false);
 
-            const allItems = [];
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [docsData, regsData, propsData] = await Promise.all([
+        documentService.getDocuments().catch(() => []),
+        eventService.getPendingRegistrations().catch(() => []),
+        organizationService.getClubProposals().catch(() => [])
+      ]);
 
-            // Mapping Events
-            if (Array.isArray(events)) {
-                events.forEach(e => {
-                    allItems.push({
-                        id: e.id,
-                        type: 'event',
-                        title: e.name,
-                        sender: e.organizer_id || 'System User',
-                        subject: e.description,
-                        status: e.status || 'PENDING',
-                        time: `${e.start_time} - ${e.end_time}`,
-                        actions: ['approve', 'reject']
-                    });
-                });
-            }
+      setDocuments(Array.isArray(docsData) ? docsData : []);
+      setRegistrations(Array.isArray(regsData) ? regsData : []);
+      setProposals(Array.isArray(propsData) ? propsData : []);
+    } catch (error) {
+      console.error('Error fetching approvals data:', error);
+      setToast({ message: 'Lỗi tải danh mục xét duyệt: ' + error.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-            // Mapping Finance Requests
-            if (Array.isArray(fundReqs)) {
-                fundReqs.forEach(f => {
-                    allItems.push({
-                        id: f.id,
-                        type: 'finance',
-                        title: f.title || 'Xin quyết toán',
-                        sender: f.user || 'System User',
-                        subject: f.detail || f.description || '',
-                        amount: f.amount ? `${f.amount.toLocaleString()} VNĐ` : '',
-                        status: f.status || 'PENDING',
-                        actions: ['sign', 'reject']
-                    });
-                });
-            }
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-            // Mapping Event Registrations
-            if (Array.isArray(pendingRegs)) {
-                pendingRegs.forEach(r => {
-                    allItems.push({
-                        id: r.id,
-                        type: 'registration',
-                        title: `Đăng ký: ${r.event_name || 'Sự kiện'}`,
-                        sender: r.user_name || 'Sinh viên',
-                        subject: `Mã SV: ${r.student_code || ''}`,
-                        status: r.status || 'PENDING',
-                        time: r.created_at,
-                        actions: ['approve', 'reject']
-                    });
-                });
-            }
+  // Action Handlers - Digital Documents
+  const handleApproveDoc = async (docId) => {
+    try {
+      await documentService.updateDocument(docId, { status: 'APPROVED' });
+      setToast({ message: 'Đã phê duyệt văn bản / đơn từ thành công', type: 'success' });
+      setShowDocModal(false);
+      fetchData();
+    } catch (err) {
+      setToast({ message: 'Lỗi phê duyệt văn bản: ' + err.message, type: 'error' });
+    }
+  };
 
-            // Split into queue (PENDING) and repo (APPROVED/REJECTED/COMPLETED)
-            const pending = allItems.filter(i => i.status === 'PENDING' || i.status === 'DRAFT');
-            const done = allItems.filter(i => i.status !== 'PENDING' && i.status !== 'DRAFT');
+  const handleRejectDoc = async (docId) => {
+    try {
+      await documentService.updateDocument(docId, { status: 'REJECTED' });
+      setToast({ message: 'Đã từ chối văn bản / đơn từ', type: 'info' });
+      setShowDocModal(false);
+      fetchData();
+    } catch (err) {
+      setToast({ message: 'Lỗi xử lý văn bản: ' + err.message, type: 'error' });
+    }
+  };
 
-            setQueueItems(pending);
-            setRepoItems(done);
-        } catch (error) {
-            console.error('Lỗi khi fetch approval items:', error);
-            setToast({ message: 'Lỗi tải danh sách phê duyệt: ' + error.message, type: 'error' });
-        } finally {
-            setLoading(false);
-        }
-    };
+  // Action Handlers - Event Registrations
+  const handleApproveReg = async (regId) => {
+    try {
+      await eventService.approveRegistration(regId);
+      setToast({ message: 'Đã xác nhận đăng ký sự kiện cho sinh viên', type: 'success' });
+      fetchData();
+    } catch (err) {
+      setToast({ message: 'Lỗi duyệt đăng ký: ' + err.message, type: 'error' });
+    }
+  };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+  // Action Handlers - Club Proposals
+  const handleApproveProposal = async (propId) => {
+    try {
+      await organizationService.approveClubProposal(propId);
+      setToast({ message: 'Đã phê duyệt đề xuất hoạt động CLB', type: 'success' });
+      setShowProposalModal(false);
+      fetchData();
+    } catch (err) {
+      setToast({ message: 'Lỗi phê duyệt đề xuất: ' + err.message, type: 'error' });
+    }
+  };
 
-    // State cho modal yêu cầu đổi giờ
-    const [showRescheduleModal, setShowRescheduleModal] = useState(false);
-    const [selectedItem, setSelectedItem] = useState(null);
-    const [newTime, setNewTime] = useState('');
+  // Filtered Lists
+  const filteredDocs = documents.filter(d => 
+    (d.title || d.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (d.user_name || d.sender || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    // Lọc queue dựa trên searchTerm
-    const filteredQueue = queueItems.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.subject && item.subject.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+  const filteredRegs = registrations.filter(r => 
+    (r.event_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.user_full_name || r.user_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.student_code || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    // Lọc repo
-    const filteredRepo = repoItems.filter(item =>
-        item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.sender.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const filteredProps = proposals.filter(p => 
+    (p.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.club_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    // Xử lý các action
-    const handleSignAndPay = async (item) => {
-        try {
-            await financeService.approveFacultyTransaction(item.id);
-            setToast({ message: `Đã ký số và chuyển tiền cho "${item.title}"`, type: 'success' });
-            fetchData(); // Reload từ API
-        } catch (error) {
-            setToast({ message: 'Lỗi ký số: ' + error.message, type: 'error' });
-        }
-    };
+  const pendingDocsCount = documents.filter(d => d.status === 'PENDING' || !d.status).length;
+  const pendingRegsCount = registrations.filter(r => r.status === 'PENDING' || !r.status).length;
+  const pendingPropsCount = proposals.filter(p => p.status === 'PENDING' || !p.status).length;
 
-    const handleApprove = async (item) => {
-        try {
-            if (item.type === 'event') {
-                await eventService.updateEvent(item.id, { status: 'APPROVED' });
-            } else if (item.type === 'registration') {
-                await eventService.approveRegistration(item.id);
-            } else if (item.type === 'finance') {
-                await financeService.approveFacultyTransaction(item.id);
-            }
-            setToast({ message: `Đã duyệt "${item.title}"`, type: 'success' });
-            fetchData();
-        } catch (error) {
-            setToast({ message: 'Lỗi khi duyệt: ' + error.message, type: 'error' });
-        }
-    };
-
-    const handleReject = async (item) => {
-        try {
-            if (item.type === 'event') {
-                await eventService.updateEvent(item.id, { status: 'CANCELLED' });
-            }
-            // Add finance reject if supported
-            setToast({ message: `Đã từ chối "${item.title}"`, type: 'info' });
-            fetchData();
-        } catch (error) {
-            setToast({ message: 'Lỗi khi huỷ: ' + error.message, type: 'error' });
-        }
-    };
-
-    const handleRescheduleRequest = (item) => {
-        setSelectedItem(item);
-        setNewTime('');
-        setShowRescheduleModal(true);
-    };
-
-    const submitReschedule = () => {
-        setToast({ message: `Đã gửi yêu cầu đổi giờ cho "${selectedItem.title}"`, type: 'success' });
-        setShowRescheduleModal(false);
-        setSelectedItem(null);
-    };
-
-    // Helper để render nút theo action
-    const renderActions = (item) => {
-        return item.actions.map(action => {
-            switch (action) {
-                case 'sign':
-                    return (
-                        <button
-                            key="sign"
-                            onClick={() => handleSignAndPay(item)}
-                            className="h-12 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-blue-100 flex items-center justify-center gap-2 px-4"
-                        >
-                            <span className="material-symbols-outlined">history_edu</span> Ký số & Chuyển tiền
-                        </button>
-                    );
-                case 'reject':
-                    return (
-                        <button
-                            key="reject"
-                            onClick={() => handleReject(item)}
-                            className="h-12 rounded-xl border border-slate-200 text-slate-900 text-xs font-bold uppercase tracking-widest hover:bg-slate-50 px-4"
-                        >
-                            Từ chối
-                        </button>
-                    );
-                case 'reschedule':
-                    return (
-                        <button
-                            key="reschedule"
-                            onClick={() => handleRescheduleRequest(item)}
-                            className="h-12 rounded-xl bg-orange-600 text-white text-xs font-bold uppercase tracking-widest shadow-lg shadow-orange-100 flex items-center justify-center gap-2 px-4"
-                        >
-                            <span className="material-symbols-outlined">update</span> Yêu cầu đổi giờ
-                        </button>
-                    );
-                case 'approve':
-                    return (
-                        <button
-                            key="approve"
-                            onClick={() => handleApprove(item)}
-                            className="h-12 rounded-xl border border-slate-200 text-slate-900 text-xs font-bold uppercase tracking-widest hover:bg-slate-50 px-4"
-                        >
-                            Vẫn duyệt
-                        </button>
-                    );
-                default:
-                    return null;
-            }
-        });
-    };
-
-    return (
-        <div className="p-4 md:p-6 lg:p-8 bg-[#F8FAFC] min-h-screen space-y-6 md:space-y-8 font-sans">
-            {/* Header với Search */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div>
-                    <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <span className="material-symbols-outlined text-sm">home</span>
-                        <span>Tổng quan</span>
-                        <span>/</span>
-                        <span className="text-blue-600 underline">Xét duyệt & Văn bản</span>
-                    </nav>
-                    <h1 className="text-xl md:text-2xl font-bold text-slate-900">Trung tâm Hành chính & Xét duyệt Điện tử</h1>
-                </div>
-                <div className="relative w-full lg:w-96">
-                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">search</span>
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm văn bản, số hiệu, tên người gửi..."
-                        className="w-full h-12 pl-12 pr-4 rounded-xl border border-slate-200 bg-white shadow-sm outline-none focus:ring-2 ring-blue-500/10 text-sm font-bold"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {[
-                    { label: 'Chờ xử lý', val: queueItems.length.toString().padStart(2, '0'), sub: 'Yêu cầu mới cần duyệt', color: 'orange', icon: 'pending_actions' },
-                    { label: 'Đã duyệt tháng này', val: repoItems.length.toString(), sub: 'Hồ sơ hoàn tất', color: 'emerald', icon: 'verified' },
-                    { label: 'Văn bản từ Trường', val: '03', sub: 'Văn bản chưa đọc', color: 'blue', icon: 'mail' },
-                ].map((s, i) => (
-                    <div key={i} className={`bg-white border-l-8 border-${s.color}-500 rounded-2xl p-6 shadow-sm flex items-center gap-4 group hover:shadow-xl transition-all`}>
-                        <div className={`h-12 w-12 rounded-xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center shrink-0`}>
-                            <span className="material-symbols-outlined text-2xl">{s.icon}</span>
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">{s.label}</p>
-                            <p className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tighter">{s.val}</p>
-                            <p className="text-xs font-bold text-emerald-600 mt-2 uppercase tracking-widest">{s.sub}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Main Section with Tabs */}
-            <div className="space-y-6">
-                <div className="flex border-b border-slate-200 gap-4 md:gap-8 overflow-x-auto pb-2">
-                    <button
-                        onClick={() => setActiveTab('Queue')}
-                        className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                            activeTab === 'Queue' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                        }`}>
-                        <span className="material-symbols-outlined">add_box</span> Yêu cầu từ Chi đoàn & CLB ({queueItems.length})
-                        {activeTab === 'Queue' && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></div>}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('Repo')}
-                        className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all relative flex items-center gap-2 whitespace-nowrap ${
-                            activeTab === 'Repo' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                        }`}>
-                        <span className="material-symbols-outlined">folder_open</span> Quản lý Văn bản Đi/Đến ({repoItems.length})
-                        {activeTab === 'Repo' && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></div>}
-                    </button>
-                </div>
-
-                {/* Nội dung tab */}
-                {activeTab === 'Queue' && (
-                    <div className="space-y-4 md:space-y-6">
-                        {filteredQueue.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-2xl border border-slate-100">
-                                <span className="material-symbols-outlined text-6xl text-slate-300">inbox</span>
-                                <p className="text-lg font-bold text-slate-400 mt-4">Không có yêu cầu nào</p>
-                            </div>
-                        ) : (
-                            filteredQueue.map((item) => (
-                                <div key={item.id} className="bg-white border border-slate-100 rounded-2xl p-6 md:p-8 shadow-sm space-y-4 md:space-y-6 group hover:shadow-xl transition-all border-l-8 border-transparent hover:border-blue-500">
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                                        <div className="flex items-start gap-4">
-                                            <div className={`h-12 w-12 md:h-16 md:w-16 rounded-2xl ${
-                                                item.type === 'finance' ? 'bg-emerald-50 text-emerald-500' :
-                                                item.type === 'facility' ? 'bg-indigo-50 text-indigo-500' :
-                                                'bg-indigo-50 text-indigo-500'
-                                            } flex items-center justify-center border border-slate-100 shadow-sm shrink-0`}>
-                                                <span className="material-symbols-outlined text-2xl md:text-3xl">
-                                                    {item.type === 'finance' ? 'payments' : item.type === 'facility' ? 'apartment' : 'assignment'}
-                                                </span>
-                                            </div>
-                                            <div className="space-y-1 md:space-y-2">
-                                                <h3 className="text-lg md:text-xl font-bold text-slate-900 uppercase">{item.title}</h3>
-                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest flex-wrap">
-                                                    <span>Gửi bởi: <span className="text-blue-600">{item.sender}</span></span>
-                                                </div>
-                                                <p className="text-sm font-medium text-slate-600 mt-2 leading-relaxed">{item.subject}</p>
-                                                <div className="flex flex-wrap items-center gap-4 mt-2">
-                                                    {item.amount && (
-                                                        <p className="text-xs font-bold text-slate-400 uppercase">Tổng tiền: <span className="text-slate-900">{item.amount}</span></p>
-                                                    )}
-                                                    {item.file && (
-                                                        <div className="flex items-center gap-2 text-blue-600 text-xs font-bold underline underline-offset-4 decoration-2 cursor-pointer">
-                                                            <span className="material-symbols-outlined text-sm">picture_as_pdf</span> {item.file}
-                                                        </div>
-                                                    )}
-                                                    {item.time && (
-                                                        <p className="text-xs font-bold text-slate-400 uppercase flex items-center gap-2">
-                                                            <span className="material-symbols-outlined text-sm">schedule</span> {item.time}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-64">
-                                            {renderActions(item)}
-                                        </div>
-                                    </div>
-                                    {item.aiStatus && (
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-100">
-                                            <span className="material-symbols-outlined text-sm">auto_awesome</span> AI Check: {item.aiStatus}
-                                        </div>
-                                    )}
-                                    {item.conflict && (
-                                        <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-start gap-3 text-amber-800">
-                                            <span className="material-symbols-outlined">warning</span>
-                                            <p className="text-xs font-bold leading-relaxed">{item.conflict}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
-
-                {activeTab === 'Repo' && (
-                    <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[600px]">
-                                <thead>
-                                    <tr className="bg-slate-50/50">
-                                        <th className="px-4 md:px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Văn bản</th>
-                                        <th className="px-4 md:px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Người gửi</th>
-                                        <th className="px-4 md:px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Ngày duyệt</th>
-                                        <th className="px-4 md:px-6 py-4 text-left text-xs font-bold text-slate-400 uppercase tracking-widest">Loại</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {filteredRepo.map((doc) => (
-                                        <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 md:px-6 py-4">
-                                                <p className="text-sm font-bold text-slate-900">{doc.title}</p>
-                                                {doc.details && <p className="text-xs font-medium text-slate-400 mt-1">{doc.details}</p>}
-                                            </td>
-                                            <td className="px-4 md:px-6 py-4 text-sm font-bold text-slate-700">{doc.sender}</td>
-                                            <td className="px-4 md:px-6 py-4 text-sm font-bold text-slate-500">{doc.approvedDate}</td>
-                                            <td className="px-4 md:px-6 py-4">
-                                                <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest ${
-                                                    doc.type === 'finance' ? 'bg-emerald-50 text-emerald-600' :
-                                                    doc.type === 'event' ? 'bg-blue-50 text-blue-600' :
-                                                    'bg-purple-50 text-purple-600'
-                                                }`}>
-                                                    {doc.type === 'finance' ? 'Tài chính' : doc.type === 'event' ? 'Sự kiện' : 'Quyết định'}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <footer className="text-center pt-8 text-xs font-medium text-slate-400 italic">
-                © 2025 Digital Youth Union System (DYUS). All rights reserved.<br />
-                Module: Approval & Document Center v2.0 - Khoa Công Nghệ Thông Tin
-            </footer>
-
-            {/* Modal yêu cầu đổi giờ */}
-            <Modal isOpen={showRescheduleModal} onClose={() => setShowRescheduleModal(false)} title="Yêu cầu đổi giờ" size="md">
-                <div className="space-y-6 py-4">
-                    <p className="text-sm text-slate-600">Nhập thời gian mới cho yêu cầu:</p>
-                    <Input
-                        type="datetime-local"
-                        value={newTime}
-                        onChange={(e) => setNewTime(e.target.value)}
-                        className="w-full"
-                    />
-                    <div className="flex gap-4 pt-4">
-                        <Button variant="outline" className="flex-1" onClick={() => setShowRescheduleModal(false)}>Hủy</Button>
-                        <Button variant="primary" className="flex-1" onClick={submitReschedule}>Gửi yêu cầu</Button>
-                    </div>
-                </div>
-            </Modal>
-
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <UserCheck size={22} className="text-blue-600" />
+            Trung tâm Xét duyệt Cấp Khoa
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Xử lý văn bản xác nhận sinh viên, danh sách đăng ký sự kiện và đề xuất hoạt động từ các CLB trực thuộc.
+          </p>
         </div>
-    );
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-semibold text-slate-700 shadow-sm transition-all"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Làm mới
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Cards / Metric Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div 
+          onClick={() => setActiveTab('documents')}
+          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+            activeTab === 'documents' 
+              ? 'bg-blue-50/50 border-blue-300 ring-2 ring-blue-500/10' 
+              : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Đơn từ & Xác nhận SV</span>
+            <div className="p-2 rounded-lg bg-blue-100 text-blue-700">
+              <FileText size={16} />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900">{pendingDocsCount}</span>
+            <span className="text-xs text-amber-600 font-semibold">Chờ xem xét</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">Tổng cộng {documents.length} đơn gửi lên Khoa</p>
+        </div>
+
+        <div 
+          onClick={() => setActiveTab('registrations')}
+          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+            activeTab === 'registrations' 
+              ? 'bg-emerald-50/50 border-emerald-300 ring-2 ring-emerald-500/10' 
+              : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Đăng ký Sự kiện</span>
+            <div className="p-2 rounded-lg bg-emerald-100 text-emerald-700">
+              <Calendar size={16} />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900">{pendingRegsCount}</span>
+            <span className="text-xs text-amber-600 font-semibold">Chờ cấp vé</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">Sinh viên đăng ký các hoạt động phong trào</p>
+        </div>
+
+        <div 
+          onClick={() => setActiveTab('proposals')}
+          className={`p-4 rounded-xl border cursor-pointer transition-all ${
+            activeTab === 'proposals' 
+              ? 'bg-purple-50/50 border-purple-300 ring-2 ring-purple-500/10' 
+              : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Đề xuất CLB & Đội nhóm</span>
+            <div className="p-2 rounded-lg bg-purple-100 text-purple-700">
+              <Sparkles size={16} />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900">{pendingPropsCount}</span>
+            <span className="text-xs text-amber-600 font-semibold">Chờ duyệt kinh phí/kế hoạch</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1">Hoạt động từ các CLB trực thuộc Khoa</p>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Navigation Tabs & Search */}
+        <div className="px-5 pt-4 pb-0 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`pb-3.5 px-3 text-xs font-bold tracking-tight transition-all relative flex items-center gap-1.5 ${
+                activeTab === 'documents'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <FileText size={15} />
+              Văn bản & Giấy xác nhận
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                {documents.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('registrations')}
+              className={`pb-3.5 px-3 text-xs font-bold tracking-tight transition-all relative flex items-center gap-1.5 ${
+                activeTab === 'registrations'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Calendar size={15} />
+              Duyệt Đăng ký Sự kiện
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                {registrations.length}
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('proposals')}
+              className={`pb-3.5 px-3 text-xs font-bold tracking-tight transition-all relative flex items-center gap-1.5 ${
+                activeTab === 'proposals'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles size={15} />
+              Đề xuất Hoạt động CLB
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                {proposals.length}
+              </span>
+            </button>
+          </div>
+
+          <div className="pb-3 w-full sm:w-72">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Tìm kiếm trong tab này..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-slate-200 outline-none focus:border-blue-500 bg-slate-50/50"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tab 1: Digital Documents Table */}
+        {activeTab === 'documents' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3 px-5">Tên văn bản / Đơn từ</th>
+                  <th className="py-3 px-4">Sinh viên / Người gửi</th>
+                  <th className="py-3 px-4">Ngày gửi</th>
+                  <th className="py-3 px-4">Trạng thái</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="py-12 text-center text-slate-400">
+                      <FileText size={36} className="mx-auto text-slate-300 mb-2" />
+                      Không có văn bản hoặc giấy xác nhận nào
+                    </td>
+                  </tr>
+                ) : (
+                  filteredDocs.map((doc) => (
+                    <tr key={doc.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-5">
+                        <div className="font-semibold text-slate-900">{doc.title || doc.name || 'Đơn xác nhận đoàn viên'}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{doc.description || doc.subject || 'Không có ghi chú thêm'}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-800">
+                        {doc.user_name || doc.sender || 'Sinh viên Khoa'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString('vi-VN') : 'Hôm nay'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {doc.status === 'APPROVED' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 size={12} /> Đã phê duyệt
+                          </span>
+                        ) : doc.status === 'REJECTED' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                            <XCircle size={12} /> Đã từ chối
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock size={12} /> Chờ duyệt
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => { setSelectedDoc(doc); setShowDocModal(true); }}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          {doc.status !== 'APPROVED' && (
+                            <button
+                              onClick={() => handleApproveDoc(doc.id)}
+                              className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1"
+                            >
+                              <CheckCircle2 size={13} /> Duyệt
+                            </button>
+                          )}
+                          {doc.status !== 'REJECTED' && (
+                            <button
+                              onClick={() => handleRejectDoc(doc.id)}
+                              className="px-2 py-1.5 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-lg text-xs font-medium transition-all"
+                            >
+                              Từ chối
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 2: Event Registrations Table */}
+        {activeTab === 'registrations' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3 px-5">Sự kiện</th>
+                  <th className="py-3 px-4">Họ tên Sinh viên</th>
+                  <th className="py-3 px-4">Mã số SV</th>
+                  <th className="py-3 px-4">Chi đoàn / Lớp</th>
+                  <th className="py-3 px-4">Thời gian đăng ký</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredRegs.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center text-slate-400">
+                      <Calendar size={36} className="mx-auto text-slate-300 mb-2" />
+                      Không có lượt đăng ký sự kiện nào cần duyệt
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRegs.map((reg) => (
+                    <tr key={reg.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-5 font-semibold text-slate-900">
+                        {reg.event_name || 'Sự kiện Khoa'}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-800">
+                        {reg.user_full_name || reg.user_name || 'Sinh viên'}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-slate-600">
+                        {reg.student_code || '---'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {reg.class_name || 'Chi đoàn Khoa'}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-500">
+                        {reg.created_at ? new Date(reg.created_at).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : 'Vừa xong'}
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <button
+                          onClick={() => handleApproveReg(reg.id)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all inline-flex items-center gap-1"
+                        >
+                          <CheckCircle2 size={13} /> Duyệt vé
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 3: Club Proposals Table */}
+        {activeTab === 'proposals' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  <th className="py-3 px-5">Tên đề xuất / Kế hoạch</th>
+                  <th className="py-3 px-4">CLB / Đội nhóm</th>
+                  <th className="py-3 px-4">Kinh phí dự trù</th>
+                  <th className="py-3 px-4">Trạng thái</th>
+                  <th className="py-3 px-5 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                {filteredProps.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="py-12 text-center text-slate-400">
+                      <Sparkles size={36} className="mx-auto text-slate-300 mb-2" />
+                      Không có đề xuất hoạt động nào từ CLB
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProps.map((prop) => (
+                    <tr key={prop.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="py-3.5 px-5">
+                        <div className="font-semibold text-slate-900">{prop.title}</div>
+                        <div className="text-[11px] text-slate-500 line-clamp-1">{prop.description || 'Không có mô tả'}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-purple-700">
+                        {prop.club_name || 'CLB Khoa'}
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">
+                        {prop.estimated_budget ? `${prop.estimated_budget.toLocaleString()} đ` : '0 đ'}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {prop.status === 'APPROVED' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 size={12} /> Đã duyệt
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock size={12} /> Chờ Bí thư duyệt
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => { setSelectedProposal(prop); setShowProposalModal(true); }}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          {prop.status !== 'APPROVED' && (
+                            <button
+                              onClick={() => handleApproveProposal(prop.id)}
+                              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all inline-flex items-center gap-1"
+                            >
+                              <CheckCircle2 size={13} /> Phê duyệt
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Detail Modal - Digital Document */}
+      <Modal 
+        isOpen={showDocModal} 
+        onClose={() => setShowDocModal(false)} 
+        title="Chi tiết Văn bản & Giấy xác nhận"
+        size="md"
+      >
+        {selectedDoc && (
+          <div className="space-y-4 py-2 text-xs">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+              <div>
+                <span className="text-slate-400 font-semibold uppercase text-[10px] block">Tiêu đề</span>
+                <span className="font-bold text-slate-900 text-sm">{selectedDoc.title || selectedDoc.name}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <span className="text-slate-400 font-semibold uppercase text-[10px] block">Người gửi</span>
+                  <span className="font-semibold text-slate-800">{selectedDoc.user_name || selectedDoc.sender || 'Sinh viên'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold uppercase text-[10px] block">Ngày tạo</span>
+                  <span className="text-slate-600">{selectedDoc.created_at ? new Date(selectedDoc.created_at).toLocaleString('vi-VN') : 'Gần đây'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-semibold block mb-1">Nội dung chi tiết / Lý do:</span>
+              <p className="p-3 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
+                {selectedDoc.description || selectedDoc.content || 'Sinh viên yêu cầu xin giấy xác nhận đoàn viên hoàn thành nhiệm vụ năm học.'}
+              </p>
+            </div>
+
+            {selectedDoc.file_url && (
+              <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-700">
+                <span className="font-medium flex items-center gap-2">
+                  <FileText size={16} /> File đính kèm kèm theo
+                </span>
+                <a 
+                  href={selectedDoc.file_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-[11px]"
+                >
+                  Tải xuống
+                </a>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-3 border-t border-slate-200">
+              <button
+                onClick={() => handleRejectDoc(selectedDoc.id)}
+                className="flex-1 py-2 px-3 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 rounded-lg text-slate-700 font-semibold transition-all"
+              >
+                Từ chối đơn
+              </button>
+              <button
+                onClick={() => handleApproveDoc(selectedDoc.id)}
+                className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 size={14} /> Phê duyệt & Ký số
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Detail Modal - Club Proposal */}
+      <Modal 
+        isOpen={showProposalModal} 
+        onClose={() => setShowProposalModal(false)} 
+        title="Chi tiết Đề xuất Hoạt động CLB"
+        size="md"
+      >
+        {selectedProposal && (
+          <div className="space-y-4 py-2 text-xs">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+              <div>
+                <span className="text-slate-400 font-semibold uppercase text-[10px] block">CLB Trình nộp</span>
+                <span className="font-bold text-purple-700 text-sm">{selectedProposal.club_name}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 font-semibold uppercase text-[10px] block">Tên kế hoạch</span>
+                <span className="font-bold text-slate-900">{selectedProposal.title}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <span className="text-slate-400 font-semibold uppercase text-[10px] block">Kinh phí đề xuất</span>
+                  <span className="font-bold text-slate-900">
+                    {selectedProposal.estimated_budget ? `${selectedProposal.estimated_budget.toLocaleString()} đ` : '0 đ'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 font-semibold uppercase text-[10px] block">Thời gian dự kiến</span>
+                  <span className="text-slate-600">{selectedProposal.event_date || 'Trong tháng này'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-slate-500 font-semibold block mb-1">Mục tiêu & Kế hoạch tổ chức:</span>
+              <p className="p-3 bg-white border border-slate-200 rounded-xl text-slate-700 leading-relaxed">
+                {selectedProposal.description || 'Chương trình giao lưu và sinh hoạt chuyên đề định kỳ của CLB.'}
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-3 border-t border-slate-200">
+              <button
+                onClick={() => setShowProposalModal(false)}
+                className="flex-1 py-2 px-3 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-700 font-semibold transition-all"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => handleApproveProposal(selectedProposal.id)}
+                className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold shadow-sm transition-all flex items-center justify-center gap-1.5"
+              >
+                <CheckCircle2 size={14} /> Chấp thuận Đề xuất
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
 };
 
 export default SubAdminApprovals;

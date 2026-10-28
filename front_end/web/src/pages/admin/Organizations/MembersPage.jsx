@@ -1,12 +1,9 @@
 import React from "react";
-import MemberProfile from "../../../components/admin/Org/MemberProfile";
+import { Navigate, useLocation } from "react-router-dom";
 
 const MembersPage = () => {
-  return (
-    <div className="space-y-6">
-      <MemberProfile />
-    </div>
-  );
+  const location = useLocation();
+  return <Navigate to="/admin/organizations?tab=members" state={location.state} replace />;
 };
 
 export default MembersPage;

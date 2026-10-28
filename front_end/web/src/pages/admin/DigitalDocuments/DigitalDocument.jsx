@@ -324,7 +324,7 @@ const DigitalDocument = () => {
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsModalOpen(false)}></div>
-          <div className="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl p-8 animate-in zoom-in-95 duration-300 border border-slate-100">
+          <div className="relative bg-white w-full max-w-lg rounded-xl shadow-xl p-6 animate-in zoom-in-95 duration-200 border border-slate-200">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Plus size={20} /></div>

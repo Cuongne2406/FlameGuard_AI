@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, ChevronRight, ChevronDown, CornerDownRight } from "lucide-react";
+import { Calendar, ChevronRight, ChevronDown, CornerDownRight, Flag } from "lucide-react";
 import { campaignService } from "../../../services/campaignService";
 
 const TimeLineView = () => {
-  // Danh sách các tháng hiển thị trên header
   const months = [
     "Jan 2026",
     "Feb 2026",
@@ -25,7 +24,7 @@ const TimeLineView = () => {
     const fetchCampaigns = async () => {
       try {
         const data = await campaignService.getCampaigns();
-        setCampaigns(data);
+        setCampaigns(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to fetch campaigns:", error);
       }
@@ -33,10 +32,10 @@ const TimeLineView = () => {
     fetchCampaigns();
   }, []);
 
-  // Helper tính toán vị trí dựa trên ngày (giả định hiển thị năm 2026)
-  const getTimelinePos = (dateStr) => {
-    if (!dateStr) return 0;
-    const date = new Date(dateStr);
+  // Helper tính toán vị trí % trong năm 2026
+  const getTimelinePos = (dateInput) => {
+    if (!dateInput) return 0;
+    const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
     const startOfYear = new Date(2026, 0, 1);
     const diff = date - startOfYear;
     const oneDay = 1000 * 60 * 60 * 24;
@@ -44,18 +43,27 @@ const TimeLineView = () => {
     return Math.max(0, Math.min(100, (dayOfYear / 365) * 100));
   };
 
+  const today = new Date();
+  const todayPos = getTimelinePos(today);
+  const todayFormatted = `${String(today.getDate()).padStart(2, "0")}/${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const currentMonthIdx = today.getMonth();
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col h-full overflow-hidden animate-in slide-in-from-right-4 duration-500">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col h-full overflow-hidden">
       {/* 1. Header Timeline (Tháng) */}
-      <div className="flex border-b border-slate-100 bg-slate-50/50">
-        <div className="w-[300px] p-4 font-bold text-[11px] text-slate-400 uppercase tracking-widest border-r border-slate-200 shrink-0">
-          Chiến dịch / Đơn vị
+      <div className="flex border-b border-slate-200 bg-slate-50/70">
+        <div className="w-[280px] p-3.5 font-bold text-[11px] text-slate-500 uppercase tracking-wider border-r border-slate-200 shrink-0">
+          Chiến dịch / Đơn vị phụ trách
         </div>
-        <div className="flex-1 flex overflow-x-auto">
-          {months.map((month) => (
+        <div className="flex-1 flex overflow-x-auto min-w-[1000px]">
+          {months.map((month, idx) => (
             <div
               key={month}
-              className={`min-w-[120px] flex-1 p-4 text-center text-[10px] font-bold border-r border-slate-100 last:border-r-0 ${month === "Jun 2026" ? "text-blue-600 bg-blue-50/30" : "text-slate-400"}`}
+              className={`min-w-[100px] flex-1 p-3 text-center text-[11px] font-semibold border-r border-slate-100 last:border-r-0 ${
+                idx === currentMonthIdx
+                  ? "text-blue-700 font-bold bg-blue-50/60"
+                  : "text-slate-500"
+              }`}
             >
               {month}
             </div>
@@ -65,50 +73,70 @@ const TimeLineView = () => {
 
       {/* 2. Body Content */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Vạch kẻ "Hôm nay" */}
-        <div className="absolute left-[300px] ml-[45%] top-0 bottom-0 w-px bg-red-500 z-20 pointer-events-none">
-          <div className="absolute top-0 -translate-x-1/2 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow-sm">
-            Hôm nay (17/03)
-          </div>
-        </div>
-
         {/* Cột trái: Tên chiến dịch */}
-        <div className="w-[300px] border-r border-slate-200 shrink-0 bg-white z-10 overflow-y-auto">
-          <div className="divide-y divide-slate-50">
-            {campaigns.map((camp) => (
-              <React.Fragment key={camp.id}>
-                <CampaignNameRow name={camp.name} isParent />
-              </React.Fragment>
-            ))}
+        <div className="w-[280px] border-r border-slate-200 shrink-0 bg-white z-10 overflow-y-auto">
+          <div className="divide-y divide-slate-100">
+            {campaigns.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">
+                Chưa có dữ liệu chiến dịch
+              </div>
+            ) : (
+              campaigns.map((camp) => (
+                <CampaignNameRow
+                  key={camp.id}
+                  name={camp.name}
+                  unit={camp.unit || camp.organization?.name || "Đoàn trường LHU"}
+                  isParent
+                />
+              ))
+            )}
           </div>
         </div>
 
         {/* Cột phải: Biểu đồ Bars */}
-        <div className="flex-1 overflow-x-auto bg-white">
-          <div className="divide-y divide-slate-50 relative min-h-[500px]">
+        <div className="flex-1 overflow-x-auto bg-white relative">
+          <div className="divide-y divide-slate-100 relative min-h-[400px] min-w-[1000px]">
+            {/* Vạch kẻ "Hôm nay" động theo ngày thực tế */}
+            <div
+              className="absolute top-0 bottom-0 w-px bg-rose-500 z-30 pointer-events-none"
+              style={{ left: `${todayPos}%` }}
+            >
+              <div className="absolute top-0 -translate-x-1/2 bg-rose-600 text-white text-[9px] px-2 py-0.5 rounded font-bold whitespace-nowrap shadow-xs">
+                Hôm nay ({todayFormatted})
+              </div>
+            </div>
+
             {/* Lưới kẻ mờ dọc cho mỗi tháng */}
             <div className="absolute inset-0 flex pointer-events-none">
               {months.map((_, i) => (
                 <div
                   key={i}
-                  className="flex-1 min-w-[120px] border-r border-slate-200"
-                ></div>
+                  className="flex-1 min-w-[100px] border-r border-slate-100"
+                />
               ))}
             </div>
 
-            {campaigns.map((camp, cIndex) => {
+            {campaigns.map((camp) => {
               const startPos = getTimelinePos(camp.start_date);
               const endPos = getTimelinePos(camp.end_date);
-              const width = Math.max(2, endPos - startPos); // Tối thiểu 2% để nhìn thấy
+              const width = Math.max(3, endPos - startPos);
+
+              const unitStr = String(camp.unit || camp.organization?.name || "");
+              const barColor = unitStr.includes("CNTT")
+                ? "bg-amber-500 hover:bg-amber-600"
+                : unitStr.includes("Xây dựng")
+                ? "bg-emerald-500 hover:bg-emerald-600"
+                : "bg-blue-600 hover:bg-blue-700";
 
               return (
                 <TimelineRow key={camp.id}>
                   <TimelineBar
-                    color={camp.unit.includes("CNTT") ? "bg-orange-500" : 
-                           camp.unit.includes("Xây dựng") ? "bg-emerald-500" : "bg-blue-500"}
+                    color={barColor}
                     start={`${startPos}%`}
                     width={`${width}%`}
+                    numericWidth={width}
                     label={camp.name}
+                    dates={`${camp.start_date || ""} - ${camp.end_date || ""}`}
                     hasMilestone={camp.status === "ONGOING" || camp.status === "RUNNING"}
                   />
                 </TimelineRow>
@@ -118,12 +146,15 @@ const TimeLineView = () => {
         </div>
       </div>
 
-      {/* 3. Chú giải (Legend) - Theo ảnh */}
-      <div className="p-4 bg-white border-t border-slate-100 flex gap-6 items-center">
-        <LegendItem color="bg-blue-500" label="Chiến dịch cấp Trường" />
-        <LegendItem color="bg-emerald-500" label="Khoa Xây dựng" />
-        <LegendItem color="bg-orange-500" label="Khoa CNTT" />
-        <LegendItem isMilestone label="Sự kiện quan trọng (Milestone)" />
+      {/* 3. Chú giải (Legend) */}
+      <div className="p-3.5 bg-slate-50 border-t border-slate-200 flex flex-wrap gap-5 items-center text-xs">
+        <LegendItem color="bg-blue-600" label="Chiến dịch cấp Trường" />
+        <LegendItem color="bg-emerald-500" label="Cấp Khoa / Viện" />
+        <LegendItem color="bg-amber-500" label="Câu lạc bộ / Chi đoàn" />
+        <LegendItem isMilestone label="Trọng điểm (Milestone)" />
+        <span className="text-[11px] text-slate-400 ml-auto">
+          * Trục thời gian chuẩn hóa theo niên khóa 2026
+        </span>
       </div>
     </div>
   );
@@ -131,50 +162,67 @@ const TimeLineView = () => {
 
 // --- Helper Components ---
 
-const CampaignNameRow = ({ name, isParent, isSub }) => (
-  <div
-    className={`h-14 flex items-center px-4 gap-2 ${isSub ? "bg-slate-50/30" : "bg-white"}`}
-  >
-    {isParent && <ChevronDown size={14} className="text-slate-400" />}
-    {isSub && <CornerDownRight size={14} className="text-slate-300 ml-4" />}
-    <div
-      className={`flex items-center gap-2 ${isParent ? "font-bold text-slate-700" : "text-slate-500 text-xs font-medium"}`}
-    >
-      {isParent && <span className="text-red-500">🚩</span>}
-      <span className="truncate leading-tight">{name}</span>
+const CampaignNameRow = ({ name, unit, isParent }) => (
+  <div className="h-14 flex items-center px-4 justify-between bg-white hover:bg-slate-50/70 transition-colors">
+    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+      <Flag size={14} className="text-blue-600 shrink-0" />
+      <div className="min-w-0">
+        <span className="block text-xs font-bold text-slate-800 truncate" title={name}>
+          {name}
+        </span>
+        <span className="block text-[10px] text-slate-400 truncate mt-0.5">
+          {unit}
+        </span>
+      </div>
     </div>
   </div>
 );
 
 const TimelineRow = ({ children }) => (
-  <div className="h-14 flex items-center relative group hover:bg-slate-50/40 transition-colors">
+  <div className="h-14 flex items-center relative group hover:bg-slate-50/30 transition-colors">
     {children}
   </div>
 );
 
-const TimelineBar = ({ color, start, width, label, hasMilestone }) => (
-  <div
-    className={`absolute h-6 ${color} rounded-md shadow-sm flex items-center px-3 z-10 transition-transform hover:scale-[1.02] cursor-pointer`}
-    style={{ left: start, width: width }}
-  >
-    {hasMilestone && (
-      <div className="absolute -left-1 -top-1 w-3 h-3 bg-yellow-400 rotate-45 border-2 border-white"></div>
-    )}
-    <span className="text-[9px] font-bold text-white truncate">{label}</span>
-    {hasMilestone && (
-      <div className="absolute -right-1 -top-1 w-3 h-3 bg-red-600 rotate-45 border-2 border-white"></div>
-    )}
-  </div>
-);
+const TimelineBar = ({ color, start, width, numericWidth, label, dates, hasMilestone }) => {
+  const isShortBar = numericWidth < 14;
+
+  return (
+    <div
+      className={`absolute h-7 ${color} rounded-md shadow-xs flex items-center px-2.5 z-10 transition-all cursor-pointer group`}
+      style={{ left: start, width: width }}
+      title={`${label} (${dates})`}
+    >
+      {hasMilestone && (
+        <div className="absolute -left-1 -top-1 w-2.5 h-2.5 bg-amber-400 rotate-45 border border-white" />
+      )}
+
+      {/* If bar is wide enough, show text inside; if short, show text flowing cleanly outside */}
+      {isShortBar ? (
+        <span className="absolute left-full ml-2 whitespace-nowrap text-[11px] font-semibold text-slate-700 bg-white/95 px-2 py-0.5 rounded border border-slate-200 shadow-xs z-20 pointer-events-none">
+          {label}
+        </span>
+      ) : (
+        <span className="text-[10px] font-bold text-white truncate drop-shadow-xs">
+          {label}
+        </span>
+      )}
+
+      {hasMilestone && (
+        <div className="absolute -right-1 -top-1 w-2.5 h-2.5 bg-rose-600 rotate-45 border border-white" />
+      )}
+    </div>
+  );
+};
 
 const LegendItem = ({ color, label, isMilestone }) => (
   <div className="flex items-center gap-2">
     {isMilestone ? (
-      <div className="w-3 h-3 bg-yellow-400 rotate-45 border border-white shadow-sm"></div>
+      <div className="w-2.5 h-2.5 bg-amber-400 rotate-45 border border-white shadow-xs shrink-0" />
     ) : (
-      <div className={`w-3 h-3 rounded-full ${color}`}></div>
+      <div className={`w-2.5 h-2.5 rounded-full ${color} shrink-0`} />
     )}
-    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+    <span className="text-[11px] font-medium text-slate-600">
       {label}
     </span>
   </div>

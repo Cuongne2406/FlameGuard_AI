@@ -70,9 +70,9 @@ class FundRequestBase(BaseModel):
     evidence_urls: Optional[str] = None # JSON list of evidence images
 
 class FundRequestCreate(FundRequestBase):
-    budget_id: UUID
+    budget_id: Optional[UUID] = None
     event_id: Optional[UUID] = None
-    requested_by: UUID
+    requested_by: Optional[UUID] = None
 
 class FundRequestUpdate(BaseModel):
     amount: Optional[Decimal] = None
@@ -89,9 +89,33 @@ class FundRequestResponse(FundRequestBase):
     requested_by: UUID
     approved_by: Optional[UUID] = None
     approved_at: Optional[datetime] = None
+    requester_name: Optional[str] = None
+    budget_name: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class StudentFeeItemResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    full_name: str
+    student_id: Optional[str] = None
+    class_name: Optional[str] = None
+    title: str
+    amount: float
+    status: str
+    paid_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class StudentFeeOverviewResponse(BaseModel):
+    totalStudents: int
+    paidCount: int
+    pendingCount: int
+    totalCollected: float
+    percentPaid: float
+    items: List[StudentFeeItemResponse]
 
 
 # ==========================================

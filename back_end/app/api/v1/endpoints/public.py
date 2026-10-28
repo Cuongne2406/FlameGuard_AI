@@ -100,3 +100,22 @@ def read_news_detail(news_id: UUID, db: Session = Depends(get_db)):
         "content": news.content or news.excerpt,
         "image": news.image_url or f"https://picsum.photos/seed/{news.id}/900/500"
     }
+
+@router.post("/contact")
+def submit_public_contact(
+    data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Tiếp nhận phản hồi / liên hệ từ trang liên hệ công khai và lưu vào nhật ký hệ thống.
+    """
+    from app.models.audit import AuditLog
+    
+    audit = AuditLog(
+        action="CONTACT_SUBMISSION",
+        entity_type="ContactFeedback",
+        new_values=data
+    )
+    db.add(audit)
+    db.commit()
+    return {"status": "success", "message": "Thông tin liên hệ của bạn đã được gửi thành công!"}

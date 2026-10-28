@@ -191,6 +191,13 @@ class EventRegistrationResponse(EventRegistrationBase):
     user_id: UUID
     check_in_time: Optional[datetime] = None
     check_in_token: Optional[str] = None
+    user_full_name: Optional[str] = None
+    student_code: Optional[str] = None
+    user_email: Optional[str] = None
+    class_name: Optional[str] = None
+    faculty_name: Optional[str] = None
+    event_name: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

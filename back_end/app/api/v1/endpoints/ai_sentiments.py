@@ -1,18 +1,22 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from app.models.ai import AISentiment, SentimentLabel
-from app.api.deps import get_db
+from app.models.core import Organization
+from app.api.deps import get_db, get_user_faculty_org
 from app.schemas.ai_audit_schemas import AISentimentCreate, AISentimentUpdate, AISentimentResponse
 from app.services import ai_audit_service
 
 router = APIRouter()
 
 @router.get("/sub-admin")
-def get_sub_admin_ai_sentiments(db: Session = Depends(get_db)):
+def get_sub_admin_ai_sentiments(
+    db: Session = Depends(get_db),
+    faculty_org: Optional[Organization] = Depends(get_user_faculty_org)
+):
     """Fetch AI Sentiments mixed with real database metrics for SubAdmin"""
-    return ai_audit_service.get_sub_admin_dashboard_analysis(db=db)
+    return ai_audit_service.get_sub_admin_dashboard_analysis(db=db, faculty_org=faculty_org)
 
 @router.get("/admin")
 def get_admin_ai_sentiments(db: Session = Depends(get_db)):

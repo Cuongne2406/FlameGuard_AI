@@ -44,5 +44,12 @@ export const publicService = {
       console.error('Error fetching news detail:', error);
       return null;
     }
+  },
+
+  submitContact: async (contactData) => {
+    return await apiClient('/public/contact', {
+      method: 'POST',
+      body: JSON.stringify(contactData)
+    });
   }
 };

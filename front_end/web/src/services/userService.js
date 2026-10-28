@@ -164,5 +164,12 @@ export const userService = {
       method: 'PUT',
       body: JSON.stringify(userData)
     });
+  },
+
+  changePassword: async (passwordData) => {
+    return apiClient('/users/me/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData)
+    });
   }
 };

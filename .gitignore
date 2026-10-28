@@ -49,7 +49,12 @@ bin/
 lib/
 share/
 Include/
-Scripts/
+.venv/Scripts/
+venv/Scripts/
+env/Scripts/
+ENV/Scripts/
+!back_end/scripts/
+!front_end/app/scripts/
 
 # Python cache
 __pycache__/

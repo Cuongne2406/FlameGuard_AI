@@ -14,6 +14,7 @@ import {
   Users,
   CheckCircle2,
   Loader2,
+  Building2,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { organizationService } from "../../../services/organizationService";
@@ -260,31 +261,31 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 p-4 md:p-6 bg-white min-h-screen font-sans text-slate-900">
+    <div className="space-y-4 font-sans text-slate-900">
       {/* 1. THANH CÔNG CỤ */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-center mb-6">
-        <div className="relative w-full lg:max-w-md">
+      <div className="flex flex-col sm:flex-row gap-3 justify-between items-center">
+        <div className="relative w-full sm:w-80">
           <div className="relative group">
             <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors"
-              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none"
+              size={15}
             />
             <input
               type="text"
-              placeholder="Tìm theo tên, người đứng đầu..."
+              placeholder="Tìm theo tên đơn vị, lãnh đạo..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setShowSuggestions(true);
               }}
               onFocus={() => setShowSuggestions(true)}
-              className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-500 transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-xs"
             />
           </div>
 
           {showSuggestions && searchTerm && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 overflow-hidden">
-              <div className="px-4 py-2 bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 Gợi ý tìm kiếm
               </div>
               {suggestions.map((u) => (
@@ -294,12 +295,12 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                     setSearchTerm(u.name);
                     setShowSuggestions(false);
                   }}
-                  className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center justify-between group"
+                  className="w-full px-3 py-2 text-left hover:bg-blue-50 flex items-center justify-between group transition-colors"
                 >
-                  <span className="text-sm font-bold text-slate-700 group-hover:text-blue-600">
+                  <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-600">
                     {u.name}
                   </span>
-                  <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500">
+                  <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">
                     {u.type}
                   </span>
                 </button>
@@ -308,12 +309,12 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-3 w-full lg:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
           <button
             onClick={exportToExcel}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-black text-slate-600 hover:bg-slate-50 transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
-            <Download size={18} />
+            <Download size={15} />
             <span>Xuất Excel</span>
           </button>
           <button
@@ -321,186 +322,187 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
               setNewUnitName("");
               setModalStep("create");
             }}
-            className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 rounded-2xl text-sm font-black text-white shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
-            <Plus size={18} />
-            <span>Thêm Đơn vị</span>
+            <Plus size={15} />
+            <span>+ Thêm Đơn vị</span>
           </button>
         </div>
       </div>
 
       {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-4">
-              <Loader2 className="animate-spin" size={40} />
-              <p className="font-bold">Đang tải danh sách đơn vị...</p>
-          </div>
+        <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3 bg-white rounded-xl border border-slate-200">
+          <Loader2 className="animate-spin text-blue-600" size={32} />
+          <p className="text-xs font-medium text-slate-500">Đang tải danh sách đơn vị...</p>
+        </div>
       ) : (
-      <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Thông tin đơn vị
-                </th>
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                  Nhân sự phụ trách
-                </th>
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                  Quy mô
-                </th>
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                  Thi đua
-                </th>
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                  Trạng thái
-                </th>
-                <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {filteredUnits.length > 0 ? (
-                filteredUnits.map((unit) => (
-                  <tr
-                    key={unit.id}
-                    className="hover:bg-blue-50/30 transition-colors group"
-                  >
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                          <ExternalLink size={22} />
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/90 border-b border-slate-200">
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Thông tin đơn vị
+                  </th>
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Nhân sự phụ trách
+                  </th>
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
+                    Quy mô
+                  </th>
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
+                    Thi đua
+                  </th>
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
+                    Trạng thái
+                  </th>
+                  <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredUnits.length > 0 ? (
+                  filteredUnits.map((unit) => (
+                    <tr
+                      key={unit.id}
+                      className="hover:bg-slate-50/70 transition-colors group"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-blue-50 text-blue-600 border border-blue-100">
+                            <Building2 size={16} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 leading-tight">
+                              {unit.name}
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {unit.type}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                            {unit.name}
-                          </p>
-                          <p className="text-[11px] text-slate-400 font-bold">
-                            {unit.type}
-                          </p>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-blue-600 text-xs font-bold shrink-0">
+                            {unit.leader.split(" ").pop().charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 leading-tight">
+                              {unit.leader}
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {unit.leaderId ? `${unit.leaderId} • ` : ""}{unit.leaderTitle}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center text-blue-600 text-[11px] font-black uppercase">
-                          {unit.leader.split(" ").pop().charAt(0)}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <p className="text-xs font-semibold text-slate-700">
+                          {unit.size}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {unit.subUnits}
+                        </p>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="inline-flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                          {unit.score}đ
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          {unit.status === "Active" ? "Đang hoạt động" : unit.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => handleViewMembers(unit)}
+                            title="Danh sách thành viên"
+                            className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          >
+                            <Users size={15} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedUnit(unit);
+                              setNewUnitName(unit.name);
+                              setNewUnitType(unit.type === 'LCĐ Khoa' ? 'FACULTY' : unit.type === 'CLB/Đội/Nhóm' ? 'CLUB' : 'CLASS');
+                              setUserSearchTerm(unit.leaderId || "");
+                              setAssignTitle(unit.leaderTitle || "Bí thư");
+                              setModalStep("edit");
+                            }}
+                            title="Chỉnh sửa đơn vị"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedUnit(unit);
+                              setModalStep("delete");
+                            }}
+                            title="Xóa đơn vị"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-700">
-                            {unit.leader}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-medium">
-                            {unit.leaderId ? `${unit.leaderId} • ` : ""}{unit.leaderTitle}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <p className="text-xs font-black text-slate-700">
-                        {unit.size}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="px-6 py-16 text-center text-slate-400"
+                    >
+                      <Filter
+                        size={36}
+                        className="mx-auto mb-2 text-slate-300"
+                        strokeWidth={1.5}
+                      />
+                      <p className="text-xs font-medium text-slate-500">
+                        Không tìm thấy đơn vị phù hợp
                       </p>
-                      <p className="text-[10px] text-slate-400 font-medium">
-                        {unit.subUnits}
-                      </p>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
-                        {unit.score}đ
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase">
-                        {unit.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleViewMembers(unit)}
-                          title="Danh sách sinh viên"
-                          className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
-                        >
-                          <Users size={16} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedUnit(unit);
-                            setNewUnitName(unit.name);
-                            setNewUnitType(unit.type === 'LCĐ Khoa' ? 'FACULTY' : unit.type === 'CLB/Đội/Nhóm' ? 'CLUB' : 'CLASS');
-                            // Load existing leader info if available
-                            setUserSearchTerm(unit.leaderId || "");
-                            setAssignTitle(unit.leaderTitle || "Bí thư");
-                            setModalStep("edit");
-                          }}
-                          className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
-                        >
-                          <Edit3 size={16} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedUnit(unit);
-                            setModalStep("delete");
-                          }}
-                          className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-xl shadow-sm border border-transparent hover:border-slate-100 transition-all"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="px-6 py-20 text-center text-slate-300"
-                  >
-                    <Filter
-                      size={48}
-                      className="mx-auto mb-3"
-                      strokeWidth={1}
-                    />
-                    <p className="text-sm font-medium">
-                      Không tìm thấy dữ liệu
-                    </p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
 
       {/* 3. MODAL SYSTEM */}
       {modalStep !== "none" && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-[2px] p-0 sm:p-4">
-          <div className="bg-white w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+          <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-50">
-              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/70">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
                 {modalStep === "create" && "Tạo đơn vị mới"}
                 {modalStep === "edit" && "Chỉnh sửa đơn vị"}
-                {modalStep === "delete" && "Xác nhận xóa"}
+                {modalStep === "delete" && "Xác nhận xóa đơn vị"}
                 {modalStep === "success" && "Thông báo"}
                 {modalStep === "members" && `Danh sách ${selectedUnit?.name}`}
               </h3>
               <button
                 onClick={handleCloseModal}
-                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
               >
-                <X size={20} className="text-slate-400" />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-8">
+            <div className="p-6">
               {(modalStep === "create" || modalStep === "edit") && (
-                <div className="space-y-5">
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-[11px] font-black text-slate-400 uppercase mb-2 ml-1">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                       Tên đơn vị *
                     </label>
                     <input
@@ -508,18 +510,18 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                       value={newUnitName}
                       onChange={(e) => setNewUnitName(e.target.value)}
                       placeholder="VD: Khoa Ngoại ngữ..."
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold"
+                      className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all font-medium"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-black text-slate-400 uppercase mb-2 ml-1">
+                      <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                         Loại hình
                       </label>
                       <select 
                          value={newUnitType}
                          onChange={(e) => setNewUnitType(e.target.value)}
-                         className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none font-bold italic"
+                         className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-blue-600"
                       >
                         <option value="FACULTY">Đoàn Khoa</option>
                         <option value="CLUB">CLB / Đội / Nhóm</option>
@@ -527,22 +529,22 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black text-slate-400 uppercase mb-2 ml-1">
+                      <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
                         Trực thuộc
                       </label>
-                      <select className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm outline-none font-bold italic">
+                      <select className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-blue-600">
                         <option>Ban Chấp hành</option>
                       </select>
                     </div>
                   </div>
 
                   {/* Phần bổ nhiệm lãnh đạo */}
-                  <div className="pt-4 border-t border-slate-100">
-                    <label className="block text-[11px] font-black text-slate-500 uppercase mb-3 flex items-center gap-2">
-                       <UserPlus size={14} className="text-blue-500" />
+                  <div className="pt-3 border-t border-slate-200">
+                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                       <UserPlus size={14} className="text-blue-600" />
                        {modalStep === "create" ? "Bổ nhiệm người phụ trách (Tùy chọn)" : "Chỉnh sửa người phụ trách"}
                     </label>
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="relative group">
                         <input
                           type="text"
@@ -553,7 +555,7 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                           }}
                           onFocus={() => setUserShowSuggestions(true)}
                           placeholder="Nhập MSSV hoặc Tên lãnh đạo..."
-                          className={`w-full px-5 py-4 bg-slate-50 border ${selectedLeader ? 'border-blue-500 ring-4 ring-blue-500/10' : 'border-slate-200'} rounded-2xl text-sm focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-bold pr-12`}
+                          className={`w-full px-3.5 py-2.5 bg-white border ${selectedLeader ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-300'} rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all font-medium pr-10`}
                         />
                         {userSearchTerm && (
                           <button
@@ -563,13 +565,13 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                               setSelectedLeader(null);
                               setUserShowSuggestions(false);
                             }}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors"
                           >
                             <X size={14} />
                           </button>
                         )}
                         {filteredUsers.length > 0 && userShowSuggestions && (
-                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             {filteredUsers.map(u => (
                               <button
                                 key={u.id}
@@ -579,13 +581,13 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                                   setUserSearchTerm(u.full_name);
                                   setUserShowSuggestions(false);
                                 }}
-                                className="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 border-b border-slate-50 last:border-0"
+                                className="w-full px-3.5 py-2.5 text-left hover:bg-blue-50 flex items-center gap-2.5 border-b border-slate-100 last:border-0 transition-colors"
                               >
-                                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[10px] font-bold uppercase">
+                                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-xs font-bold shrink-0">
                                   {u.full_name?.split(" ").pop().charAt(0)}
                                 </div>
-                                <div className="flex-1">
-                                  <p className="text-sm font-bold text-slate-700">{u.full_name}</p>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-bold text-slate-800 truncate">{u.full_name}</p>
                                   <p className="text-[10px] text-slate-400">{u.student_id ? `MSSV: ${u.student_id}` : u.email}</p>
                                 </div>
                               </button>
@@ -594,13 +596,13 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-3 p-3 bg-blue-50/50 rounded-2xl border border-blue-100/50">
+                      <div className="flex items-center gap-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
                          <div className="flex-1">
-                             <p className="text-[10px] font-black text-blue-500 uppercase mb-1 ml-1">Chức vụ</p>
+                             <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Chức vụ phụ trách</p>
                              <select 
                                value={assignTitle}
                                onChange={(e) => setAssignTitle(e.target.value)}
-                               className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none"
+                               className="w-full bg-transparent text-xs font-semibold text-slate-800 outline-none"
                              >
                                <option>Bí thư</option>
                                <option>Phó Bí thư</option>
@@ -616,17 +618,17 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
               )}
 
               {modalStep === "delete" && (
-                <div className="text-center space-y-4">
-                  <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500">
-                    <AlertTriangle size={40} />
+                <div className="text-center space-y-3 py-2">
+                  <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+                    <AlertTriangle size={28} />
                   </div>
-                  <div className="space-y-2">
-                    <h4 className="text-lg font-black text-slate-800">
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-slate-900">
                       Bạn có chắc chắn muốn xóa?
                     </h4>
-                    <p className="text-sm text-slate-400">
-                      Hành động này sẽ xóa vĩnh viễn đơn vị <br />
-                      <span className="font-black text-red-600 uppercase">
+                    <p className="text-xs text-slate-500">
+                      Hành động này sẽ xóa vĩnh viễn đơn vị{" "}
+                      <span className="font-bold text-rose-600">
                         {selectedUnit?.name}
                       </span>
                     </p>
@@ -635,47 +637,47 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
               )}
 
               {modalStep === "success" && (
-                <div className="py-6 text-center">
-                  <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-500 shadow-lg shadow-emerald-50">
-                    <CheckCircle2 size={48} />
+                <div className="py-4 text-center">
+                  <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600 border border-emerald-100">
+                    <CheckCircle2 size={32} />
                   </div>
-                  <h4 className="text-xl font-black text-slate-800 uppercase italic">
-                    Thành công!
+                  <h4 className="text-base font-bold text-slate-900">
+                    Thao tác thành công!
                   </h4>
-                  <p className="text-sm text-slate-400 mt-2">
+                  <p className="text-xs text-slate-500 mt-1">
                     Dữ liệu đã được cập nhật thành công vào hệ thống.
                   </p>
                 </div>
               )}
 
               {modalStep === "members" && (
-                <div className="py-2 max-h-[60vh] overflow-y-auto w-full">
+                <div className="max-h-[50vh] overflow-y-auto w-full">
                     {loadingMembers ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-4">
-                            <Loader2 className="animate-spin" size={30} />
-                            <p className="font-bold">Đang tải danh sách...</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-2">
+                            <Loader2 className="animate-spin text-blue-600" size={24} />
+                            <p className="text-xs font-medium">Đang tải danh sách...</p>
                         </div>
                     ) : unitMembers.length === 0 ? (
-                        <p className="text-center text-sm text-slate-500 py-8 font-bold">Chưa có sinh viên nào trong đơn vị này.</p>
+                        <p className="text-center text-xs text-slate-500 py-6">Chưa có sinh viên nào trong đơn vị này.</p>
                     ) : (
                         <div className="overflow-x-auto w-full">
-                            <table className="w-full text-left border-collapse min-w-[500px]">
+                            <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-slate-100 bg-slate-50">
-                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">STT</th>
-                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">MSSV</th>
-                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Họ và tên</th>
-                                        <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Chức vụ</th>
+                                    <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                        <th className="px-3 py-2.5">STT</th>
+                                        <th className="px-3 py-2.5">MSSV</th>
+                                        <th className="px-3 py-2.5">Họ và tên</th>
+                                        <th className="px-3 py-2.5">Chức vụ</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-slate-100">
                                     {unitMembers.map((m, idx) => (
-                                        <tr key={m.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                                            <td className="px-4 py-3 text-sm font-medium text-slate-500">{idx + 1}</td>
-                                            <td className="px-4 py-3 text-sm font-bold text-slate-700">{m.student_id || '---'}</td>
-                                            <td className="px-4 py-3 text-sm font-black text-slate-800">{m.full_name}</td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-xs font-bold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg">
+                                        <tr key={m.id} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-3 py-2 text-xs text-slate-500">{idx + 1}</td>
+                                            <td className="px-3 py-2 text-xs font-bold text-slate-700">{m.student_id || '---'}</td>
+                                            <td className="px-3 py-2 text-xs font-semibold text-slate-800">{m.full_name}</td>
+                                            <td className="px-3 py-2">
+                                                <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
                                                     {m.title}
                                                 </span>
                                             </td>
@@ -690,62 +692,62 @@ const UnitList = ({ triggerCreateModal, onModalClose }) => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-8 py-6 bg-slate-50/50 flex flex-col sm:flex-row justify-end gap-3">
+            <div className="px-6 py-3.5 bg-slate-50/70 border-t border-slate-200 flex justify-end gap-2.5">
               {modalStep === "delete" ? (
                 <>
                   <button
                     onClick={() => setModalStep("none")}
-                    className="px-6 py-3 text-sm font-black text-slate-400"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                   >
-                    HỦY BỎ
+                    Hủy bỏ
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="px-8 py-3 bg-red-600 text-white text-sm font-black rounded-xl shadow-lg shadow-red-100 hover:bg-red-700 transition-all active:scale-95"
+                    className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors"
                   >
-                    XÁC NHẬN XÓA
+                    Xác nhận xóa
                   </button>
                 </>
               ) : modalStep === "edit" ? (
                 <>
                   <button
                     onClick={() => setModalStep("none")}
-                    className="px-6 py-3 text-sm font-black text-slate-400"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                   >
-                    HỦY
+                    Hủy
                   </button>
                   <button
                     onClick={handleEdit}
                     disabled={!newUnitName || !selectedLeader || isSubmitting}
-                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                    LƯU THAY ĐỔI
+                    {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                    Lưu thay đổi
                   </button>
                 </>
               ) : modalStep === "create" ? (
                 <>
                   <button
                     onClick={() => setModalStep("none")}
-                    className="px-6 py-3 text-sm font-black text-slate-400"
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                   >
-                    HỦY
+                    Hủy
                   </button>
                   <button
                     onClick={handleCreate}
                     disabled={!newUnitName || !selectedLeader || isSubmitting}
-                    className="px-8 py-3 bg-blue-600 text-white text-sm font-black rounded-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
                   >
-                    {isSubmitting && <Loader2 size={16} className="animate-spin" />}
-                    HOÀN TẤT
+                    {isSubmitting && <Loader2 size={14} className="animate-spin" />}
+                    Hoàn tất
                   </button>
                 </>
               ) : (
                 <button
                   onClick={handleCloseModal}
-                  className="w-full py-4 bg-slate-900 text-white text-sm font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all shadow-xl shadow-slate-200"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg transition-colors"
                 >
-                  ĐÓNG CỬA SỔ
+                  Đóng
                 </button>
               )}
             </div>

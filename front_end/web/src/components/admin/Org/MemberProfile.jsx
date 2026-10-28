@@ -15,6 +15,7 @@ import {
   UserCheck,
   X,
   AlertCircle,
+  Download,
 } from "lucide-react";
 import { userService } from "../../../services/userService";
 import { organizationService } from "../../../services/organizationService";
@@ -98,46 +99,47 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-        <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <h3 className="text-xl font-black text-slate-800">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="bg-white w-full max-w-lg rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/70">
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
             {member ? "Chỉnh sửa Cán bộ" : "Thêm Cán bộ mới"}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-full transition-colors">
-            <X size={20} className="text-slate-400" />
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+            <X size={18} />
           </button>
         </div>
-        <div className="p-8 space-y-4">
+        <div className="p-6 space-y-3.5">
           <div className="relative">
-            <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Họ và tên / MSSV</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 block">Họ và tên / MSSV *</label>
             <div className="relative">
               <input
-                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.userId ? 'border-blue-500 bg-blue-50/30' : 'border-slate-100'} rounded-2xl focus:ring-2 focus:ring-blue-100 outline-none transition-all font-bold`}
+                className={`w-full px-3.5 py-2.5 bg-white border ${formData.userId ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-300'} rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-600 outline-none transition-all text-xs font-medium`}
                 value={searchUser}
                 onChange={(e) => {
                   setSearchUser(e.target.value);
                   setFormData(prev => ({ ...prev, name: e.target.value, userId: null }));
                   setShowUserSuggestions(true);
                 }}
-                placeholder="Tìm MSSV hoặc nhập tên mới..."
+                placeholder="Tìm MSSV hoặc nhập tên cán bộ..."
               />
               {formData.userId && (
                 <button 
                   onClick={() => { setFormData(p => ({...p, userId: null})); setSearchUser(""); }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-rose-600 p-1"
                 >
-                  <X size={16} />
+                  <X size={14} />
                 </button>
               )}
             </div>
             
             {showUserSuggestions && filteredUsers.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+              <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                 {filteredUsers.map(u => (
                   <button
                     key={u.id}
-                    className="w-full px-5 py-3 text-left hover:bg-blue-50 border-b border-slate-50 last:border-0 flex justify-between items-center"
+                    type="button"
+                    className="w-full px-3.5 py-2 text-left hover:bg-blue-50 border-b border-slate-100 last:border-0 flex justify-between items-center transition-colors"
                     onClick={() => {
                       setFormData(prev => ({ ...prev, name: u.full_name, userId: u.id, email: u.email }));
                       setSearchUser(u.full_name);
@@ -145,30 +147,30 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
                     }}
                   >
                     <div>
-                      <p className="font-bold text-slate-800">{u.full_name}</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">{u.student_id || "User"}</p>
+                      <p className="text-xs font-bold text-slate-800">{u.full_name}</p>
+                      <p className="text-[10px] text-slate-400">{u.student_id ? `MSSV: ${u.student_id}` : u.email}</p>
                     </div>
-                    <Plus size={14} className="text-blue-500" />
+                    <Plus size={14} className="text-blue-600" />
                   </button>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Email</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 block">Email</label>
               <input
-                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-blue-600"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="email@example.com"
               />
             </div>
             <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Số điện thoại</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 block">Số điện thoại</label>
               <input
-                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-blue-600"
                 value={formData.phone_number}
                 onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                 placeholder="09xxx..."
@@ -176,11 +178,11 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Chức vụ</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 block">Chức vụ</label>
               <select
-                className="w-full px-5 py-3 mt-1 bg-slate-50 border border-slate-100 rounded-2xl outline-none font-bold"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 outline-none focus:border-blue-600"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               >
@@ -191,9 +193,9 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
               </select>
             </div>
             <div className="relative">
-              <label className="text-[11px] font-black uppercase text-slate-400 ml-2">Đơn vị</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-1 block">Đơn vị trực thuộc *</label>
               <input
-                className={`w-full px-5 py-3 mt-1 bg-slate-50 border ${formData.unitId ? 'border-emerald-500 bg-emerald-50/30' : 'border-slate-100'} rounded-2xl outline-none font-bold transition-all`}
+                className={`w-full px-3.5 py-2.5 bg-white border ${formData.unitId ? 'border-emerald-600 ring-2 ring-emerald-100' : 'border-slate-300'} rounded-lg text-xs font-medium outline-none transition-all`}
                 value={searchUnit}
                 onChange={(e) => {
                   setSearchUnit(e.target.value);
@@ -203,38 +205,39 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
                 placeholder="Tìm tên khoa/lớp..."
               />
               {showUnitSuggestions && filteredOrgs.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden max-h-48 overflow-y-auto">
+                <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden max-h-48 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
                   {filteredOrgs.map(o => (
                     <button
                       key={o.id}
                       type="button"
-                      className="w-full px-5 py-3 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0"
+                      className="w-full px-3.5 py-2 text-left hover:bg-emerald-50 border-b border-slate-100 last:border-0 transition-colors"
                       onClick={() => {
                         setFormData(prev => ({ ...prev, unit: o.name, unitId: o.id }));
                         setSearchUnit(o.name);
                         setShowUnitSuggestions(false);
                       }}
                     >
-                      <p className="font-bold text-slate-800">{o.name}</p>
+                      <p className="text-xs font-bold text-slate-800">{o.name}</p>
                     </button>
                   ))}
                 </div>
               )}
               {formData.unit && !formData.unitId && (
-                <p className="text-[10px] text-rose-500 font-bold mt-1.5 ml-2 animate-pulse flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs">info</span>
-                  Vui lòng nhấp chọn từ danh sách gợi ý phía trên
+                <p className="text-[10px] text-rose-600 font-semibold mt-1">
+                  Vui lòng nhấp chọn từ gợi ý phía trên
                 </p>
               )}
             </div>
           </div>
         </div>
-        <div className="px-8 py-6 bg-slate-50 flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:text-slate-700">Hủy bỏ</button>
+        <div className="px-6 py-3.5 bg-slate-50/70 border-t border-slate-200 flex justify-end gap-2.5">
+          <button onClick={onClose} className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+            Hủy bỏ
+          </button>
           <button
             onClick={() => onSave(formData)}
             disabled={!formData.name || !formData.unitId}
-            className={`flex-1 py-3 text-white rounded-2xl text-sm font-black shadow-lg shadow-blue-200 transition-all ${(!formData.name || !formData.unitId) ? 'bg-slate-300 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'}`}
+            className={`px-4 py-2 text-white rounded-lg text-xs font-semibold transition-all ${(!formData.name || !formData.unitId) ? 'bg-slate-300 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 shadow-xs'}`}
           >
             Lưu thay đổi
           </button>
@@ -244,39 +247,42 @@ const MemberModal = ({ isOpen, onClose, member, onSave }) => {
   );
 };
 
-// --- 2. MODAL XÓA (THEO STYLE ẢNH THỨ 2) ---
+// --- 2. MODAL XÓA / MIỄN NHIỆM ---
 const DeleteModal = ({ isOpen, onClose, member, onDelete }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 duration-300">
-        <div className="p-8 text-center">
-          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <AlertCircle size={32} />
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="p-6 text-center">
+          <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <AlertCircle size={26} />
           </div>
-          <h3 className="text-xl font-black text-slate-800 mb-2">
-            Xác nhận miễn nhiệm
+          <h3 className="text-base font-bold text-slate-900 mb-1">
+            Xác nhận miễn nhiệm cán bộ
           </h3>
-          <p className="text-sm text-slate-500 font-medium px-4">
+          <p className="text-xs text-slate-500 font-medium px-2">
             Bạn có chắc chắn muốn miễn nhiệm chức vụ của đồng chí{" "}
             <span className="text-slate-800 font-bold">{member?.name}</span>?
           </p>
         </div>
-        <div className="p-4 bg-slate-50 flex flex-col gap-2">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col gap-2">
           <button
             onClick={() => onDelete(member.id)}
-            className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors"
           >
-            <UserCheck size={18} /> Hoàn thành nhiệm kỳ
+            <UserCheck size={16} /> Hoàn thành nhiệm kỳ
           </button>
-          <button className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-sm">
-            Chuyển chức vụ
+          <button
+            onClick={() => onDelete(member.id)}
+            className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-xs shadow-xs transition-colors"
+          >
+            Xóa vĩnh viễn khỏi danh sách
           </button>
           <button
             onClick={onClose}
-            className="w-full py-4 bg-white border border-slate-200 text-red-500 rounded-2xl font-black text-sm"
+            className="w-full py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg font-semibold text-xs transition-colors"
           >
-            Xóa hoàn toàn
+            Hủy bỏ
           </button>
         </div>
       </div>
@@ -287,76 +293,74 @@ const DeleteModal = ({ isOpen, onClose, member, onDelete }) => {
 // --- 3. COMPONENT CHI TIẾT HỒ SƠ ---
 const MemberDetail = ({ member, onBack, onEdit, onExport }) => {
   return (
-    <div className="animate-in fade-in slide-in-from-right-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
+    <div className="animate-in fade-in duration-200 space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+        <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="group p-3 bg-white border border-slate-200 hover:border-blue-500 rounded-2xl transition-all shadow-sm"
+            className="p-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg transition-colors shadow-xs"
+            title="Quay lại danh sách"
           >
             <ArrowLeft
-              size={20}
-              className="text-slate-600 group-hover:text-blue-600"
+              size={18}
+              className="text-slate-600"
             />
           </button>
           <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-              Hồ sơ chi tiết
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+              Hồ sơ chi tiết cán bộ
             </h2>
-            <p className="text-slate-400 text-sm font-medium">
-              Quản lý thông tin cán bộ hệ thống
+            <p className="text-slate-400 text-xs">
+              Thông tin công tác và quá trình tham gia Đoàn - Hội
             </p>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-2">
           <button 
             onClick={() => onEdit(member)}
-            className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
           >
-            <Edit3 size={18} /> Chỉnh sửa
+            <Edit3 size={15} /> Chỉnh sửa
           </button>
           <button 
             onClick={() => onExport(member)}
-            className="flex items-center gap-2 px-5 py-3 bg-blue-600 rounded-2xl text-sm font-bold text-white shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-semibold text-white shadow-xs transition-colors"
           >
-            <FileText size={18} /> Xuất dữ liệu
+            <FileText size={15} /> Xuất dữ liệu
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 opacity-50"></div>
-            <div className="relative">
-              <div className="relative w-32 h-32 mx-auto mb-6 p-1 border-[4px] border-blue-600 rounded-3xl rotate-3">
+      <div className="grid grid-cols-12 gap-5">
+        <div className="col-span-12 lg:col-span-4 space-y-4">
+          <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs relative overflow-hidden">
+            <div className="relative text-center">
+              <div className="relative w-24 h-24 mx-auto mb-4 p-0.5 border-2 border-blue-600 rounded-xl">
                 <img
                   src={member.avatar_url || `https://ui-avatars.com/api/?name=${member.name}&background=0284c7&color=fff&size=128`}
-                  className="w-full h-full rounded-2xl object-cover -rotate-3"
+                  className="w-full h-full rounded-lg object-cover"
                   alt="Avatar"
                 />
               </div>
-              <div className="text-center">
-                <h3 className="text-2xl font-black text-slate-800">
-                  {member.name}
-                </h3>
-                <span className="inline-block px-4 py-1 bg-blue-50 text-blue-600 text-[11px] font-black rounded-full uppercase mt-2">
-                  {member.role}
-                </span>
-              </div>
-              <div className="space-y-4 mt-8 pt-8 border-t border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">
+                {member.name}
+              </h3>
+              <span className="inline-block px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold rounded-md mt-1.5">
+                {member.role}
+              </span>
+              <div className="space-y-3 mt-6 pt-4 border-t border-slate-100 text-left">
                 <ContactInfo
-                  icon={<Phone size={16} />}
+                  icon={<Phone size={15} />}
                   label="Số điện thoại"
                   value={member.phone_number || "Chưa cập nhật"}
                 />
                 <ContactInfo
-                  icon={<MapPin size={16} />}
-                  label="Đơn vị"
+                  icon={<MapPin size={15} />}
+                  label="Đơn vị trực thuộc"
                   value={member.unit}
                 />
                 <ContactInfo
-                  icon={<Calendar size={16} />}
+                  icon={<Calendar size={15} />}
                   label="Ngày vào đoàn"
                   value={member.joinDate || "N/A"}
                 />
@@ -364,8 +368,8 @@ const MemberDetail = ({ member, onBack, onEdit, onExport }) => {
             </div>
           </div>
         </div>
-        <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="col-span-12 lg:col-span-8 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <StatCard
               label="Hoạt động"
               value={member.activity_count || "0"}
@@ -381,22 +385,21 @@ const MemberDetail = ({ member, onBack, onEdit, onExport }) => {
             <StatCard
               label="Khen thưởng"
               value={member.award_count || "0"}
-              sub="Cấp khoa"
-              color="text-purple-600"
+              sub="Cấp trường/khoa"
+              color="text-indigo-600"
             />
           </div>
-          <div className="bg-white rounded-[2.5rem] p-10 border border-slate-100 shadow-xl">
-            <h4 className="font-black text-slate-800 uppercase text-xs tracking-widest mb-6">
-              Lịch sử công tác
+          <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-xs">
+            <h4 className="font-bold text-slate-800 uppercase text-xs tracking-wider mb-4">
+              Lịch sử công tác & Bổ nhiệm
             </h4>
-            <div className="space-y-6">
+            <div className="space-y-4">
               <TimelineItem
                 year={`${new Date(member.joinDate).getFullYear() || '2024'} - Nay`}
                 title={member.role}
-                desc="Đang đương nhiệm"
+                desc={`Đang phụ trách tại ${member.unit}`}
                 active
               />
-              {/* Có thể bổ sung lịch sử từ DB nếu có API hỗ trợ trong tương lai */}
             </div>
           </div>
         </div>
@@ -539,7 +542,7 @@ const MemberProfiles = () => {
     setDeleteModal({ open: false, data: null });
   };
 
-  // Handler: Xuất dữ liệu
+  // Handler: Xuất dữ liệu cá nhân
   const handleExport = (member) => {
     const headers = ["Mã Cán bộ", "Họ tên", "Chức vụ", "Đơn vị", "Email", "SĐT", "Ngày vào đoàn", "Số hoạt động", "Khen thưởng"];
     const row = [
@@ -566,8 +569,35 @@ const MemberProfiles = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  // Handler: Xuất toàn bộ danh sách cán bộ
+  const handleExportAll = () => {
+    const headers = ["Mã Cán bộ", "Họ tên", "Chức vụ", "Đơn vị", "Email", "SĐT", "Ngày vào đoàn", "Số hoạt động", "Khen thưởng", "Trạng thái"];
+    const rows = filteredMembers.map(m => [
+      m.id,
+      m.name,
+      m.role,
+      m.unit,
+      m.email || "",
+      m.phone_number || "",
+      m.joinDate || "",
+      m.activity_count || 0,
+      m.award_count || 0,
+      m.status === "Active" ? "Đang hoạt động" : "Tạm nghỉ"
+    ]);
+    
+    const csvContent = "\ufeff" + [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute("download", `Danh_Sach_Can_Bo_${new Date().getTime()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1400px] mx-auto p-4">
+    <div className="space-y-4 font-sans text-slate-900">
       {/* Nội dung chính: Danh sách hoặc Chi tiết */}
       {selectedMember ? (
         <MemberDetail
@@ -578,130 +608,145 @@ const MemberProfiles = () => {
         />
       ) : (
         <>
-          {/* Header & Search */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight">
-                Danh sách Cán bộ
-              </h1>
-              <p className="text-slate-400 text-sm font-medium">
-                Tổng cộng {filteredMembers.length} nhân sự
-              </p>
+          {/* Thanh công cụ tìm kiếm và thao tác */}
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="relative w-full sm:w-80">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none"
+                size={15}
+              />
+              <input
+                type="text"
+                placeholder="Tìm tên, mã cán bộ, chức vụ..."
+                className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition-all shadow-xs"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <div className="relative flex-1 md:w-80">
-                <Search
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  size={18}
-                />
-                <input
-                  type="text"
-                  placeholder="Tìm tên, mã cán bộ..."
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm font-medium"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button
+                onClick={handleExportAll}
+                className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              >
+                <Download size={15} />
+                <span>Xuất Excel</span>
+              </button>
               <button
                 onClick={() =>
                   setModalMode({ open: true, type: "add", data: null })
                 }
-                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl text-sm font-bold shadow-lg shadow-blue-200 hover:scale-105 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
               >
-                <Plus size={18} /> Thêm mới
+                <Plus size={15} />
+                <span>+ Thêm mới</span>
               </button>
             </div>
           </div>
 
-          {/* Bảng dữ liệu */}
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl overflow-hidden">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                    Thông tin Cán bộ
-                  </th>
-                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                    Chức vụ
-                  </th>
-                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                    Đơn vị
-                  </th>
-                  <th className="px-6 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
-                    Trạng thái
-                  </th>
-                  <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredMembers.map((m) => (
-                  <tr
-                    key={m.id}
-                    onClick={() => setSelectedMember(m)}
-                    className="group hover:bg-blue-50/40 transition-all cursor-pointer"
-                  >
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-600 font-black shadow-sm border border-white">
-                          {m.name.split(" ").pop().charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-[15px] font-black text-slate-800">
-                            {m.name}
-                          </p>
-                          <p className="text-[11px] text-slate-400 font-bold uppercase">
-                            {m.id}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="px-3 py-1.5 bg-blue-50 text-blue-600 text-[10px] font-black rounded-xl uppercase border border-blue-100">
-                        {m.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-sm font-bold text-slate-600">
-                      {m.unit}
-                    </td>
-                    <td className="px-6 py-5 text-center">
-                      <div
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${m.status === "Active" ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"}`}
-                      >
-                        {m.status === "Active" ? "Đang hoạt động" : "Tạm nghỉ"}
-                      </div>
-                    </td>
-                    <td
-                      className="px-8 py-5 text-right"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() =>
-                            setModalMode({ open: true, type: "edit", data: m })
-                          }
-                          className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteModal({ open: true, data: m })}
-                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+          {/* Bảng dữ liệu cán bộ chuẩn Enterprise */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200">
+                    <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Thông tin Cán bộ
+                    </th>
+                    <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Chức vụ
+                    </th>
+                    <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                      Đơn vị trực thuộc
+                    </th>
+                    <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
+                      Trạng thái
+                    </th>
+                    <th className="py-3 px-4 text-[11px] font-bold text-slate-500 uppercase tracking-wider text-right">
+                      Thao tác
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredMembers.length === 0 && (
-              <div className="p-20 text-center text-slate-400 font-bold">
-                Không tìm thấy cán bộ nào...
-              </div>
-            )}
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredMembers.map((m) => (
+                    <tr
+                      key={m.id}
+                      onClick={() => setSelectedMember(m)}
+                      className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 font-bold text-xs shrink-0">
+                            {m.name.split(" ").pop().charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 leading-tight">
+                              {m.name}
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {m.id} {m.email ? `• ${m.email}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                          {m.role}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs font-medium text-slate-700">
+                        {m.unit}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+                            m.status === "Active"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-100 text-slate-600 border-slate-200"
+                          }`}
+                        >
+                          {m.status === "Active" ? "Đang hoạt động" : "Tạm nghỉ"}
+                        </span>
+                      </td>
+                      <td
+                        className="py-3.5 px-4 text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => setSelectedMember(m)}
+                            title="Xem chi tiết"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <FileText size={15} />
+                          </button>
+                          <button
+                            onClick={() =>
+                              setModalMode({ open: true, type: "edit", data: m })
+                            }
+                            title="Chỉnh sửa"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={() => setDeleteModal({ open: true, data: m })}
+                            title="Miễn nhiệm / Xóa"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {filteredMembers.length === 0 && (
+                <div className="p-16 text-center text-slate-400 text-xs">
+                  Không tìm thấy cán bộ phù hợp
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -738,7 +783,7 @@ const ContactInfo = ({ icon, label, value }) => (
   </div>
 );
 const StatCard = ({ label, value, sub, color }) => (
-  <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
     <p className="text-[11px] font-bold text-slate-400 uppercase mb-1">
       {label}
     </p>

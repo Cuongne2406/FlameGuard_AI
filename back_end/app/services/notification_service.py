@@ -10,6 +10,9 @@ def create_notification(db: Session, notification_in: NotificationCreate):
     db.refresh(db_notification)
     return db_notification
 
+def get_notification(db: Session, notification_id: UUID):
+    return db.query(Notification).filter(Notification.id == notification_id).first()
+
 def get_user_notifications(db: Session, user_id: UUID, skip: int = 0, limit: int = 100):
     return db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).offset(skip).limit(limit).all()
 

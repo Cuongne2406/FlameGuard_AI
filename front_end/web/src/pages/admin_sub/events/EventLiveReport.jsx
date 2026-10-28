@@ -1,322 +1,424 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import Toast from '../../../components/ui/Toast';
-import { eventService } from '../../../services/eventService';
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { 
+  QrCode, 
+  Users, 
+  MessageSquare, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Clock, 
+  Send, 
+  X, 
+  BarChart2, 
+  Pause, 
+  Play, 
+  ArrowLeft,
+  Trophy
+} from "lucide-react";
+import Toast from "../../../components/ui/Toast";
+import Modal from "../../../components/ui/Modal";
+import Button from "../../../components/ui/Button";
+import { eventService } from "../../../services/eventService";
 
 const EventLiveReport = () => {
-    const { id } = useParams();
-    const navigate = useNavigate();
-    const [toast, setToast] = useState(null);
-    const [activeTab, setActiveTab] = useState('qa');
-    const [checkinPaused, setCheckinPaused] = useState(false);
-    const [showAllClasses, setShowAllClasses] = useState(false);
-    const [eventData, setEventData] = useState(null);
-    const [registrations, setRegistrations] = useState([]);
-    const [qaList, setQaList] = useState([]);
-    const [incidentList, setIncidentList] = useState([]);
-    const [chartData, setChartData] = useState([0, 0, 0, 0, 0]);
-    const [loading, setLoading] = useState(true);
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    useEffect(() => {
-        const fetchReportData = async () => {
-            try {
-                setLoading(true);
-                const [evt, regs, qas, incs, liveStats] = await Promise.all([
-                    eventService.getEvent(id),
-                    eventService.getEventRegistrations(id),
-                    eventService.getEventQA(id),
-                    eventService.getEventIncidents(id),
-                    eventService.getEventLiveStats(id)
-                ]);
-                setEventData(evt);
-                setRegistrations(regs);
-                setQaList(qas);
-                setIncidentList(incs);
-                if (liveStats && liveStats.length > 0) setChartData(liveStats);
-            } catch (err) {
-                console.error("Failed to fetch live report data", err);
-                setToast({ message: 'Lỗi tải dữ liệu giám sát', type: 'error' });
-            } finally {
-                setLoading(false);
-            }
-        };
-        if (id) {
-            fetchReportData();
-            // Polling every 30s for "real-time" feel without WebSockets
-            const interval = setInterval(fetchReportData, 30000);
-            return () => clearInterval(interval);
-        }
-    }, [id]);
+  const [toast, setToast] = useState(null);
+  const [activeTab, setActiveTab] = useState("qa");
+  const [checkinPaused, setCheckinPaused] = useState(false);
 
-    const checkedInCount = registrations.filter(r => r.status === 'ATTENDED').length;
-    const totalRegCount = registrations.length || 1; // avoid division by zero
-    const checkinPercent = ((checkedInCount / totalRegCount) * 100).toFixed(1);
+  const [eventData, setEventData] = useState(null);
+  const [registrations, setRegistrations] = useState([]);
+  const [qaList, setQaList] = useState([]);
+  const [incidentList, setIncidentList] = useState([]);
+  const [classRankings, setClassRankings] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-    const stats = [
-        { label: 'Tổng Check-in', val: checkedInCount.toString(), total: `/ ${totalRegCount}`, percent: `${checkinPercent}%`, sub: 'Dữ liệu thời gian thực', icon: 'qr_code_scanner', color: 'blue' },
-        { label: 'Đại biểu & Khách mời', val: '0', total: '/ 0 Đại biểu', sub: 'Tính năng đang phát triển', icon: 'badge', color: 'orange', extra: '', statusIcon: 'check_circle' },
-        { label: 'Tương tác Q&A', val: qaList.length.toString(), sub: `${qaList.filter(q => q.is_answered).length} đã xử lý`, icon: 'forum', color: 'indigo', unit: 'câu hỏi' },
-    ];
+  // Q&A Answer Modal (replacing prompt)
+  const [showAnswerModal, setShowAnswerModal] = useState(false);
+  const [selectedQa, setSelectedQa] = useState(null);
+  const [answerInput, setAnswerInput] = useState("");
 
+  const fetchReportData = async () => {
+    try {
+      setLoading(true);
+      const [evt, regs, qas, incs, liveStats] = await Promise.all([
+        eventService.getEvent(id),
+        eventService.getEventRegistrations(id),
+        eventService.getEventQA(id),
+        eventService.getEventIncidents(id),
+        eventService.getEventLiveStats(id).catch(() => null)
+      ]);
 
-    const rankings = [
-        { rank: 1, name: 'Lớp 21CNTT1', percent: 95 },
-        { rank: 2, name: 'Lớp 22CNTT2', percent: 88 },
-        { rank: 3, name: 'Lớp 21CNTT3', percent: 45, contact: true }
-    ];
-    const allRankings = rankings;
+      setEventData(evt);
+      setRegistrations(Array.isArray(regs) ? regs : []);
+      setQaList(Array.isArray(qas) ? qas : []);
+      setIncidentList(Array.isArray(incs) ? incs : []);
 
-    const handlePauseCheckin = () => {
-        setCheckinPaused(!checkinPaused);
-        setToast({ message: checkinPaused ? 'Đã tiếp tục check-in' : 'Đã tạm dừng check-in', type: 'info' });
-    };
+      if (liveStats && liveStats.class_rankings && liveStats.class_rankings.length > 0) {
+        setClassRankings(liveStats.class_rankings);
+      } else {
+        // Fallback rankings calculated from real registrations
+        const classMap = {};
+        (Array.isArray(regs) ? regs : []).forEach((r) => {
+          const cName = r.class_name || "Khoa CNTT";
+          if (!classMap[cName]) classMap[cName] = { name: cName, total: 0, attended: 0 };
+          classMap[cName].total += 1;
+          if (r.status === "ATTENDED") classMap[cName].attended += 1;
+        });
 
-    const handleAnswerQA = async (qaId) => {
-        const answer = prompt("Nhập câu trả lời:");
-        if (!answer) return;
-        try {
-            await eventService.answerQA(qaId, answer);
-            setQaList(prev => prev.map(q => q.id === qaId ? { ...q, answer, is_answered: true } : q));
-            setToast({ message: 'Đã gửi câu trả lời!', type: 'success' });
-        } catch (err) {
-            setToast({ message: 'Lỗi khi gửi câu trả lời', type: 'error' });
-        }
-    };
+        const computed = Object.values(classMap).map((c, i) => ({
+          rank: i + 1,
+          name: c.name,
+          percent: c.total > 0 ? Math.round((c.attended / c.total) * 100) : 0,
+          attended: c.attended,
+          total: c.total
+        }));
+        setClassRankings(computed);
+      }
+    } catch (err) {
+      console.error("Failed to fetch live report data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleUpdateIncidentStatus = async (incidentId, currentStatus) => {
-        const nextStatus = currentStatus === 'PENDING' ? 'RESOLVED' : 'PENDING';
-        try {
-            await eventService.updateIncidentStatus(incidentId, nextStatus);
-            setIncidentList(prev => prev.map(i => i.id === incidentId ? { ...i, status: nextStatus } : i));
-            setToast({ message: `Đã cập nhật trạng thái: ${nextStatus}`, type: 'success' });
-        } catch (err) {
-            setToast({ message: 'Lỗi khi cập nhật trạng thái', type: 'error' });
-        }
-    };
+  useEffect(() => {
+    if (id) {
+      fetchReportData();
+      const interval = setInterval(fetchReportData, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [id]);
 
-    return (
-        <div className="p-4 md:p-8 bg-[#F8FAFC] min-h-screen space-y-8 font-sans">
-            {/* Header với breadcrumb */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                <div>
-                    <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
-                        <button onClick={() => navigate(-1)} className="hover:text-blue-600">‹ Quay lại</button>
-                        <span>/</span>
-                        <span className="text-blue-600 underline">Giám sát Trực tiếp</span>
-                    </nav>
-                    <h1 className="text-2xl font-bold text-slate-900">Báo cáo Giám sát Trực tiếp: {eventData?.name || 'Đang tải...'}</h1>
-                    <div className="flex items-center gap-6 mt-2">
-                        <p className="flex items-center gap-2 text-xs font-bold text-rose-600 uppercase tracking-widest">
-                            <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse"></span> LIVE NOW
-                        </p>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            <span className="material-symbols-outlined text-sm align-middle mr-1">history</span> {eventData ? `Tối đa: ${eventData.max_participants} người` : ''}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handlePauseCheckin}
-                        className={`h-12 px-6 rounded-xl border border-slate-200 bg-white text-xs font-bold uppercase tracking-widest flex items-center gap-3 shadow-sm ${
-                            checkinPaused ? 'text-rose-600 border-rose-200' : 'text-slate-900'
-                        }`}
-                    >
-                        <span className="material-symbols-outlined text-lg">{checkinPaused ? 'play_circle' : 'pause_circle'}</span>
-                        {checkinPaused ? 'Tiếp tục Check-in' : 'Tạm dừng Check-in'}
-                    </button>
-                    <button className="h-12 px-6 rounded-xl bg-blue-600 text-white text-xs font-bold uppercase tracking-widest flex items-center gap-3 shadow-lg shadow-blue-100">
-                        <span className="material-symbols-outlined text-lg">notifications_active</span> Gửi Push thông báo
-                    </button>
-                </div>
-            </div>
+  const checkedInCount = registrations.filter((r) => r.status === "ATTENDED").length;
+  const totalRegCount = registrations.length || 1;
+  const checkinPercent = ((checkedInCount / totalRegCount) * 100).toFixed(1);
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {stats.map((s, i) => (
-                    <div key={i} className={`bg-white border-l-8 rounded-2xl p-8 shadow-sm group hover:shadow-xl transition-all border-${s.color}-500 flex flex-col justify-between h-48`}>
-                        <div className="flex justify-between items-start">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
-                            <div className={`h-10 w-10 rounded-xl bg-slate-50 text-${s.color}-600 flex items-center justify-center`}>
-                                <span className="material-symbols-outlined">{s.icon}</span>
-                            </div>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex items-baseline gap-2">
-                                <p className="text-4xl font-bold text-slate-900 tracking-tighter">{s.val}</p>
-                                <span className="text-xs font-bold text-slate-400 uppercase">{s.total || s.unit} <span className="text-blue-600 ml-1">{s.percent}</span></span>
-                            </div>
-                            <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                    {s.statusIcon && <span className="material-symbols-outlined text-xs text-emerald-500">{s.statusIcon}</span>}
-                                    <p className={`text-xs font-bold uppercase ${s.color === 'blue' ? 'text-emerald-500' : 'text-slate-400'}`}>{s.sub}</p>
-                                </div>
-                                {s.extra && <p className="text-xs font-bold text-slate-400 uppercase italic leading-none ml-5">• {s.extra}</p>}
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
+  const handlePauseCheckin = () => {
+    setCheckinPaused(!checkinPaused);
+    setToast({
+      message: checkinPaused ? "Đã tiếp tục phiên check-in trực tiếp" : "Đã tạm dừng phiên check-in trực tiếp",
+      type: "info"
+    });
+  };
 
-            {/* Visual Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Check-in Chart */}
-                <div className="lg:col-span-8 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm space-y-10">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-3">
-                            <span className="material-symbols-outlined text-blue-600">show_chart</span> Diễn biến Check-in theo thời gian thực
-                        </h3>
-                        <select className="h-10 px-4 rounded-xl border border-slate-100 bg-slate-50 text-xs font-bold uppercase tracking-widest outline-none">
-                            <option>1 giờ qua</option>
-                        </select>
-                    </div>
-                    <div className="h-64 flex items-end gap-1.5 px-4 relative">
-                        {/* Chart bars */}
-                        {chartData.map((h, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                                <div className={`w-full rounded-t-lg transition-all duration-700 ${Math.max(...chartData) === h && h > 0 ? 'bg-blue-600 shadow-lg shadow-blue-100' : 'bg-blue-200 group-hover:bg-blue-400'}`} style={{ height: `${h > 0 ? (h / Math.max(...chartData)) * 100 : 0}%` }}>
-                                    {Math.max(...chartData) === h && h > 0 && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-600 uppercase">Peak</div>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <div className="flex justify-between px-4 text-xs font-bold text-slate-300 uppercase tracking-widest">
-                        <span>07:00</span>
-                        <span>07:30</span>
-                        <span>08:00</span>
-                        <span>09:00</span>
-                        <span>Now</span>
-                    </div>
-                </div>
+  const openAnswerModal = (qa) => {
+    setSelectedQa(qa);
+    setAnswerInput(qa.answer || "");
+    setShowAnswerModal(true);
+  };
 
-                {/* Right: Ranking */}
-                <div className="lg:col-span-4 bg-white border border-slate-100 rounded-[2.5rem] p-10 shadow-sm space-y-8">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Tỷ lệ tham gia theo Chi đoàn</h3>
-                        <button
-                            onClick={() => setShowAllClasses(!showAllClasses)}
-                            className="text-xs font-bold text-blue-600 underline underline-offset-4 uppercase tracking-widest"
-                        >
-                            {showAllClasses ? 'Thu gọn' : 'Xem tất cả'}
-                        </button>
-                    </div>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-4 px-4 text-xs font-bold text-slate-300 uppercase tracking-widest">
-                            <span>Hạng</span>
-                            <span className="col-span-2">Chi đoàn</span>
-                            <span className="text-right">Tỷ lệ</span>
-                        </div>
-                        {(showAllClasses ? allRankings : rankings.slice(0, 3)).map((r) => (
-                            <div key={r.rank} className={`p-4 rounded-xl border flex items-center justify-between group transition-all ${r.contact ? 'bg-rose-50/30 border-rose-50' : 'bg-slate-50/50 border-transparent hover:bg-white hover:shadow-lg'}`}>
-                                <div className="flex items-center gap-6">
-                                    <div className="w-4 text-xs font-bold text-slate-400">
-                                        {r.rank === 1 ? '🥇' : r.rank === 2 ? '🥈' : `#${r.rank}`}
-                                    </div>
-                                    <p className="text-sm font-bold text-slate-900">{r.name}</p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <p className={`text-sm font-bold ${r.percent >= 90 ? 'text-emerald-600' : 'text-rose-600'}`}>{r.percent}%</p>
-                                    {r.contact && <button className="h-8 w-8 bg-white rounded-lg shadow-sm border border-slate-100 flex items-center justify-center text-rose-500 hover:bg-rose-500 hover:text-white transition-all"><span className="material-symbols-outlined text-sm font-bold">call</span></button>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
+  const handleSendAnswer = async () => {
+    if (!selectedQa || !answerInput.trim()) return;
+    try {
+      await eventService.answerQA(selectedQa.id, answerInput.trim());
+      setQaList((prev) =>
+        prev.map((q) =>
+          q.id === selectedQa.id ? { ...q, answer: answerInput.trim(), is_answered: true } : q
+        )
+      );
+      setShowAnswerModal(false);
+      setSelectedQa(null);
+      setAnswerInput("");
+      setToast({ message: "✅ Đã gửi phản hồi câu hỏi trực tiếp!", type: "success" });
+    } catch (err) {
+      setToast({ message: "Lỗi gửi câu trả lời", type: "error" });
+    }
+  };
 
-            {/* Bottom Tab Section */}
-            <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden min-h-[400px]">
-                <div className="p-8 border-b border-slate-50">
-                    <div className="flex gap-10">
-                        <button
-                            onClick={() => setActiveTab('qa')}
-                            className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all relative ${activeTab === 'qa' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                            Câu hỏi Q&A ({qaList.length})
-                            {activeTab === 'qa' && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></div>}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('feedback')}
-                            className={`pb-4 text-sm font-bold uppercase tracking-widest transition-all relative ${activeTab === 'feedback' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                            Báo cáo Sự cố ({incidentList.length})
-                            {activeTab === 'feedback' && <div className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-t-full"></div>}
-                        </button>
-                    </div>
-                </div>
-                <div className="p-10 space-y-6">
-                    {activeTab === 'qa' ? (
-                        <div className="space-y-4">
-                            {qaList.length === 0 ? (
-                                <p className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest">Chưa có câu hỏi nào</p>
-                            ) : (
-                                qaList.map(q => (
-                                    <div key={q.id} className="p-6 rounded-2xl border border-slate-100 bg-white flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-slate-900">{q.user_name || 'Người tham gia'}</p>
-                                            <p className="text-base mt-2 font-medium">{q.question}</p>
-                                            {q.is_answered && (
-                                                <div className="mt-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-                                                    <p className="text-xs font-bold text-blue-600 uppercase mb-1">Cán bộ phản hồi:</p>
-                                                    <p className="text-sm text-slate-700">{q.answer}</p>
-                                                </div>
-                                            )}
-                                            <p className="text-xs font-bold text-slate-400 mt-3">{new Date(q.created_at).toLocaleTimeString()}</p>
-                                        </div>
-                                        {q.is_answered ? (
-                                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-lg border border-emerald-100 ml-4 shrink-0">Đã trả lời ✓</span>
-                                        ) : (
-                                            <button 
-                                                onClick={() => handleAnswerQA(q.id)}
-                                                className="px-6 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all ml-4 shrink-0"
-                                            >
-                                                Trả lời
-                                            </button>
-                                        )}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {incidentList.length === 0 ? (
-                                <p className="text-center text-slate-400 py-10 font-bold uppercase tracking-widest">Không có sự cố báo cáo</p>
-                            ) : (
-                                incidentList.map(f => (
-                                    <div key={f.id} className={`p-6 rounded-2xl border-l-8 bg-white flex items-start justify-between shadow-sm transition-all ${f.status === 'RESOLVED' ? 'border-emerald-500' : 'border-rose-500'}`}>
-                                        <div>
-                                            <div className="flex items-center gap-3">
-                                                <p className="text-sm font-bold text-slate-900">{f.reporter_name || 'Cán bộ trực'}</p>
-                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${f.severity === 'Critical' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}`}>
-                                                    {f.severity}
-                                                </span>
-                                            </div>
-                                            <p className="text-base mt-2 font-medium">{f.description}</p>
-                                            <p className="text-xs font-bold text-slate-400 mt-1">{new Date(f.created_at).toLocaleTimeString()}</p>
-                                        </div>
-                                        <button 
-                                            onClick={() => handleUpdateIncidentStatus(f.id, f.status)}
-                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                                                f.status === 'RESOLVED' 
-                                                ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
-                                                : 'bg-rose-600 border-transparent text-white shadow-lg shadow-rose-100'
-                                            }`}
-                                        >
-                                            {f.status === 'RESOLVED' ? 'Đã xử lý ✓' : 'Đánh dấu Đã xử lý'}
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+  const handleUpdateIncidentStatus = async (incidentId, currentStatus) => {
+    const nextStatus = currentStatus === "PENDING" ? "RESOLVED" : "PENDING";
+    try {
+      await eventService.updateIncidentStatus(incidentId, nextStatus);
+      setIncidentList((prev) =>
+        prev.map((i) => (i.id === incidentId ? { ...i, status: nextStatus } : i))
+      );
+      setToast({ message: `Cập nhật sự cố: ${nextStatus}`, type: "success" });
+    } catch (err) {
+      setToast({ message: "Lỗi cập nhật sự cố", type: "error" });
+    }
+  };
 
-            <footer className="text-center pt-8 text-xs font-medium text-slate-400 italic">
-                © 2025 Digital Youth Union System (DYUS). All rights reserved.<br />
-                Module: Real-time Event Monitoring Center v3.0 - Khoa Công Nghệ Thông Tin
-            </footer>
-
-            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+  return (
+    <div className="space-y-6">
+      {/* Top Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl p-5 shadow-xs">
+        <div>
+          <nav className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">
+            <button
+              onClick={() => navigate("/admin_sub/events")}
+              className="hover:text-blue-600 transition-colors inline-flex items-center gap-1"
+            >
+              <ArrowLeft size={13} /> Sự kiện Khoa
+            </button>
+            <span>/</span>
+            <span className="text-slate-600 font-medium">Giám sát & Điều phối Live Event</span>
+          </nav>
+          <div className="flex items-center gap-2.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse"></span>
+            <h2 className="text-lg md:text-xl font-bold text-slate-900">
+              {eventData?.name || "Báo cáo Sự kiện Trực tiếp"}
+            </h2>
+          </div>
         </div>
-    );
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePauseCheckin}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              checkinPaused
+                ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                : "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100"
+            }`}
+          >
+            {checkinPaused ? <Play size={13} /> : <Pause size={13} />}
+            <span>{checkinPaused ? "Tiếp tục check-in" : "Tạm dừng check-in"}</span>
+          </button>
+
+          <button
+            onClick={() => navigate(`/admin_sub/events/${id}/checkin`)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs"
+          >
+            <QrCode size={13} />
+            <span>Mở Điểm danh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Stats Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Tỷ lệ Check-in Thực tế</span>
+            <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <QrCode size={16} />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-slate-900">{checkedInCount}</span>
+            <span className="text-xs text-slate-400">/ {totalRegCount} SV ({checkinPercent}%)</span>
+          </div>
+          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-2">
+            <div className="bg-blue-600 h-full" style={{ width: `${checkinPercent}%` }}></div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Tương tác Q&A Trực tiếp</span>
+            <div className="h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <MessageSquare size={16} />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{qaList.length} câu hỏi</div>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Đã giải đáp: <strong className="text-indigo-600">{qaList.filter((q) => q.is_answered).length}</strong> câu
+          </p>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Sự cố kỹ thuật & An ninh</span>
+            <div className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <AlertTriangle size={16} />
+            </div>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{incidentList.length} sự cố</div>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Đang xử lý: <strong className="text-rose-600">{incidentList.filter((i) => i.status === "PENDING").length}</strong>
+          </p>
+        </div>
+      </div>
+
+      {/* Row 2: 2-Column Live Center */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left 7/12: Q&A and Incident Live Stream */}
+        <div className="lg:col-span-7 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab("qa")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  activeTab === "qa"
+                    ? "bg-blue-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                Hỏi đáp Q&A ({qaList.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("incidents")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  activeTab === "incidents"
+                    ? "bg-rose-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                Sự cố ({incidentList.length})
+              </button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100 overflow-y-auto max-h-[380px] flex-1 mt-2">
+            {activeTab === "qa" ? (
+              qaList.length === 0 ? (
+                <div className="py-12 text-center text-xs text-slate-400">
+                  Chưa có câu hỏi nào từ sinh viên
+                </div>
+              ) : (
+                qaList.map((qa) => (
+                  <div key={qa.id} className="py-3 px-1 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-slate-800">{qa.author_name || "Sinh viên"}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          qa.is_answered
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        {qa.is_answered ? "Đã trả lời" : "Chờ giải đáp"}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-900 font-medium">{qa.question}</p>
+
+                    {qa.answer && (
+                      <div className="p-2 bg-blue-50/60 rounded-md text-xs text-blue-900 border border-blue-100">
+                        <strong className="text-blue-700">Phản hồi:</strong> {qa.answer}
+                      </div>
+                    )}
+
+                    <div className="pt-1 flex justify-end">
+                      <button
+                        onClick={() => openAnswerModal(qa)}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline inline-flex items-center gap-1"
+                      >
+                        <span>{qa.is_answered ? "Cập nhật câu trả lời" : "Trả lời câu hỏi →"}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : incidentList.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400">
+                Không ghi nhận sự cố kỹ thuật nào
+              </div>
+            ) : (
+              incidentList.map((inc) => (
+                <div key={inc.id} className="py-3 px-1 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          inc.status === "RESOLVED"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-rose-50 text-rose-700"
+                        }`}
+                      >
+                        {inc.status === "RESOLVED" ? "Đã xử lý" : "Cần hỗ trợ"}
+                      </span>
+                      <span className="text-[11px] text-slate-400">{inc.location || "Hội trường"}</span>
+                    </div>
+                    <p className="text-xs font-bold text-slate-800 mt-1">{inc.title || inc.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => handleUpdateIncidentStatus(inc.id, inc.status)}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-md border border-slate-200 hover:bg-slate-50 transition-colors"
+                  >
+                    {inc.status === "RESOLVED" ? "Đánh dấu chưa xong" : "Đã giải quyết ✓"}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right 5/12: Bảng xếp hạng Check-in các Chi đoàn */}
+        <div className="lg:col-span-5 bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col">
+          <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Trophy size={16} className="text-amber-500" />
+              <span>Tiến độ Check-in Chi đoàn</span>
+            </h3>
+            <span className="text-[11px] text-slate-400">Dữ liệu thực từ DB</span>
+          </div>
+
+          <div className="divide-y divide-slate-100 overflow-y-auto max-h-[380px] flex-1 mt-2">
+            {classRankings.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400">
+                Chưa có dữ liệu check-in theo lớp
+              </div>
+            ) : (
+              classRankings.map((r, i) => (
+                <div key={i} className="py-2.5 px-1 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-slate-100 text-slate-600 font-bold text-[10px] flex items-center justify-center">
+                        {r.rank || i + 1}
+                      </span>
+                      {r.name}
+                    </span>
+                    <strong className="text-blue-600">{r.percent}%</strong>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${r.percent >= 80 ? "bg-emerald-500" : r.percent >= 50 ? "bg-blue-500" : "bg-amber-500"}`}
+                      style={{ width: `${Math.min(100, r.percent)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Enterprise Answer Q&A Modal (Replaces browser prompt) */}
+      <Modal
+        isOpen={showAnswerModal}
+        onClose={() => setShowAnswerModal(false)}
+        title="Trả lời câu hỏi sinh viên"
+        size="md"
+      >
+        {selectedQa && (
+          <div className="space-y-4 py-2">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <p className="text-[11px] text-slate-400 font-medium">Câu hỏi từ: {selectedQa.author_name || "Sinh viên"}</p>
+              <p className="text-xs font-bold text-slate-900 mt-1">{selectedQa.question}</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Nội dung trả lời trực tiếp:
+              </label>
+              <textarea
+                rows={4}
+                value={answerInput}
+                onChange={(e) => setAnswerInput(e.target.value)}
+                placeholder="Nhập câu trả lời chính thức từ Ban Tổ Chức..."
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button variant="outline" onClick={() => setShowAnswerModal(false)}>
+                Hủy
+              </Button>
+              <Button variant="primary" onClick={handleSendAnswer}>
+                Gửi câu trả lời
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
 };
 
 export default EventLiveReport;

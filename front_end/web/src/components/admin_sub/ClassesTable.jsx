@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Pagination from '../ui/Pagination';
+import { MoreVertical } from 'lucide-react';
 
 const ClassesTable = ({ classes }) => {
   const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +89,7 @@ const ClassesTable = ({ classes }) => {
                 </td>
                 <td className="px-6 py-4">
                   <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <span className="material-symbols-outlined text-gray-600">more_vert</span>
+                    <MoreVertical size={16} className="text-gray-600" />
                   </button>
                 </td>
               </tr>

@@ -221,6 +221,22 @@ class UserBase(BaseModel):
     device_id: Optional[str] = None
     push_token: Optional[str] = None
     is_profile_updated: bool = False
+    
+    # SV5T Fields
+    cccd: Optional[str] = None
+    gender: Optional[str] = "Nam"
+    date_of_birth: Optional[date] = None
+    ethnicity: Optional[str] = "Kinh"
+    religion: Optional[str] = "Không"
+    address: Optional[str] = None
+    academic_year_num: Optional[int] = 3
+    school_name: Optional[str] = "Trường Đại học Lạc Hồng"
+    faculty_name: Optional[str] = None
+    education_level: Optional[str] = "Đại học"
+    gpa: Optional[float] = 0.0
+    union_position: Optional[str] = "Đoàn viên"
+    political_status: Optional[str] = "Đoàn viên"
+    achievement_summary: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -249,6 +265,27 @@ class UserUpdate(BaseModel):
     is_completing: Optional[bool] = False
     password: Optional[str] = None
     role_ids: Optional[List[UUID]] = None
+    
+    # SV5T Fields
+    cccd: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    ethnicity: Optional[str] = None
+    religion: Optional[str] = None
+    address: Optional[str] = None
+    academic_year_num: Optional[int] = None
+    school_name: Optional[str] = None
+    faculty_name: Optional[str] = None
+    education_level: Optional[str] = None
+    gpa: Optional[float] = None
+    training_score: Optional[int] = None
+    union_position: Optional[str] = None
+    political_status: Optional[str] = None
+    achievement_summary: Optional[str] = None
+
+class UserChangePassword(BaseModel):
+    current_password: str
+    new_password: str
 
 class UserResponse(UserBase):
     id: UUID
@@ -261,6 +298,8 @@ class UserResponse(UserBase):
     award_count: int = 0
     roles: List[RoleResponse] = []
     organizations: List[UserOrgMiniResponse] = []
+    managed_org_id: Optional[UUID] = None
+    managed_org_name: Optional[str] = None
 
     class Config:
         from_attributes = True
