@@ -15,8 +15,9 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X, Zap, ZapOff, AlertCircle, Star, MessageSquare } from 'lucide-react-native';
-import { getUserRegistrations, updateRegistrationStatus, submitFeedback } from '../src/api/client';
+import { getUserRegistrations, checkInSecure, submitFeedback } from '../src/api/client';
 import { useAuth } from '../src/context/AuthContext';
+import { useQueryClient } from '@tanstack/react-query';
 import SuccessAnimation from '../src/components/SuccessAnimation';
 import { COLORS, SHADOWS } from '../src/constants/theme';
 import GlassCard from '../src/components/common/GlassCard';
@@ -27,6 +28,7 @@ const { width } = Dimensions.get('window');
 const ScanQRScreen = () => {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [flash, setFlash] = useState(false);
@@ -64,11 +66,16 @@ const ScanQRScreen = () => {
     setScanned(true);
     
     try {
-      const eventId = data.trim();
+      const qrText = data.trim();
+      let eventId = qrText;
+      if (qrText.includes('|')) {
+        eventId = qrText.split('|')[0];
+      }
+      
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       
       if (!uuidRegex.test(eventId)) {
-        throw new Error("Mã QR không đúng định dạng sự kiện.");
+        throw new Error("Mã QR không đúng định dạng bảo mật.");
       }
 
       const myEvents = await getUserRegistrations(user.id);
@@ -78,7 +85,11 @@ const ScanQRScreen = () => {
         throw new Error("Bạn chưa đăng ký tham gia sự kiện này.");
       }
 
-      await updateRegistrationStatus(registration.registration_id, 'ATTENDED');
+      await checkInSecure(registration.registration_id, qrText);
+
+      // Invalidate queries so that the user's attended list and profile are updated immediately
+      queryClient.invalidateQueries({ queryKey: ['userRegistrations', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['profileStats', user.id] });
 
       setCurrentEventId(eventId);
       setStatus('success');
@@ -89,7 +100,8 @@ const ScanQRScreen = () => {
       
     } catch (error: any) {
       console.error('Scan check-in error:', error);
-      setErrorMsg(error.message || "Lỗi hệ thống khi điểm danh.");
+      const errorMsgText = error.response?.data?.detail || error.message || "Lỗi hệ thống khi điểm danh.";
+      setErrorMsg(errorMsgText);
       setStatus('error');
       setTimeout(() => {
         setScanned(false);

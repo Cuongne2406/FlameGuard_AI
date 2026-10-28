@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.api import api_router
@@ -11,14 +12,28 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="FlameGuard AI API",
-    description="Enterprise API Core for DYUS Management",
+    description="Enterprise API Core for LHU YouthHub Management System",
     version="1.0.0"
 )
 
-# CORS config
+# CORS config - read extra origins from env (for production flexibility)
+_extra_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+_extra_origins = [o.strip() for o in _extra_origins if o.strip()]
+
+_default_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8080",
+    "http://localhost:8081",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    # GitHub Pages production URL
+    "https://cuongne2406.github.io",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with specific origins
+    allow_origins=_default_origins + _extra_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,4 +45,5 @@ app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to FlameGuard AI Enterprise API"}
+    return {"message": "Welcome to FlameGuard AI - LHU YouthHub API"}
+

@@ -11,6 +11,7 @@ from app.models.core import User
 from app.services import ai_audit_service, cloudinary_service
 from app.schemas.ai_audit_schemas import AuditLogCreate
 from datetime import datetime
+from app.utils.file_validator import verify_image_magic_bytes
 
 router = APIRouter()
 
@@ -21,6 +22,12 @@ async def upload_system_logo(
     file: UploadFile = File(...),
     current_admin: User = Depends(get_current_active_admin)
 ):
+    # Kiểm tra Magic Bytes của ảnh logo tải lên
+    contents = await file.read()
+    await file.seek(0)
+    if not verify_image_magic_bytes(contents):
+        raise HTTPException(status_code=400, detail="Tệp tin hình ảnh không hợp lệ (Không đúng định dạng JPEG/PNG/GIF/WEBP)")
+
     result = cloudinary_service.upload_image(file.file, folder="system/logo")
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))

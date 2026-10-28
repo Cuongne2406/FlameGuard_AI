@@ -17,10 +17,13 @@ class IPWhitelistMiddleware(BaseHTTPMiddleware):
                     if allowed_ips:
                         client_ip = request.client.host
                         
-                        # Kiểm tra X-Forwarded-For nếu chạy sau Proxy
-                        forwarded_for = request.headers.get("X-Forwarded-For")
-                        if forwarded_for:
-                            client_ip = forwarded_for.split(",")[0].strip()
+                        # Kiểm tra X-Forwarded-For nếu chạy sau Proxy đáng tin cậy (được cấu hình TRUST_PROXY="true" trong DB)
+                        trust_proxy = db.query(SystemSetting).filter(SystemSetting.key == "TRUST_PROXY").first()
+                        if trust_proxy and trust_proxy.value == "true":
+                            forwarded_for = request.headers.get("X-Forwarded-For")
+                            if forwarded_for:
+                                client_ip = forwarded_for.split(",")[0].strip()
+                        
                         
                         if client_ip not in allowed_ips and "127.0.0.1" not in allowed_ips:
                              return JSONResponse(

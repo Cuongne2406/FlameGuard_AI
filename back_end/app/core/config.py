@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "FlameGuard AI API"
+    PROJECT_NAME: str = "DYUS API"
     
     # DATABASE
     POSTGRES_SERVER: str = os.getenv("POSTGRES_SERVER", "localhost")

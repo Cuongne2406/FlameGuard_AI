@@ -17,6 +17,10 @@ from datetime import datetime
 from app.models.settings import SystemSetting
 from app.services import email_service
 from app.schemas.core_schemas import VerifyOTP
+from collections import defaultdict
+
+# Bộ đếm số lần nhập sai OTP 2FA của người dùng
+otp_failure_counter = defaultdict(int)
 
 def get_session_timeout(db: Session) -> int:
     setting = db.query(SystemSetting).filter(SystemSetting.key == "SESSION_TIMEOUT").first()
@@ -119,6 +123,7 @@ async def login_access_token(
                 user.otp_code = otp
                 user.otp_expires_at = datetime.now() + timedelta(minutes=5)
                 db.commit()
+                otp_failure_counter[user.id] = 0
                 
                 # Gửi email (Chạy sync cho demo hoặc dùng background task)
                 await email_service.send_otp_email(user.email, otp, user.full_name)
@@ -184,6 +189,7 @@ async def login_access_token(
         user.otp_code = otp
         user.otp_expires_at = datetime.now() + timedelta(minutes=5)
         db.commit()
+        otp_failure_counter[user.id] = 0
         await email_service.send_otp_email(user.email, otp, user.full_name)
         return {
             "access_token": "",
@@ -214,16 +220,27 @@ async def verify_2fa_otp(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    if not user.otp_code or user.otp_code != verify_in.otp_code:
-        raise HTTPException(status_code=400, detail="Mã xác thực không đúng")
+    if not user.otp_code:
+        raise HTTPException(status_code=400, detail="Mã xác thực không hợp lệ hoặc đã bị vô hiệu hóa")
         
     if not user.otp_expires_at or user.otp_expires_at < datetime.now():
         raise HTTPException(status_code=400, detail="Mã xác thực đã hết hạn")
+        
+    if user.otp_code != verify_in.otp_code:
+        otp_failure_counter[user.id] += 1
+        if otp_failure_counter[user.id] >= 5:
+            user.otp_code = None
+            user.otp_expires_at = None
+            db.commit()
+            otp_failure_counter.pop(user.id, None)
+            raise HTTPException(status_code=400, detail="Mã xác thực đã bị vô hiệu hóa do nhập sai quá nhiều lần. Vui lòng đăng nhập lại.")
+        raise HTTPException(status_code=400, detail=f"Mã xác thực không đúng. Bạn còn {5 - otp_failure_counter[user.id]} lần thử.")
         
     # Reset OTP sau khi dùng thành công
     user.otp_code = None
     user.otp_expires_at = None
     db.commit()
+    otp_failure_counter.pop(user.id, None)
     
     # Cấp Token
     timeout_minutes = get_session_timeout(db)

@@ -5,10 +5,11 @@ from uuid import UUID
 import cloudinary
 import cloudinary.uploader
 
-from app.api.deps import get_db, get_current_active_user
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.models.documents import DigitalDocument
 from app.schemas.document_schemas import DigitalDocumentCreate, DigitalDocumentUpdate, DigitalDocumentResponse
 from app.core.config import settings
+from app.utils.file_validator import verify_document_magic_bytes
 
 # Init Cloudinary
 cloudinary.config(
@@ -44,6 +45,10 @@ async def upload_document_file(
     contents = await file.read()
     if len(contents) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File quá lớn. Tối đa 20MB")
+
+    # Kiểm tra Magic Bytes
+    if not verify_document_magic_bytes(contents):
+        raise HTTPException(status_code=400, detail="Tệp tin tài liệu không hợp lệ (Không đúng định dạng PDF/DOC/DOCX)")
 
     try:
         result = cloudinary.uploader.upload(
@@ -95,7 +100,8 @@ def read_documents(
     # Note: In a real app, use permission-based checks.
     is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
     if not is_admin:
-        query = query.filter(DigitalDocument.is_public == True)
+        from sqlalchemy import or_
+        query = query.filter(or_(DigitalDocument.is_public == True, DigitalDocument.user_id == current_user.id))
         
     return query.order_by(DigitalDocument.request_date.desc()).offset(skip).limit(limit).all()
 
@@ -123,11 +129,17 @@ def get_document_stats(
 @router.get("/{doc_id}", response_model=DigitalDocumentResponse)
 def read_document(
     doc_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user)
 ):
     doc = db.query(DigitalDocument).filter(DigitalDocument.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin and not doc.is_public and doc.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền truy cập tài liệu này")
+        
     return doc
 
 @router.put("/{doc_id}", response_model=DigitalDocumentResponse)
@@ -136,10 +148,15 @@ def update_document(
     db: Session = Depends(get_db),
     doc_id: UUID,
     doc_in: DigitalDocumentUpdate,
+    current_user = Depends(get_current_active_user)
 ):
     doc = db.query(DigitalDocument).filter(DigitalDocument.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin and doc.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền chỉnh sửa tài liệu này")
     
     update_data = doc_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -155,10 +172,16 @@ def delete_document(
     *,
     db: Session = Depends(get_db),
     doc_id: UUID,
+    current_user = Depends(get_current_active_user)
 ):
     doc = db.query(DigitalDocument).filter(DigitalDocument.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin and doc.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bạn không có quyền xóa tài liệu này")
+        
     db.delete(doc)
     db.commit()
     return {"message": "Document deleted successfully"}

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.schemas.finance_schemas import AssetCreate, AssetUpdate, AssetResponse
 from app.services import finance_service
 
@@ -14,6 +14,7 @@ def create_asset(
     *,
     db: Session = Depends(get_db),
     asset_in: AssetCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.create_asset(db=db, asset_in=asset_in)
 
@@ -21,7 +22,8 @@ def create_asset(
 def read_assets(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
 ):
     return finance_service.get_assets(db, skip=skip, limit=limit)
 
@@ -31,6 +33,7 @@ def update_asset(
     db: Session = Depends(get_db),
     asset_id: UUID,
     asset_in: AssetUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.update_asset(db=db, asset_id=asset_id, asset_in=asset_in)
 
@@ -39,5 +42,7 @@ def delete_asset(
     *,
     db: Session = Depends(get_db),
     asset_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.delete_asset(db=db, asset_id=asset_id)
+

@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.schemas.ai_audit_schemas import (
     AuditLogCreate, 
     AuditLogResponse, 
@@ -19,6 +19,7 @@ def create_system_audit_log(
     *,
     db: Session = Depends(get_db),
     log_in: AuditLogCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Tạo nhật ký hệ thống (thường được thực hiện ngầm, ít khi qua API công khai).
@@ -32,7 +33,8 @@ def read_system_audit_logs(
     date_from: str = None,
     date_to: str = None,
     role: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Lấy danh sách nhật ký hệ thống (Read-only).
@@ -44,9 +46,11 @@ def export_audit_logs(
     date_from: str = None,
     date_to: str = None,
     role: str = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Xuất danh sách nhật ký hệ thống dưới dạng file CSV.
     """
     return ai_audit_service.export_system_audit_logs(db, date_from=date_from, date_to=date_to, role=role)
+

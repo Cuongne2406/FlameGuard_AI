@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -7,7 +7,9 @@ import {
   TouchableOpacity, 
   Modal, 
   TextInput,
-  Platform
+  Platform,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +31,10 @@ import * as z from 'zod';
 import FormInput from '../src/components/common/FormInput';
 import PremiumButton from '../src/components/common/PremiumButton';
 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../src/context/AuthContext';
+import { getDocuments, createDocumentRequest } from '../src/api/client';
+
 const documentRequestSchema = z.object({
   reason: z.string().min(10, 'Lý do quá ngắn. Vui lòng trình bày chi tiết hơn (ít nhất 10 ký tự).')
 });
@@ -38,9 +44,12 @@ type DocumentRequestFormData = z.infer<typeof documentRequestSchema>;
 export default function DocumentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState(0); // 0: Đang xử lý, 1: Mẫu đơn, 2: Khoa
   const [previewModal, setPreviewModal] = useState(false);
   const [requestModal, setRequestModal] = useState(false);
+  const [selectedPreviewDoc, setSelectedPreviewDoc] = useState<any>(null);
 
   const { control, handleSubmit, reset, formState: { errors } } = useForm<DocumentRequestFormData>({
     resolver: zodResolver(documentRequestSchema),
@@ -49,19 +58,46 @@ export default function DocumentsScreen() {
     }
   });
 
+  const { data: rawDocs = [], isLoading: isLoadingDocs } = useQuery({
+    queryKey: ['userDocuments', user?.id],
+    queryFn: () => getDocuments(0, 100),
+    enabled: !!user,
+  });
+
+  const userRequests = useMemo(() => {
+    if (!user) return [];
+    return (rawDocs as any[]).filter((d: any) => !d.is_public && d.user_id === user.id);
+  }, [rawDocs, user]);
+
+  const publicTemplates = useMemo(() => {
+    return (rawDocs as any[]).filter((d: any) => d.is_public);
+  }, [rawDocs]);
+
+  const submitDocMutation = useMutation({
+    mutationFn: (data: DocumentRequestFormData) => createDocumentRequest({
+      user_id: user?.id,
+      document_type: "Giấy chứng nhận",
+      title: "Xin cấp lại Giấy chứng nhận",
+      purpose: data.reason,
+      is_public: false
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userDocuments', user?.id] });
+      setRequestModal(false);
+      reset();
+      Alert.alert('Thành công', 'Yêu cầu của bạn đã được gửi thành công!');
+    },
+    onError: (err: any) => {
+      console.error(err);
+      Alert.alert('Lỗi', 'Gửi yêu cầu thất bại. Vui lòng thử lại sau.');
+    }
+  });
+
   const onSubmitRequest = (data: DocumentRequestFormData) => {
-    setRequestModal(false);
-    reset();
-    alert(`Yêu cầu đã được gửi!\nLý do: ${data.reason}`);
+    submitDocMutation.mutate(data);
   };
 
   const tabs = ['Tiến độ Thủ tục', 'Khuôn mẫu', 'Văn bản Khoa'];
-
-  const documents = [
-    { id: 1, title: 'Mẫu Đơn Đăng ký Sinh viên 5 Tốt 2026', type: 'DOCX', date: '20/04/2026' },
-    { id: 2, title: 'Quy chế Phân loại rèn luyện sinh viên', type: 'PDF', date: '15/01/2026' },
-    { id: 3, title: 'Mẫu Đơn xin Miễn sinh hoạt Đoàn', type: 'PDF', date: '10/01/2026' },
-  ];
 
   return (
     <View style={styles.container}>
@@ -101,28 +137,58 @@ export default function DocumentsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {activeTab === 0 ? (
           <View>
-            <View style={[styles.progressCard, SHADOWS.light]}>
-              <View style={styles.cardHeaderRow}>
-                <View style={styles.iconBoxMini}><FileText size={16} color={COLORS.primary} /></View>
-                <Text style={styles.cardHeaderTitle}>Mã HS: #HS2604A1</Text>
+            {isLoadingDocs ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 30 }} />
+            ) : userRequests.length === 0 ? (
+              <View style={{ padding: 30, alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 20, marginBottom: 20 }}>
+                <Text style={{ color: COLORS.textSecondary, fontSize: 13, fontWeight: '500', textAlign: 'center' }}>
+                  Chưa có yêu cầu hành chính nào đang được xử lý.
+                </Text>
               </View>
-              <Text style={styles.docNameTitle}>Xin cấp lại Giấy chứng nhận Thanh niên Tiên tiến</Text>
-              
-              <View style={styles.progressBarContainer}>
-                <View style={styles.progressLabels}>
-                  <Text style={styles.progressStatus}>ĐANG XỬ LÝ (KHOA)</Text>
-                  <Text style={styles.progressPercent}>60%</Text>
-                </View>
-                <View style={styles.progressTrack}>
-                  <View style={[styles.progressFill, { width: '60%' }]} />
-                </View>
-              </View>
+            ) : (
+              userRequests.map((doc: any) => {
+                const isApproved = doc.status === 'APPROVED' || doc.status === 'Approved';
+                const isRejected = doc.status === 'REJECTED' || doc.status === 'Rejected';
+                
+                const statusPercent = isApproved ? '100%' : isRejected ? '100%' : '60%';
+                const statusLabel = isApproved ? 'ĐÃ DUYỆT' : isRejected ? 'BỊ TỪ CHỐI' : 'ĐANG XỬ LÝ (KHOA)';
+                const statusColor = isApproved ? '#4CAF50' : isRejected ? '#EF4444' : COLORS.primary;
 
-              <View style={styles.cardFooter}>
-                <Clock size={14} color={COLORS.textSecondary} />
-                <Text style={styles.footerText}>Dự kiến trả kết quả: 24h nữa</Text>
-              </View>
-            </View>
+                return (
+                  <TouchableOpacity 
+                    key={doc.id} 
+                    style={[styles.progressCard, SHADOWS.light]}
+                    onPress={() => {
+                      setSelectedPreviewDoc(doc);
+                      setPreviewModal(true);
+                    }}
+                  >
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.iconBoxMini}><FileText size={16} color={statusColor} /></View>
+                      <Text style={[styles.cardHeaderTitle, { color: statusColor }]}>Mã HS: #{doc.document_code || doc.id.substring(0, 8).toUpperCase()}</Text>
+                    </View>
+                    <Text style={styles.docNameTitle}>{doc.title || 'Đơn xin cấp lại tài liệu'}</Text>
+                    
+                    <View style={styles.progressBarContainer}>
+                      <View style={styles.progressLabels}>
+                        <Text style={[styles.progressStatus, { color: statusColor }]}>{statusLabel}</Text>
+                        <Text style={[styles.progressPercent, { color: statusColor }]}>{statusPercent}</Text>
+                      </View>
+                      <View style={styles.progressTrack}>
+                        <View style={[styles.progressFill, { width: statusPercent, backgroundColor: statusColor }]} />
+                      </View>
+                    </View>
+
+                    <View style={styles.cardFooter}>
+                      <Clock size={14} color={COLORS.textSecondary} />
+                      <Text style={styles.footerText}>
+                        {isApproved ? 'Đã hoàn thành thủ tục' : isRejected ? `Lý do từ chối: ${doc.rejection_reason || 'Không rõ'}` : 'Dự kiến trả kết quả: 24h nữa'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
 
             <TouchableOpacity 
               style={[styles.requestActionCard, SHADOWS.light]}
@@ -139,22 +205,54 @@ export default function DocumentsScreen() {
           </View>
         ) : (
           <View style={styles.docList}>
-            {documents.map((doc) => (
-              <TouchableOpacity 
-                key={doc.id} 
-                style={[styles.docItem, SHADOWS.light]}
-                onPress={() => setPreviewModal(true)}
-              >
-                <View style={[styles.docIcon, { backgroundColor: doc.type === 'PDF' ? '#FFEBEE' : '#E3F2FD' }]}>
-                  <Text style={[styles.docTypeText, { color: doc.type === 'PDF' ? '#F44336' : '#2196F3' }]}>{doc.type}</Text>
-                </View>
-                <View style={styles.docInfo}>
-                  <Text style={styles.docTitle} numberOfLines={2}>{doc.title}</Text>
-                  <Text style={styles.docDate}>Ban hành: {doc.date}</Text>
-                </View>
-                <ChevronRight size={20} color={COLORS.border} />
-              </TouchableOpacity>
-            ))}
+            {isLoadingDocs ? (
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 30 }} />
+            ) : publicTemplates.length === 0 ? (
+              // Fallback to default static list to keep it visually rich if DB is clean
+              [
+                { id: 'f-1', title: 'Mẫu Đơn Đăng ký Sinh viên 5 Tốt 2026', document_type: 'DOCX', request_date: '2026-04-20T00:00:00', file_url: '#', purpose: 'Đăng ký xét chọn danh hiệu Sinh viên 5 Tốt cấp Trường niên khóa 2025-2026.' },
+                { id: 'f-2', title: 'Quy chế Phân loại rèn luyện sinh viên', document_type: 'PDF', request_date: '2026-01-15T00:00:00', file_url: '#', purpose: 'Quy chế đánh giá điểm rèn luyện và phân loại sinh viên hệ chính quy.' },
+                { id: 'f-3', title: 'Mẫu Đơn xin Miễn sinh hoạt Đoàn', document_type: 'PDF', request_date: '2026-01-10T00:00:00', file_url: '#', purpose: 'Thủ tục xin miễn sinh hoạt Đoàn theo quy định điều lệ Đoàn.' },
+              ].map((doc) => (
+                <TouchableOpacity 
+                  key={doc.id} 
+                  style={[styles.docItem, SHADOWS.light]}
+                  onPress={() => {
+                    setSelectedPreviewDoc(doc);
+                    setPreviewModal(true);
+                  }}
+                >
+                  <View style={[styles.docIcon, { backgroundColor: doc.document_type === 'PDF' ? '#FFEBEE' : '#E3F2FD' }]}>
+                    <Text style={[styles.docTypeText, { color: doc.document_type === 'PDF' ? '#F44336' : '#2196F3' }]}>{doc.document_type}</Text>
+                  </View>
+                  <View style={styles.docInfo}>
+                    <Text style={styles.docTitle} numberOfLines={2}>{doc.title}</Text>
+                    <Text style={styles.docDate}>Ban hành: {new Date(doc.request_date).toLocaleDateString('vi-VN')}</Text>
+                  </View>
+                  <ChevronRight size={20} color={COLORS.border} />
+                </TouchableOpacity>
+              ))
+            ) : (
+              publicTemplates.map((doc: any) => (
+                <TouchableOpacity 
+                  key={doc.id} 
+                  style={[styles.docItem, SHADOWS.light]}
+                  onPress={() => {
+                    setSelectedPreviewDoc(doc);
+                    setPreviewModal(true);
+                  }}
+                >
+                  <View style={[styles.docIcon, { backgroundColor: doc.document_type === 'PDF' ? '#FFEBEE' : '#E3F2FD' }]}>
+                    <Text style={[styles.docTypeText, { color: doc.document_type === 'PDF' ? '#F44336' : '#2196F3' }]}>{doc.document_type || 'PDF'}</Text>
+                  </View>
+                  <View style={styles.docInfo}>
+                    <Text style={styles.docTitle} numberOfLines={2}>{doc.title}</Text>
+                    <Text style={styles.docDate}>Ban hành: {doc.request_date ? new Date(doc.request_date).toLocaleDateString('vi-VN') : '2026'}</Text>
+                  </View>
+                  <ChevronRight size={20} color={COLORS.border} />
+                </TouchableOpacity>
+              ))
+            )}
           </View>
         )}
       </ScrollView>
@@ -172,18 +270,33 @@ export default function DocumentsScreen() {
           <ScrollView style={styles.previewScroll} contentContainerStyle={{ padding: 20 }}>
             <View style={[styles.a4Paper, SHADOWS.heavy]}>
               <View style={styles.a4Header}>
-                <Text style={styles.a4LeftText}>ĐOÀN TNCS HỒ CHÍ MINH{'\n'}TRƯỜNG ĐH KỸ THUẬT</Text>
-                <Text style={styles.a4RightText}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM{'\n'}Độc lập - Tự do - Hạnh phúc</Text>
+                <Text style={styles.a4LeftText}>ĐOÀN TNCS HỒ CHÍ MINH{"\n"}TRƯỜNG ĐH KỸ THUẬT</Text>
+                <Text style={styles.a4RightText}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM{"\n"}Độc lập - Tự do - Hạnh phúc</Text>
               </View>
               
-              <Text style={styles.a4DocumentTitle}>VĂN BẢN ĐIỆN TỬ</Text>
-              <Text style={styles.a4Paragraph}>
-                Căn cứ vào quyết định số 123/QĐ-ĐTN, văn bản này được cấp phát cho nội bộ Sinh viên làm tài liệu tham khảo cho việc điền mẫu đơn Sinh viên 5 Tốt cấp Trường. Sinh viên cần chú ý viết hoa đúng chuẩn.
-              </Text>
+              <Text style={styles.a4DocumentTitle}>{selectedPreviewDoc?.title ? selectedPreviewDoc.title.toUpperCase() : 'VĂN BẢN ĐIỆN TỬ'}</Text>
+              
+              {selectedPreviewDoc?.is_public === false ? (
+                <Text style={styles.a4Paragraph}>
+                  Hệ thống số hóa Đoàn TNCS Hồ Chí Minh xác nhận: Sinh viên {"\n"}
+                  Họ tên: <Text style={{ fontWeight: 'bold' }}>{user?.full_name}</Text>{"\n"}
+                  MSSV: <Text style={{ fontWeight: 'bold' }}>{user?.student_id}</Text>{"\n"}
+                  Đã gửi yêu cầu hành chính trực tuyến với nội dung:{"\n"}
+                  <Text style={{ fontStyle: 'italic', color: COLORS.textSecondary }}>"{selectedPreviewDoc?.purpose || 'Lý do cá nhân'}"</Text>{"\n"}
+                  Hiện hồ sơ đang được thụ lý và xử lý trực tuyến bởi Ban Chấp hành Đoàn Khoa.
+                </Text>
+              ) : (
+                <Text style={styles.a4Paragraph}>
+                  Quyết định ban hành tài liệu hướng dẫn nội bộ sinh viên.{"\n"}
+                  Văn bản: <Text style={{ fontWeight: 'bold' }}>{selectedPreviewDoc?.title}</Text>{"\n"}
+                  Mục đích ban hành: {selectedPreviewDoc?.purpose || 'Tài liệu tham khảo phục vụ phong trào sinh viên và công tác quản lý Đoàn - Hội.'}{"\n"}
+                  Sinh viên cần lưu ý tải mẫu đơn và điền đúng quy chế văn bản trước khi ký nộp trực tiếp.
+                </Text>
+              )}
               
               <View style={styles.digitalSignature}>
                 <Text style={styles.signTitle}>KÝ BỞI: ADMIN HỆ THỐNG</Text>
-                <Text style={styles.signDate}>Ngày: 20/04/2026</Text>
+                <Text style={styles.signDate}>Ngày: {selectedPreviewDoc?.request_date ? new Date(selectedPreviewDoc.request_date).toLocaleDateString('vi-VN') : '20/04/2026'}</Text>
                 <CheckCircle size={32} color="#D32F2F" style={{ marginTop: 10 }} />
                 <Text style={styles.signVerified}>DIGITAL VERIFIED</Text>
               </View>

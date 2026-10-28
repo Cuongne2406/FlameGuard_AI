@@ -7,7 +7,7 @@ from pydantic import EmailStr
 conf = ConnectionConfig(
     MAIL_USERNAME = getattr(settings, "MAIL_USERNAME", "mock_user"),
     MAIL_PASSWORD = getattr(settings, "MAIL_PASSWORD", "mock_pass"),
-    MAIL_FROM = getattr(settings, "MAIL_FROM", "no-reply@flameguard.ai"),
+    MAIL_FROM = getattr(settings, "MAIL_FROM", "no-reply@dyus.edu.vn"),
     MAIL_PORT = getattr(settings, "MAIL_PORT", 587),
     MAIL_SERVER = getattr(settings, "MAIL_SERVER", "smtp.gmail.com"),
     MAIL_STARTTLS = True,
@@ -17,19 +17,21 @@ conf = ConnectionConfig(
 )
 
 async def send_otp_email(email: EmailStr, otp: str, full_name: str = "Người dùng"):
+    import html
+    safe_name = html.escape(full_name)
     message = MessageSchema(
-        subject="FlameGuard AI - Mã xác thực 2 lớp (2FA)",
+        subject="DYUS Platform - Mã xác thực 2 lớp (2FA)",
         recipients=[email],
         body=f"""
         <html>
             <body style="font-family: sans-serif; padding: 20px; color: #333;">
-                <h2 style="color: #2563eb;">Xác thực đăng nhập FlameGuard AI</h2>
-                <p>Chào <b>{full_name}</b>,</p>
+                <h2 style="color: #2563eb;">Xác thực đăng nhập DYUS Platform</h2>
+                <p>Chào <b>{safe_name}</b>,</p>
                 <p>Mã xác thực 2 lớp của bạn là: <b style="font-size: 24px; color: #1e40af; letter-spacing: 5px;">{otp}</b></p>
                 <p>Email nhận mã: {email}</p>
                 <p>Mã này sẽ hết hạn sau 5 phút. Nếu bạn không thực hiện đăng nhập, vui lòng đổi mật khẩu ngay lập tức.</p>
                 <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 11px; color: #999;">Đây là email tự động từ hệ thống FlameGuard AI, vui lòng không trả lời.</p>
+                <p style="font-size: 11px; color: #999;">Đây là email tự động từ hệ thống DYUS Platform, vui lòng không trả lời.</p>
             </body>
         </html>
         """,

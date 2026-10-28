@@ -74,7 +74,7 @@ const LoginScreen = () => {
             <View style={styles.logoContainer}>
               <ShieldCheck size={60} color={COLORS.white} />
             </View>
-            <Text style={styles.title}>YouthHub</Text>
+            <Text style={styles.title}>DYUS</Text>
             <Text style={styles.subtitle}>Hệ thống Số hóa Đoàn - Hội</Text>
           </View>
 

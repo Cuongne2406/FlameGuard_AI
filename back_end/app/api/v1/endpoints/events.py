@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from uuid import UUID
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin
 from app.schemas.event_schemas import (
     EventCreate, EventUpdate, EventResponse,
     EventRegistrationCreate, EventRegistrationUpdate, EventRegistrationResponse,
@@ -19,7 +19,10 @@ from sqlalchemy import func
 from app.models.events import Event, EventStatus, EventRegistration
 
 @router.get("/stats")
-def get_event_stats(db: Session = Depends(get_db)):
+def get_event_stats(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """
     Lấy thống kê sự kiện thực tế từ Database.
     """
@@ -51,6 +54,7 @@ def create_event(
     *,
     db: Session = Depends(get_db),
     event_in: EventCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.create_event(db=db, event_in=event_in)
 
@@ -58,7 +62,8 @@ def create_event(
 def read_events(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_events(db, skip=skip, limit=limit)
 
@@ -67,6 +72,7 @@ def read_event(
     *,
     db: Session = Depends(get_db),
     event_id: UUID,
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_event(db, event_id=event_id)
 
@@ -76,6 +82,7 @@ def update_event(
     db: Session = Depends(get_db),
     event_id: UUID,
     event_in: EventUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.update_event(db=db, event_id=event_id, event_in=event_in)
 
@@ -84,6 +91,7 @@ def delete_event(
     *,
     db: Session = Depends(get_db),
     event_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.delete_event(db=db, event_id=event_id)
 
@@ -96,6 +104,7 @@ def register_for_event(
     db: Session = Depends(get_db),
     event_id: UUID,
     registration_in: EventRegistrationCreate,
+    current_user = Depends(get_current_active_user),
 ):
     """
     User đăng ký tham gia sự kiện.
@@ -103,6 +112,11 @@ def register_for_event(
     """
     if str(event_id) != str(registration_in.event_id):
         raise HTTPException(status_code=400, detail="Event ID in URL does not match body")
+        
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin:
+        registration_in.user_id = current_user.id
+        
     return event_service.register_for_event(db=db, registration_in=registration_in)
 
 @router.get("/{event_id}/registrations", response_model=List[EventRegistrationResponse])
@@ -112,6 +126,7 @@ def get_event_registrations(
     event_id: UUID,
     skip: int = 0,
     limit: int = 100,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Lấy danh sách người dùng đã đăng ký tham gia 1 sự kiện.
@@ -124,6 +139,7 @@ def update_event_registration(
     db: Session = Depends(get_db),
     registration_id: UUID,
     registration_in: EventRegistrationUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Cập nhật trạng thái đăng ký (Ví dụ điểm danh Check-in, hoặc Hủy đăng ký).
@@ -140,6 +156,7 @@ def create_event_qa(
     db: Session = Depends(get_db),
     event_id: UUID,
     qa_in: EventQACreate,
+    current_user = Depends(get_current_active_user),
 ):
     if str(event_id) != str(qa_in.event_id):
         raise HTTPException(status_code=400, detail="Event ID mismatch")
@@ -152,6 +169,7 @@ def get_event_qa(
     event_id: UUID,
     skip: int = 0,
     limit: int = 100,
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_event_qa(db=db, event_id=event_id, skip=skip, limit=limit)
 
@@ -161,6 +179,7 @@ def answer_event_qa(
     db: Session = Depends(get_db),
     qa_id: UUID,
     answer: str,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.answer_qa(db=db, qa_id=qa_id, answer=answer)
 
@@ -174,6 +193,7 @@ def report_event_incident(
     db: Session = Depends(get_db),
     event_id: UUID,
     incident_in: EventIncidentCreate,
+    current_user = Depends(get_current_active_user),
 ):
     if str(event_id) != str(incident_in.event_id):
         raise HTTPException(status_code=400, detail="Event ID mismatch")
@@ -186,6 +206,7 @@ def get_event_incidents(
     event_id: UUID,
     skip: int = 0,
     limit: int = 100,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.get_event_incidents(db=db, event_id=event_id, skip=skip, limit=limit)
 
@@ -195,6 +216,7 @@ def update_event_incident_status(
     db: Session = Depends(get_db),
     incident_id: UUID,
     status: str,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.update_incident_status(db=db, incident_id=incident_id, status=status)
 
@@ -203,14 +225,30 @@ def approve_event_registration(
     *,
     db: Session = Depends(get_db),
     registration_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.approve_registration(db=db, registration_id=registration_id)
+
+@router.post("/registrations/{registration_id}/check-in-secure", response_model=EventRegistrationResponse)
+def check_in_secure(
+    *,
+    db: Session = Depends(get_db),
+    registration_id: UUID,
+    qr_data: str,
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Secure QR check-in using a dynamic verification token.
+    Supports both event_id UUID or secure token format (event_id|timestamp|hash).
+    """
+    return event_service.check_in_secure(db=db, registration_id=registration_id, qr_data=qr_data, user_id=current_user.id)
 
 @router.get("/registrations/pending", response_model=List[EventRegistrationResponse])
 def get_pending_registrations(
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100,
+    current_admin = Depends(get_current_active_admin),
 ):
     return event_service.get_all_pending_registrations(db=db, skip=skip, limit=limit)
 
@@ -219,6 +257,7 @@ def get_event_summary(
     *,
     db: Session = Depends(get_db),
     id: UUID,
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_event_summary(db=db, event_id=id)
 
@@ -228,9 +267,15 @@ def create_event_feedback(
     db: Session = Depends(get_db),
     event_id: UUID,
     feedback_in: EventFeedbackCreate,
+    current_user = Depends(get_current_active_user),
 ):
     if str(event_id) != str(feedback_in.event_id):
         raise HTTPException(status_code=400, detail="Event ID mismatch")
+        
+    is_admin = any(role.name in ["ADMIN", "UNIVERSITY_ADMIN", "FACULTY_ADMIN"] for role in current_user.roles)
+    if not is_admin:
+        feedback_in.user_id = current_user.id
+        
     return event_service.create_feedback(db=db, feedback_in=feedback_in)
 
 @router.get("/{event_id}/live-stats")
@@ -238,6 +283,7 @@ def get_event_live_stats(
     *,
     db: Session = Depends(get_db),
     event_id: UUID,
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_event_live_stats(db=db, event_id=event_id)
 
@@ -246,5 +292,7 @@ def get_event_feedback_stats(
     *,
     db: Session = Depends(get_db),
     event_id: UUID,
+    current_user = Depends(get_current_active_user),
 ):
     return event_service.get_event_feedback_stats(db=db, event_id=event_id)
+

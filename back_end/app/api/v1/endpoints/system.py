@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy import func, desc, or_
 from datetime import datetime, timedelta, date
 
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_active_admin
 from app.models.core import User, Organization, OrgType, OrgStatus, AcademicTerm
 from app.models.finance import Budget, FundRequest, FundRequestStatus
 from app.models.events import Event, EventStatus, Campaign, EventIncident, EventRegistration
@@ -22,7 +22,12 @@ def format_vnd(amount: float) -> str:
         return "0 VNĐ"
 
 @router.get("/dashboard")
-def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = None, db: Session = Depends(get_db)):
+def get_system_dashboard(
+    year: Optional[str] = None, 
+    semester: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     # 0. Academic Term Resolution
     term_filter = None
     term_query = db.query(AcademicTerm)
@@ -35,6 +40,7 @@ def get_system_dashboard(year: Optional[str] = None, semester: Optional[str] = N
         term_filter = term.id
 
     # 1. Total Members / Students
+
     total_students = db.query(User).count()
     total_orgs = db.query(Organization).filter(Organization.status == OrgStatus.ACTIVE).count()
     total_classes = db.query(Organization).filter(Organization.type == OrgType.CLASS).count()

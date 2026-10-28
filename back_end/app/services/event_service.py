@@ -514,3 +514,76 @@ def get_event_feedback_stats(db: Session, event_id: UUID):
             counts[f.rating] += 1
             
     return [counts[5], counts[4], counts[3], counts[2], counts[1]]
+
+def check_in_secure(db: Session, registration_id: UUID, qr_data: str, user_id: UUID):
+    import hashlib
+    import time
+    from datetime import datetime
+    from app.core.config import settings
+    from app.models.events import EventRegistrationStatus, EventRegistration
+    
+    # 1. Fetch registration
+    reg = db.query(EventRegistration).filter(EventRegistration.id == registration_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Không tìm thấy thông tin đăng ký.")
+        
+    # 2. Verify registration belongs to scanning user
+    if reg.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Tài khoản không khớp với thông tin đăng ký.")
+        
+    # 3. Validate QR Data
+    event_id_str = str(reg.event_id)
+    qr_cleaned = qr_data.strip()
+    
+    # Check if qr_cleaned is simple event_id UUID
+    if qr_cleaned == event_id_str:
+        # Simple/Legacy check-in
+        pass
+    else:
+        # Secure format check: eventId|timestamp|hash
+        parts = qr_cleaned.split('|')
+        if len(parts) == 3:
+            event_id_part, timestamp_str, hash_part = parts
+            if event_id_part != event_id_str:
+                raise HTTPException(status_code=400, detail="Mã QR này của sự kiện khác.")
+                
+            try:
+                timestamp = float(timestamp_str)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Mã QR không đúng định dạng bảo mật.")
+                
+            # Check expiration (e.g. 5 minutes = 300 seconds)
+            current_time = time.time()
+            if abs(current_time - timestamp) > 300:
+                raise HTTPException(status_code=400, detail="Mã QR đã hết hạn. Vui lòng quét mã mới.")
+                
+            # Verify hash
+            raw_str = f"{event_id_str}{timestamp_str}{settings.SECRET_KEY}"
+            expected_hash = hashlib.sha256(raw_str.encode()).hexdigest()[:16] # Use short 16 char hash for QR density
+            if hash_part != expected_hash:
+                raise HTTPException(status_code=400, detail="Mã QR bảo mật không hợp lệ (sai chữ ký).")
+        else:
+            raise HTTPException(status_code=400, detail="Định dạng mã QR không được hỗ trợ.")
+
+    # 4. Check-in success - update registration
+    reg.status = EventRegistrationStatus.ATTENDED
+    reg.check_in_time = datetime.now()
+    db.commit()
+    db.refresh(reg)
+    
+    # Create notification
+    try:
+        from app.schemas.notification_schemas import NotificationCreate
+        from app.services import notification_service
+        notification_service.create_notification(
+            db=db,
+            notification_in=NotificationCreate(
+                user_id=reg.user_id,
+                title="Bạn đã Điểm danh thành công",
+                message=f"Đã ghi nhận tham gia '{reg.event.name}'. Điểm rèn luyện sẽ tự động cộng sau sự kiện."
+            )
+        )
+    except Exception as e:
+        print(f"Error notifying secure check-in: {e}")
+        
+    return reg

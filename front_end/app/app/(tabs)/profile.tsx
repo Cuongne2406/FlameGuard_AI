@@ -25,10 +25,11 @@ import {
 } from 'lucide-react-native';
 import { COLORS, SIZES, SHADOWS, UI } from '../../src/constants/theme';
 import { useAuth } from '../../src/context/AuthContext';
-import apiClient from '../../src/api/client';
+import apiClient, { getUserRegistrations } from '../../src/api/client';
 import { useQuery } from '@tanstack/react-query';
 import GlassCard from '../../src/components/common/GlassCard';
 import MainHeader from '../../src/components/common/MainHeader';
+import EventCard from '../../src/components/EventCard';
 
 const fallbackSkills = [
   { subject: 'Bí thư', score: 80 },
@@ -74,6 +75,18 @@ const ProfileScreen = () => {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  // Registration history — events the student has registered for
+  const { data: registrations = [] } = useQuery({
+    queryKey: ['userRegistrations', user?.id],
+    queryFn: () => getUserRegistrations(user?.id),
+    enabled: !!user,
+    staleTime: 3 * 60 * 1000,
+  });
+
+  // Ended events from registrations = the student's personal history
+  const ENDED = new Set(['ENDED', 'Ended']);
+  const historyEvents = (registrations as any[]).filter((e: any) => ENDED.has(e.status));
 
   if (isLoading || !user) {
     return (
@@ -288,6 +301,33 @@ const ProfileScreen = () => {
               <ChevronRight size={20} color={COLORS.borderStrong} />
             </Pressable>
           ))}
+
+          {/* ── Lịch sử tham gia ─────────────────────────── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Lịch sử tham gia</Text>
+            <Pressable onPress={() => router.push('/events')}>
+              <Text style={styles.viewAll}>Xem tất cả</Text>
+            </Pressable>
+          </View>
+
+          {historyEvents.length === 0 ? (
+            <View style={styles.historyEmpty}>
+              <Calendar size={28} color={COLORS.textMuted} />
+              <Text style={styles.historyEmptyText}>
+                Bạn chưa có sự kiện nào đã kết thúc.{`\n`}Tham gia sự kiện để xây dựng hồ sơ!
+              </Text>
+            </View>
+          ) : (
+            historyEvents.slice(0, 5).map((event: any) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                variant="compact"
+                style={styles.historyCard}
+                onPress={() => router.push(`/event-detail/${event.id}`)}
+              />
+            ))
+          )}
 
           <Pressable style={({ pressed }) => [styles.idLinkCard, pressed && styles.pressed]}>
             <LinearGradient colors={['#4361EE', '#3A0CA3']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.idLinkGradient}>
@@ -624,6 +664,24 @@ const styles = StyleSheet.create({
   pressed: {
     transform: [{ scale: 0.985 }],
     opacity: 0.96,
+  },
+  historyEmpty: {
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 20,
+  },
+  historyEmptyText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    fontWeight: '500',
+  },
+  historyCard: {
+    opacity: 0.75,   // subtle mute to signal these are past events
   },
 });
 

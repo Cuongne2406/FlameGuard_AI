@@ -17,7 +17,9 @@ export const COLORS = {
   black: '#0F172A',       // Slate 900
   overlay: 'rgba(15, 23, 42, 0.08)',
   surfaceMuted: '#F8FAFC',
-  gradient: ['#4F46E5', '#6366F1', '#818CF8'] // Indigo gradient
+  gradient: ['#4F46E5', '#6366F1', '#818CF8'], // Indigo gradient
+  checkIn: '#F97316',      // Orange 500 — check-in banner primary
+  checkInDark: '#EA580C',  // Orange 600 — check-in banner secondary
 };
 
 export const SIZES = {

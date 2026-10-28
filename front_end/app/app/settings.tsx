@@ -178,7 +178,7 @@ const SettingsScreen = () => {
   const handleLogout = () => {
     Alert.alert(
       "Đăng xuất",
-      "Bạn có chắc chắn muốn đăng xuất khỏi YouthHub?",
+      "Bạn có chắc chắn muốn đăng xuất khỏi DYUS Platform?",
       [
         { "text": "Hủy", "style": "cancel" },
         {
@@ -416,7 +416,7 @@ const SettingsScreen = () => {
 
             <View style={styles.logoutWrapper}>
               <PremiumButton
-                title="Đăng xuất khỏi YouthHub"
+                title="Đăng xuất khỏi DYUS Platform"
                 onPress={handleLogout}
                 variant="danger"
                 icon={<LogOut size={20} color={COLORS.white} />}
@@ -424,7 +424,7 @@ const SettingsScreen = () => {
               />
             </View>
 
-            <Text style={styles.versionText}>YouthHub Platform • Build 1528 (v1.2.0)</Text>
+            <Text style={styles.versionText}>DYUS Platform • Build 1528 (v1.2.0)</Text>
           </>
         )}
       </ScrollView>

@@ -3,10 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import func
-
 from datetime import datetime, timedelta
 
-from app.api.deps import get_db, get_current_active_user, get_user_faculty_org
+from app.api.deps import get_db, get_current_active_user, get_current_active_admin, get_user_faculty_org
 from app.schemas.core_schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse, UserOrganizationCreate, UserOrganizationResponse, ClubProposalCreate
 from app.services import core_service
 from app.models.core import UserOrganization, Organization, OrgType
@@ -20,7 +19,7 @@ def get_organization_stats(
     faculty_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user),
-    faculty_org = Depends(get_user_faculty_org)
+    faculty_org = Depends(get_user_faculty_org),
 ):
     """
     Lấy thống kê thực tế từ Database cho Admin Dashboard hoặc SubAdmin Dashboard.
@@ -61,7 +60,7 @@ def get_clubs_stats(
     faculty_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user),
-    faculty_org = Depends(get_user_faculty_org)
+    faculty_org = Depends(get_user_faculty_org),
 ):
     """
     Lấy thống kê riêng cho khối Câu lạc bộ.
@@ -74,7 +73,7 @@ def get_clubs_list(
     faculty_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user),
-    faculty_org = Depends(get_user_faculty_org)
+    faculty_org = Depends(get_user_faculty_org),
 ):
     """
     Lấy danh sách CLB kèm chi tiết trạng thái, nhân sự, ngân sách.
@@ -83,7 +82,10 @@ def get_clubs_list(
     return core_service.get_clubs_list_detailed(db, faculty_id=target_faculty_id)
 
 @router.get("/clubs/proposals")
-def get_club_proposals(db: Session = Depends(get_db)):
+def get_club_proposals(
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
+):
     """
     Lấy danh sách đề xuất từ các CLB.
     """
@@ -104,7 +106,7 @@ def create_club_proposal(
 def approve_club_proposal(
     prop_id: UUID, 
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_active_user)
+    current_admin = Depends(get_current_active_admin)
 ):
     """
     Duyệt đề xuất.
@@ -117,7 +119,7 @@ def create_organization(
     db: Session = Depends(get_db),
     org_in: OrganizationCreate,
     current_user = Depends(get_current_active_user),
-    faculty_org = Depends(get_user_faculty_org)
+    faculty_org = Depends(get_user_faculty_org),
 ):
     # Auto-assign parent_id if user is FACULTY_ADMIN and parent_id is missing
     type_val = org_in.type.value if hasattr(org_in.type, 'value') else str(org_in.type)
@@ -129,7 +131,8 @@ def create_organization(
 def read_organizations(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
 ):
     return core_service.get_organizations(db, skip=skip, limit=limit)
 
@@ -139,6 +142,7 @@ def update_organization(
     db: Session = Depends(get_db),
     org_id: UUID,
     org_in: OrganizationUpdate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.update_organization(db=db, org_id=org_id, org_in=org_in)
 
@@ -147,6 +151,7 @@ def delete_organization(
     *,
     db: Session = Depends(get_db),
     org_id: UUID,
+    current_admin = Depends(get_current_active_admin),
 ):
     return core_service.delete_organization(db=db, org_id=org_id)
 
@@ -155,6 +160,7 @@ def assign_member(
     *,
     db: Session = Depends(get_db),
     assign_in: UserOrganizationCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     """
     Bổ nhiệm hoặc gán nhân sự vào một tổ chức/đơn vị.
@@ -166,7 +172,7 @@ def get_classes_list(
     faculty_id: Optional[UUID] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_active_user),
-    faculty_org = Depends(get_user_faculty_org)
+    faculty_org = Depends(get_user_faculty_org),
 ):
     """
     Lấy danh sách Chi đoàn kèm chi tiết trạng thái, nhân sự, đoàn phí (lọc theo Khoa).
@@ -175,7 +181,11 @@ def get_classes_list(
     return core_service.get_classes_list_detailed(db, faculty_id=target_faculty_id)
 
 @router.get("/{org_id}/members")
-def get_organization_members(org_id: UUID, db: Session = Depends(get_db)):
+def get_organization_members(
+    org_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_active_user),
+):
     """
     Lấy danh sách thành viên của một tổ chức/lớp, được sắp xếp theo tên.
     """

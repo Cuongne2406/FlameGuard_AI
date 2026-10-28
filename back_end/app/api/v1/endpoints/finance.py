@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
 
-from app.api.deps import get_db, get_user_faculty_org, get_current_active_user
+from app.api.deps import get_db, get_user_faculty_org, get_current_active_user, get_current_active_admin
 from app.models.core import Organization, User
 from app.schemas.finance_schemas import (
     TransactionCreate, 
@@ -19,7 +19,7 @@ router = APIRouter()
 @router.get("/stats", response_model=FinanceDashboardStats)
 def get_finance_stats(
     db: Session = Depends(get_db),
-    faculty_org: Optional[Organization] = Depends(get_user_faculty_org)
+    faculty_org: Optional[Organization] = Depends(get_user_faculty_org),
 ):
     return finance_service.get_faculty_finance_stats(db, faculty_org=faculty_org)
 
@@ -28,7 +28,7 @@ def get_transactions(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    faculty_org: Optional[Organization] = Depends(get_user_faculty_org)
+    faculty_org: Optional[Organization] = Depends(get_user_faculty_org),
 ):
     return finance_service.get_transactions(db, skip=skip, limit=limit, faculty_org=faculty_org)
 
@@ -36,7 +36,8 @@ def get_transactions(
 def create_transaction(
     *,
     db: Session = Depends(get_db),
-    txn_in: TransactionCreate
+    txn_in: TransactionCreate,
+    current_admin = Depends(get_current_active_admin),
 ):
     return finance_service.create_transaction(db, txn_in=txn_in)
 
@@ -66,7 +67,8 @@ def update_student_fee_status(
 @router.put("/transactions/{transaction_id}/approve", response_model=TransactionResponse)
 def approve_transaction(
     transaction_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_admin = Depends(get_current_active_admin),
 ):
     txn = db.query(finance_service.FinanceTransaction).filter(
         finance_service.FinanceTransaction.id == transaction_id,
@@ -80,3 +82,4 @@ def approve_transaction(
     db.commit()
     db.refresh(txn)
     return txn
+
